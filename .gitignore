@@ -28,6 +28,8 @@ td.log
 # created by setup.py on the user's machine
 /.venv/
 /build/
+# the model files on a Mac (models/, packs/, mtp/, ~70 GB): inside the folder, named by relative paths in its config
+/Strata-data/
 /third_party/llama.cpp
 /models/
 /packs/

@@ -1,19 +1,24 @@
 # Strata on a Mac
 
-The **default build's engine does not run the model on macOS** - it is written against CUDA (NVIDIA) and HIP (AMD),
-and a Mac has neither: Apple Silicon GPUs speak Metal only. The CPU expert kernels are x86 intrinsics (AVX-512
-VNNI/VBMI, AVX2), which no Mac has either. To run the model the supported way, use a
-[Windows or Linux PC with an NVIDIA or AMD card](INSTALL.md#what-you-need).
+On an Apple-Silicon Mac the model runs on the **Metal backend** (`-DSTRATA_ENABLE_METAL=ON`,
+[docs/PORT_METAL/](PORT_METAL/HANDOFF.md)). On an M2 Max (96 GB), IQ2_XS writes about 24 tokens/s and reads a
+30,000-token prompt at 196 tokens/s.
 
-An **experimental Metal backend** (`-DSTRATA_ENABLE_METAL=ON`, [docs/PORT_METAL/](PORT_METAL/HANDOFF.md)) does run
-the model on Apple Silicon: IQ2_XS on an M2 Max (96 GB) reads a 10K prompt at about 190 tokens/s and decodes at
-about 22-23 tokens/s. That work is not committed yet and `setup.py` does not install it;
-[Run the model on the Metal backend](#run-the-model-on-the-metal-backend) below has the current steps.
+To install it:
 
-Beyond that, a Mac is a good machine to **work on everything around the engine** - and that is what most of this
-page is for: the server (the OpenAI- and Anthropic-compatible API and the web app), the GGUF tools, the planner,
-the CPU-side kernels and their tests all build and pass on Apple Silicon. The engine's CUDA/HIP targets are simply
-absent from the default build, exactly like a PC without a GPU toolkit.
+```sh
+./download-model.sh     # the model files, into Strata-data/ (git-ignored)
+./setup.sh              # builds the engine, writes the config, starts it
+```
+
+[What setup does on a Mac](#what-setup-does-on-a-mac) below says what each step does; the
+[README](../README.md#on-a-mac) gives the short version. The default build (without
+`-DSTRATA_ENABLE_METAL=ON`) has no engine on a Mac. Its engine is CUDA (NVIDIA) or HIP (AMD), and its CPU expert
+kernels are x86 intrinsics (AVX-512 VNNI/VBMI, AVX2).
+
+A Mac is also a good machine to **work on everything around the engine**: the server (the OpenAI- and
+Anthropic-compatible API and the web app), the GGUF tools, the planner, and the CPU-side kernels and their tests all
+build and pass on Apple Silicon.
 
 > **On this page:** [What works](#what-works) · [Set up](#set-up) · [Build and test the C++](#build-and-test-the-c-side)
 > · [Run the model on the Metal backend](#run-the-model-on-the-metal-backend) · [The Python side](#the-python-side) ·
@@ -24,8 +29,8 @@ absent from the default build, exactly like a PC without a GPU toolkit.
 
 | | on a Mac (Apple Silicon) |
 | --- | --- |
+| The model, installed by `./setup.sh` | **yes** - the Metal engine with IQ2_XS, measured on an M2 Max with 96 GB ([what setup does](#what-setup-does-on-a-mac)) |
 | The model, the default build's `strata --serve` | **no** - the default build needs an NVIDIA or AMD GPU ([why](#strata-on-a-mac)) |
-| The model, the Metal backend | **experimental, runs** - IQ2_XS, measured on an M2 Max with 96 GB ([steps](#run-the-model-on-the-metal-backend)) |
 | The server, the API, the web app | **yes** - against the mock engine (a scripted answer) for development, or the real model on the Metal backend |
 | C++ build + `ctest` | **yes** - the CPU-side targets; the AVX2/AVX-512 kernels are compiled out and their scalar transcriptions stand in |
 | `tools/test_setup_*.py`, `serve/test_*.py` | **yes** |
@@ -71,11 +76,19 @@ cmake -S . -B build -DSTRATA_BUILD_CONVERSATION_TESTS=ON && cmake --build build 
 
 ## Run the model on the Metal backend
 
-The port is experimental and recorded in [docs/PORT_METAL/](PORT_METAL/HANDOFF.md); so far it is validated with the
-IQ2_XS model on an Apple M2 Max (38-core GPU, 96 GB) only. All 24,576 experts are resident in GPU memory
-(33.02 GiB) and the engine process takes about 37 GB; Macs with less memory are untested. Run one engine at a time.
+`./setup.sh` does all of this ([below](#what-setup-does-on-a-mac)). This section is for working on the port: a
+build with the tests, and running it by hand.
 
-Build in its own directory:
+The port is recorded in [docs/PORT_METAL/](PORT_METAL/HANDOFF.md). So far it is validated only with the IQ2_XS model
+on an Apple M2 Max (38-core GPU, 96 GB):
+
+- all 24,576 experts are resident in GPU memory (33.02 GiB);
+- the engine's physical footprint peaks at 40.3G (`vmmap`, round 20);
+- Macs with less memory are untested.
+
+Run one engine at a time.
+
+Build in its own directory (the compiler is Xcode's: the app, with its Metal Toolchain):
 
 ```sh
 cmake -S . -B build-metal -DCMAKE_BUILD_TYPE=Release -DSTRATA_ENABLE_METAL=ON -DSTRATA_METAL_ENGINE=ON \
@@ -84,17 +97,26 @@ cmake --build build-metal -j 8
 ctest --test-dir build-metal --output-on-failure      # 50 entries, about 2.5 minutes
 ```
 
-The model files: the two IQ2_XS GGUF shards (68.03 GB), the native pack built by `tools/iq_pack.py` (1.43 GiB; run
-it with the `.venv` Python), and the MTP runtime files, which the serve interface requires even with drafts
-disabled. Sources, checksums and the folder layout: [HANDOFF's Paths section](PORT_METAL/HANDOFF.md) and
-[PROGRESS round 19](PORT_METAL/PROGRESS.md).
+The model files come from `./download-model.sh` (or `./setup.sh`), in `Strata-data/`:
 
-Start the server with a config that names the engine, the model paths and the arguments. The measured config uses
-32K context, FP16 KV, 1,024-token prefill chunks, `--spec 4 --mtp-max-t 1 --suffix-draft 0` (zero drafts in
-practice), `--mmap-experts --no-prefill-borrow`, and `STRATA_METAL_IQ4_EXPAND=0`:
+- the two IQ2_XS GGUF shards (68.03 GB);
+- the native pack built by `tools/iq_pack.py` (1.43 GiB);
+- the MTP runtime files, which the serve interface requires even with drafts disabled.
+
+Sources and checksums: [PROGRESS round 19](PORT_METAL/PROGRESS.md).
+
+The config `./setup.sh` writes, `strata-iq2_xs.json`, names the engine and model by paths relative to the Strata
+folder. Its arguments are [data/mac-metal.json](../data/mac-metal.json)'s, the measured ones:
+
+- 32K context, FP16 KV, 1,024-token prefill chunks;
+- `--spec 4 --mtp-max-t 1 --suffix-draft 0`, which makes zero drafts in practice;
+- `--mmap-experts --no-prefill-borrow`;
+- `STRATA_METAL_IQ4_EXPAND=0`.
+
+To run your own build with it, point `"exe"` at `build-metal/strata`, then:
 
 ```sh
-python3 -m serve.server --engine strata --config <your-config>.json --port 8080 --open
+.venv/bin/python -m serve.server --engine strata --config strata-iq2_xs.json --port 8080 --open
 ```
 
 `--open` opens the browser once the model is ready; `http://127.0.0.1:8080/v1/chat/completions` and `/v1/messages`
@@ -130,10 +152,44 @@ everywhere, do not expose the server beyond `127.0.0.1` without `--api-key`.
 
 ## What setup does on a Mac
 
-`./setup.sh` (or `python3 setup.py`) checks the PC first, and on a Mac it stops there with this fact and the
-commands from this page - it does not create folders, download anything, or pretend the model can run. It still
-makes the `.venv` for you (installing Python through Homebrew if you have none). It does not install the Metal
-backend; that is the manual steps [above](#run-the-model-on-the-metal-backend).
+`./setup.sh` (`setup.py`'s `install_mac`) runs the PC's steps for a Mac. Each step is skipped when it is already
+done:
+
+1. **Checks the Mac:**
+   - Apple Silicon with a native arm64 Python. An Intel Mac, or a Python under Rosetta, stops with the fix.
+   - Memory: the measured Mac had 96 GB. Under 60 GB it stops unless you pass `--model IQ2_XS --yes`; under 90 GB it
+     says the size is untested.
+   - Xcode's Metal compiler: it tries every Xcode in `/Applications` through `DEVELOPER_DIR`, no sudo. A missing
+     Metal Toolchain is downloaded after asking. Xcode itself must come from the App Store. A license that has not
+     been accepted is reported with the command that accepts it.
+2. **Takes the measured choices** from [data/mac-metal.json](../data/mac-metal.json): Qwen3.8-Flash-Next IQ2_XS, 32K
+   context, FP16 KV.
+   - `--model`, `--family`, `--context` and `--kv` are kept, with a note that they are not measured on a Mac.
+   - Images, the speed projection, the GPU flags and the low-RAM mode are PC features: left off, with a note.
+   - Unsloth's SSD budget mode is refused.
+3. Installs the Python packages into `.venv`, including CMake and Ninja.
+4. Gets llama.cpp (ggml, gguf-py) and **compiles the Metal engine** into `engine/strata`. On the M2 Max this takes
+   113 build steps, 25 s.
+   - `engine/BUILD.json` keeps a hash of the source; after a `git pull` that changes it, the next start compiles
+     again.
+5. **The model files**, into `Strata-data/models/IQ2_XS/`. A finished file gets a `.done` mark and is never
+   downloaded again. A whole file copied in by hand is checked against its own tensor directory and kept.
+6. Writes the pack (4 s) and the MTP layer.
+7. Writes `strata-iq2_xs.json` and `run-iq2_xs.sh`, both relative to the folder, and starts the server.
+
+Where the model files go:
+
+- **`Strata-data/` inside the Strata folder** (git-ignored) by default. The config names it relatively, so the
+  folder can move.
+- `--data-dir DIR`: another place. Remembered for later runs.
+- `--gguf-dir DIR`: GGUFs you already have. Remembered for this model while all shards are still there; in the
+  config they are absolute paths.
+- **`./download-model.sh`** is `./setup.sh --download-only`: steps 1 (without the compiler check), 3 and 5 plus the
+  MTP layer. It writes no engine and no config.
+
+Later runs of `./setup.sh` start the installed model right away. `--setup` sets it up again. `--check` only checks
+the Mac. Measured result, the same output text and speed as the hand-built engine:
+[bench/results/2026-10-03-metal-setup](../bench/results/2026-10-03-metal-setup/README.md).
 
 ## How the build differs
 

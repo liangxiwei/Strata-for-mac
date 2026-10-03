@@ -3,13 +3,14 @@
 Strata runs the Qwen3.8-Flash-Next mixture-of-experts model (and its Coder, Swift 1.5 and Unsloth variants) on a
 normal PC: one NVIDIA or AMD graphics card plus system RAM, on Windows or Linux. It has a C++/CUDA/HIP engine
 (`src/`, `include/`), a Python server with an OpenAI- and Anthropic-compatible API and a web app (`serve/`), and a
-one-click installer (`setup.py`, started by `START-HERE.bat` / `setup.sh`). The engine needs CUDA or HIP, so the
-model does not run on macOS - developing and testing everything else on a Mac does: [docs/MAC.md](docs/MAC.md).
+one-click installer (`setup.py`, started by `START-HERE.bat` / `setup.sh`). On an Apple-Silicon Mac the engine
+runs on Metal (`-DSTRATA_ENABLE_METAL=ON`, [docs/PORT_METAL/](docs/PORT_METAL/HANDOFF.md)); `./download-model.sh`
+and `./setup.sh` install it with the measured settings of `data/mac-metal.json`: [docs/MAC.md](docs/MAC.md).
 
 ## Installing Strata for a user
 
 Follow **[docs/AI_SETUP.md](docs/AI_SETUP.md)**: check the PC, pick the model by RAM, run setup non-interactively,
-start and verify the server, and connect the user's apps. Never expose the server beyond `127.0.0.1` without
+start and verify the server, and connect the user's apps (a Mac: its own section there). Never expose the server beyond `127.0.0.1` without
 `--api-key`. As an alternative to shell commands, Strata's MCP server ([docs/MCP_SERVER.md](docs/MCP_SERVER.md))
 offers the same steps as tools.
 

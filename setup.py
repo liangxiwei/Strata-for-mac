@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-"""Strata one-click setup and start (Windows and Linux, NVIDIA or AMD GPUs).
+"""Strata one-click setup and start (Windows and Linux, NVIDIA or AMD GPUs; an Apple-Silicon Mac on its Metal GPU).
 
-    START-HERE.bat  (Windows)   /   ./setup.sh  (Linux)      - they install Python if needed and run this file
+    START-HERE.bat  (Windows)   /   ./setup.sh  (Linux, macOS)      - they install Python if needed and run this file
+
+On a Mac (install_mac below) the same steps compile the Metal engine with Xcode and set up the measured IQ2_XS
+configuration of data/mac-metal.json; docs/MAC.md.
 
 The first time it asks four questions - which model (the original Qwen3.8-Flash-Next or the Swift 1.5 fine-tune),
 which size, how much context, and whether the model should also read images - then installs everything and starts the model on http://127.0.0.1:8080 (OpenAI- and Anthropic-compatible
@@ -70,14 +73,19 @@ HF_REVISIONS = {
 }
 
 
+# HF_ENDPOINT (as huggingface_hub and tools/mtp_fetch.py read it): a mirror such as https://hf-mirror.com where
+# huggingface.co is slow or blocked; unset, the URLs are huggingface.co's
+HF_HOST = os.environ.get("HF_ENDPOINT", "https://huggingface.co").rstrip("/")
+
+
 def hf(repo: str) -> str:
     """The download folder of a Hugging Face repository at its pinned revision."""
-    return f"https://huggingface.co/{repo}/resolve/{HF_REVISIONS[repo]}/"
+    return f"{HF_HOST}/{repo}/resolve/{HF_REVISIONS[repo]}/"
 
 
 def hf_unpinned(url: str) -> str:
     """The same file at the repository's current revision (main)."""
-    return re.sub(r"(https://huggingface\.co/.+?/resolve/)[0-9a-f]{40}/", r"\1main/", url, count=1)
+    return re.sub(r"^(" + re.escape(HF_HOST) + r"/.+?/resolve/)[0-9a-f]{40}/", r"\1main/", url, count=1)
 
 
 HF = hf("ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-GGUF")
@@ -1606,6 +1614,14 @@ def update_installed_engine(url_base) -> None:
         return
     meta_text = info.read_text()
     meta = json.loads(meta_text)
+    if meta.get("backend") == "metal":                 # a Mac: compiled here, again when its source changed
+        if meta.get("src") != source_hash(METAL_SOURCES):
+            try:
+                build_engine_metal(False, get_llama_cpp())
+            except (Exception, SystemExit) as e:
+                warn(f"could not compile the updated engine{'' if isinstance(e, SystemExit) else f' ({e})'}: "
+                     "starting the installed one")
+        return
     if meta.get("backend") == "hip" and WIN:           # AMD on Windows: the ready-made HIP engine, when older
         ver = tuple(int(x) for x in str(meta.get("version", "0")).split(".")[:3] if x.isdigit())
         if meta.get("source") == "prebuilt" and ver < WIN_HIP_MIN_ENGINE:
@@ -1749,7 +1765,7 @@ def install_build_tools(gpu, yes):
     return nvcc, find_vcvars() if WIN else None
 
 
-def cmake_build(src, bdir, target, defs, vcvars, bat_name):
+def cmake_build(src, bdir, target, defs, vcvars, bat_name, env=None):
     cmake, ninja = find_tool("cmake"), find_tool("ninja")
     if cmake is None or ninja is None:
         fail("cmake / ninja not found after installing them", "run: .venv python -m pip install cmake ninja")
@@ -1766,10 +1782,10 @@ def cmake_build(src, bdir, target, defs, vcvars, bat_name):
                        encoding="utf-8")
         run(["cmd", "/c", str(bat)])
     else:
-        run(conf)
-        if run(build, check=False).returncode != 0:
+        run(conf, env=env)
+        if run(build, env=env, check=False).returncode != 0:
             say("  (the build stopped - trying it once more)")
-            run(build)
+            run(build, env=env)
 
 
 ENGINE_SOURCES = ("CMakeLists.txt", "src", "include", "third_party/ggml")
@@ -1854,6 +1870,324 @@ def build_engine(gpu, vision, yes, llama) -> Path:
                                  "cuda_dirs": dirs, "src": src, "vision_src": vsrc if want_vision else None}, indent=1))
     ok(f"engine compiled: {eng / EXE}")
     return eng
+
+
+# ------------------------------------------------------------------------------------------------ an Apple-Silicon Mac
+# The Metal engine (docs/PORT_METAL/): compiled here with Xcode, run with the measured settings of data/mac-metal.json.
+# The GPU and the CPU share one memory, so there is no VRAM to size and no card to pick: every expert is resident.
+MAC_PROFILE = Path(__file__).resolve().parent / "data" / "mac-metal.json"
+METAL_SOURCES = (*ENGINE_SOURCES, "cmake")     # + cmake/metal_backend.cmake (the metallib) and embed_binary.cmake
+MAC_MIN_RAM_GB = 60    # under it the 33 GiB of experts and the rest cannot all stay resident (the measured 96 GB Mac
+                       # gives Metal a 77.8 GiB working set): a stop by default, a risk the user can take
+
+
+def mac_profile() -> dict:
+    return json.loads(MAC_PROFILE.read_text(encoding="utf-8"))
+
+
+def apple_silicon_problem() -> str | None:
+    """None on an Apple-Silicon Mac with a native (arm64) Python; else what is wrong.  An x86-64 Python under Rosetta
+    would compile an x86-64 engine, which has no Metal backend's CPU kernels (NEON) and cannot run."""
+    if platform.machine() == "arm64":
+        return None
+    if out(["sysctl", "-n", "hw.optional.arm64"]).strip() == "1":
+        return ("this Python runs under Rosetta (x86-64) on an Apple-Silicon Mac: install the arm64 one (brew install "
+                "python@3.12 in a Terminal that is not set to open with Rosetta), delete .venv and run ./setup.sh again")
+    return "this is an Intel Mac: the Metal engine runs on Apple Silicon (M1 or newer) only"
+
+
+def metal_compiler(env=None) -> tuple:
+    """(True, version) when `xcrun metal` works - Xcode's Metal shader compiler, which the engine's build needs (the
+    command-line tools alone have none, and since Xcode 26 the compiler is a separate component); else (False, why)."""
+    try:
+        r = subprocess.run(["xcrun", "-sdk", "macosx", "metal", "--version"], capture_output=True, text=True,
+                           timeout=120, env=env)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return False, str(e)
+    text = (r.stdout + r.stderr).strip()
+    return r.returncode == 0, (text.splitlines() or [""])[0]
+
+
+def xcode_apps() -> list:
+    return sorted(Path("/Applications").glob("Xcode*.app"))
+
+
+def metal_probe() -> tuple:
+    """(works, the compiler's version or why not, the environment that found it): xcode-select's choice first, then
+    each Xcode in /Applications through DEVELOPER_DIR (xcode-select may point at the command-line tools; no sudo)."""
+    env = dict(os.environ)
+    good, why = metal_compiler(env)
+    if not good and "DEVELOPER_DIR" not in os.environ:
+        for app in xcode_apps():
+            trial = dict(env, DEVELOPER_DIR=str(app / "Contents" / "Developer"))
+            g, w = metal_compiler(trial)
+            if g or "license" in w.lower() or "toolchain" in w.lower():
+                return g, w, trial
+    return good, why, env
+
+
+def metal_env(yes) -> dict:
+    """The build's environment with a working Metal compiler; the Metal Toolchain is downloaded when Xcode has none
+    (asks first).  Xcode itself comes from the App Store: setup cannot install it."""
+    good, why, env = metal_probe()
+    if not good and "license" in why.lower():
+        fail("Xcode's license is not accepted yet", "run: sudo xcodebuild -license accept   (then run this again)")
+    if not good and xcode_apps():
+        say("  Xcode has no Metal Toolchain yet (since Xcode 26 it is a separate download from Apple); the engine's")
+        say("  GPU kernels are compiled with it.")
+        if ask("  Download it now (xcodebuild -downloadComponent MetalToolchain)?", ["y", "n"], "y", yes) != "y":
+            fail("the Metal Toolchain is needed", "run: xcodebuild -downloadComponent MetalToolchain   (then again)")
+        run(["xcodebuild", "-downloadComponent", "MetalToolchain"], env=env, check=False)
+        good, why = metal_compiler(env)
+    if not good:
+        if not xcode_apps():
+            fail("Xcode is not installed: the Metal engine is compiled with Xcode's Metal compiler (the command-line "
+                 "tools have none)", "install Xcode from the App Store, open it once, then run this again")
+        fail(f"no Metal compiler ({why or 'xcrun metal failed'})",
+             "open Xcode > Settings > Components, install the Metal Toolchain, then run this again")
+    ok(f"Metal compiler: {why}")
+    return env
+
+
+def build_engine_metal(yes, llama) -> Path:
+    """The Metal engine, compiled here (Xcode's clang and Metal compiler, the CMake and Ninja from .venv) into
+    engine/ - again when its source changed (a git pull: only what changed is compiled)."""
+    eng = ROOT / "engine"
+    eng.mkdir(exist_ok=True)
+    stamp = eng / "BUILD.json"
+    meta = json.loads(stamp.read_text()) if stamp.exists() else {}
+    src = source_hash(METAL_SOURCES)
+    if meta.get("backend") == "metal" and meta.get("src") == src and (eng / EXE).exists():
+        ok("Metal engine already built for this Mac")
+        return eng
+    env = metal_env(yes)
+    say("  The engine's source changed: compiling it again (only what changed) ..." if meta.get("backend") == "metal"
+        else "  Compiling the Strata engine for this Mac's GPU (Metal; under a minute on an M2 Max, once) ...")
+    cmake_build(ROOT, ROOT / "build-metal-engine", "strata", [*mac_profile()["cmake"], f"-DSTRATA_GGML_DIR={llama}"],
+                None, "", env=env)
+    # a new file renamed over the old one, not a copy into it: macOS kills a signed binary whose pages change in place
+    # (a running engine, or the next start of one overwritten with cp)
+    shutil.copy2(ROOT / "build-metal-engine" / EXE, eng / (EXE + ".new"))
+    os.replace(eng / (EXE + ".new"), eng / EXE)
+    stamp.write_text(json.dumps({"source": "local", "backend": "metal", "version": source_version(), "src": src,
+                                 "vision": "none"}, indent=1))
+    ok(f"engine compiled: {eng / EXE}")
+    return eng
+
+
+def install_mac(a, data, roots, port) -> int:
+    """The install on an Apple-Silicon Mac: the steps of main() with the Metal engine compiled here, and the model
+    set up as measured (data/mac-metal.json: IQ2_XS, 32K context, every expert resident).  Another size, family or
+    context is asked as a risk (not measured on a Mac); images, the speed projection, the GPU flags and the low-RAM
+    mode are PC features."""
+    prof = mac_profile()
+    # ---- 1. the Mac
+    step(1, "checking your Mac")
+    bad = apple_silicon_problem()
+    if bad:
+        fail(bad)
+    cpu, _, _ = cpu_info()
+    ram = ram_gb()
+    ok(f"Mac: {cpu}, {ram:.0f} GB of memory (shared by the GPU and the CPU)")
+    if ram < MAC_MIN_RAM_GB:
+        if not a.check:
+            confirm_risk(f"{ram:.0f} GB of memory: the model's 33 GiB of experts and the rest need about "
+                         f"{prof['footprint_gb']:.0f} GB, measured on a {prof['ram_gb']} GB Mac; with less, macOS gives "
+                         "the GPU too little of it and the model may not start, or swap", bool(a.model), a.yes,
+                         f"{ram:.0f} GB of memory is too little for the model on a Mac (measured: {prof['ram_gb']} GB)",
+                         "--model IQ2_XS --yes sets it up anyway")
+            warn(f"going on with {ram:.0f} GB of memory, as you chose")
+    elif ram < prof["ram_gb"] - 6:
+        warn(f"measured on a {prof['ram_gb']} GB Mac; with {ram:.0f} GB it is untested (the engine used about "
+             f"{prof['footprint_gb']:.0f} GB there): close other apps while it runs")
+    good, why, _ = (True, "", None) if a.download_only else metal_probe()   # a download needs no compiler
+    if good and why:
+        ok(f"Metal compiler: {why}")
+    elif not good:
+        warn("Xcode's Metal compiler is not ready (" + ("Xcode is not installed: get it from the App Store"
+             if not xcode_apps() else "the Metal Toolchain is missing: setup offers to download it") + ")")
+    if a.check:
+        say()
+        say(f"  {prof['family']} {prof['model']}, {prof['context'] // 1024}K context: " +
+            ("fits (the measured setup)" if ram >= prof["ram_gb"] - 6 else "untested with this much memory"
+             if ram >= MAC_MIN_RAM_GB else "does not fit"))
+        say("\nThis Mac can run Strata" + ("" if good else " once Xcode's Metal compiler is installed") +
+            ". Run it again without --check to install.")
+        return 0
+    for flag, val in (("--gpu", a.gpu), ("--gpus", a.gpus), ("--layer-split", a.layer_split), ("--backend", a.backend),
+                      ("--resident-budget-gib", a.resident_budget_gib), ("--draft-vocab", a.draft_vocab)):
+        if val is not None:
+            warn(f"{flag} is for a PC: a Mac has one GPU sharing the memory with the CPU")
+    if a.low_ram != "auto" or a.kv_streaming != "auto":
+        warn("--low-ram / --kv-streaming are for a PC: on a Mac every expert stays in the memory the GPU reads")
+
+    # ---- 2. the choices
+    step(2, "your choices")
+    family = a.family or prof["family"]
+    fam = FAMILIES[family]
+    names = [m for m in MODELS if family in MODELS[m].get("families", ("qwen", "swift"))]
+    model = a.model or (prof["model"] if prof["model"] in names else names[0])
+    if model not in names:
+        fail(f"{fam['title']} has no {model} model file", "choose one of: " + ", ".join(names))
+    if MODELS[model].get("budget"):
+        fail(f"{model} is not set up on a Mac: it reads most of its experts from the SSD (a PC mode)",
+             f"use the measured --model {prof['model']}")
+    if (family, model) != (prof["family"], prof["model"]):
+        confirm_risk(f"{fam['title']} {model} is not measured on a Mac yet (measured: {prof['model']}): it may not fit "
+                     "the memory the GPU can use, or run slower", bool(a.model or a.family), a.yes,
+                     f"{fam['title']} {model} is not measured on a Mac", f"--model {model} --yes sets it up anyway")
+        warn(f"setting up {fam['title']} {model} on a Mac, as you chose (please report how it runs)")
+    ok(f"model: {fam['title']} {model}")
+    ctx = a.context or prof["context"]
+    if ctx != prof["context"]:
+        warn(f"{ctx} tokens of context is not validated on a Mac (measured: {prof['context']}); kept as you chose")
+    try:
+        scaling, rope_scale = resolve_rope(ctx, a.rope_scaling, a.rope_scale)
+    except ValueError as e:
+        fail(str(e))
+    if scaling is not None:
+        ok(f"rope scaling: {scaling}, factor {rope_scale:g}")
+    ok(f"context: {ctx} tokens")
+    if a.kv:
+        warn(f"--kv {a.kv} is not measured on a Mac (measured: FP16, the engine's default); kept as you chose")
+    if a.vision not in (None, "no", "none"):
+        warn("images are not set up on a Mac yet: off")
+    if (a.experimental_speed_projection or "off").strip().lower() not in ("off", "no", "n", "0"):
+        warn("the experimental speed projection is not tested on a Mac: off")
+    tag = fam["tag"] + model
+    # a --gguf-dir (the model files somewhere else, e.g. from ./download-model.sh --gguf-dir) is remembered for this
+    # model, so a plain ./setup.sh later uses it too, while every shard is still there
+    st = load_settings()
+    if a.gguf_dir:
+        a.gguf_dir = str(Path(a.gguf_dir).expanduser().resolve())
+        save_settings({**st, "gguf_dirs": {**st.get("gguf_dirs", {}), tag: a.gguf_dir}})
+    elif st.get("gguf_dirs", {}).get(tag):
+        prev = Path(st["gguf_dirs"][tag])
+        if all(s.is_file() for s in gguf_dir_shards(prev, fam, model)):
+            a.gguf_dir = str(prev)
+            ok(f"model files: {prev} (as given before with --gguf-dir)")
+    models_dir = Path(a.gguf_dir) if a.gguf_dir else Path(a.models_dir) / tag
+    shards = gguf_dir_shards(models_dir, fam, model) if a.gguf_dir else \
+        [models_dir / fam["file"].format(q=model, i=i) for i in range(1, fam.get("shards", 2) + 1)]
+    if not a.gguf_dir and not all(sh.exists() and done(sh) for sh in shards):
+        for r in roots[1:]:                            # already downloaded for another Strata folder: used there
+            cand = [r / "models" / tag / sh.name for sh in shards]
+            if all(c.exists() and done(c) for c in cand):
+                models_dir, shards = cand[0].parent, cand
+                ok(f"model files found in {models_dir}")
+                break
+    for s in shards:                                   # #173: a whole file copied in by hand has no finish mark
+        if s.exists() and not done(s) and whole_shard(s):
+            mark(s, "whole (checked against its own tensor directory)")
+    have_model = all(s.exists() and (done(s) or a.gguf_dir) for s in shards)
+    on_disk = sum(f.stat().st_size for s in shards for f in (s, s.with_name(s.name + ".part")) if f.is_file()) / 1e9
+    need = (0 if a.gguf_dir or have_model else max(MODELS[model]["download_gb"] - on_disk, 0)) + 8
+    if free_gb(models_dir) < need:
+        fail(f"not enough free disk space in {models_dir}: need ~{need:.0f} GB", "use --models-dir on a bigger drive")
+
+    # ---- 3. python packages
+    step(3, "Python packages")
+    pip_install(requirement_lines() if REQUIREMENTS.exists() else PY_PACKAGES,
+                "numpy, jinja2, regex, pyyaml, tqdm, requests, cmake, ninja, pillow, psutil")
+
+    # ---- 4. the engine (a download alone needs llama.cpp's gguf-py for the MTP layer, no engine)
+    step(4, "llama.cpp (gguf-py)" if a.download_only else "the Strata engine (Metal)")
+    llama = get_llama_cpp()
+    ok(f"llama.cpp {LLAMA_CPP_COMMIT[:7]} (gguf-py, ggml)")
+    eng = None if a.download_only else build_engine_metal(a.yes, llama)
+
+    # ---- 5. the model files (a finished file has a .done mark, or is checked whole above: never downloaded again)
+    step(5, f"downloading {fam['title']} {model}")
+    if not a.gguf_dir:
+        for s in shards:
+            if s.exists() and done(s):
+                ok(f"{s.name} already downloaded")
+                continue
+            download(fam["hf"].format(q=model) + s.name, s)
+    check_shards(shards)
+    ok(f"model files present: {shards[0].parent}")
+
+    # ---- 6. the pack and the MTP layer
+    step(6, "the MTP layer" if a.download_only else "preparing the model for Strata")
+    pack = find_in(roots, f"packs/{tag.lower()}") or data / "packs" / tag.lower()
+    env = dict(os.environ, STRATA_GGUF_PY=str(llama / "gguf-py"))
+    if a.download_only:
+        pass                                           # the pack is made from the GGUFs by setup (not a download)
+    elif not (pack / "native_experts.txt").exists() or not (pack / "tokenizer" / "vocab.json").exists():
+        run([sys.executable, str(ROOT / "tools" / "iq_pack.py"), "--gguf", str(shards[0]), "--out", str(pack),
+             *fam.get("pack_args", [])], env=env)
+    if not a.download_only:
+        ok(f"model prepared: {pack}")
+    mtp = (find_in(roots, "mtp/rt/experts.bin") or data / "mtp/rt/experts.bin").parent.parent
+    rt = mtp / "rt"
+    corrupt = (rt / "experts.bin").exists() and mtp_corrupt(mtp, env)
+    if corrupt:
+        warn("some MTP tensors are not the checkpoint's (a download mirror that ignored range requests, #327): "
+             "fetching them again and rebuilding the draft layer")
+    if corrupt or not (rt / "experts.bin").exists():
+        say("  The server loads the MTP draft layer (on a Mac it drafts nothing: docs/MAC.md); it comes from the")
+        say("  original Qwen checkpoint: only its ~5 GB of MTP tensors are downloaded.")
+        run([sys.executable, str(ROOT / "tools" / "mtp_fetch.py"), "fetch", "--out", str(mtp)], env=env)
+        run([sys.executable, str(ROOT / "tools" / "mtp_pack.py"), "--src", str(mtp), "--experts", "q2_0",
+             "--out", str(mtp / "mtp-q2_0.gguf")], env=env)
+        run([sys.executable, str(ROOT / "tools" / "mtp_rt.py"), "--gguf", str(mtp / "mtp-q2_0.gguf"), "--out", str(rt)],
+            env=env)
+    ok(f"MTP layer: {rt}")
+    if a.download_only:
+        where = "" if not (a.gguf_dir or a.data_dir) else \
+            f" --gguf-dir {a.gguf_dir}" if a.gguf_dir else f" --data-dir {a.data_dir}"
+        say()
+        say("Downloaded.")
+        say(f"  Model files: {shards[0].parent}")
+        say(f"  MTP layer:   {rt}")
+        say(f"  Next:        ./setup.sh{where}   (builds the engine, writes the config, starts it - nothing is "
+            "downloaded again)")
+        return 0
+
+    # ---- 7. the start script
+    step(7, "writing the start script")
+    sys.path.insert(0, str(ROOT / "tools"))
+    from gguf_reader import GGUFFile                   # the PLE table's shard: shard 2 (original) or 1 (Swift)
+    ple = next((s for s in shards if any(t.name == "per_layer_token_embd.weight" for t in GGUFFile(s).tensors)), None)
+    if ple is None:
+        fail("the model has no per_layer_token_embd tensor (is this a Qwen3.8-Flash-Next GGUF?)")
+    def rel(p) -> str:
+        """Inside the Strata folder: relative to it (the config's cwd "."), so the folder can move; else absolute."""
+        p = Path(p).absolute()
+        try:
+            return p.relative_to(ROOT.absolute()).as_posix()
+        except ValueError:
+            return str(p)
+    fill = {"pack": rel(pack), "gguf": rel(shards[0]), "ple": rel(ple), "context": str(ctx), "mtp": rel(rt),
+            "profile": rel(ROOT / "data" / fam.get("profile", "expert-profile.bin"))}
+    args = [x.format(**fill) for x in prof["args"]]
+    if scaling is not None:
+        args += ["--rope-scaling", scaling, "--rope-scale", f"{rope_scale:g}"]
+    if a.kv:
+        args += ["--kv", a.kv]
+    cfg = {"exe": rel(eng / EXE), "args": args, "cwd": ".", "tokenizer": rel(pack / "tokenizer"),
+           "model_name": f"{fam['name']}-{model.lower()}", "log": f"strata-{tag.lower()}.log",
+           "port": port, "backend": "metal", "env": dict(prof["env"])}
+    if a.host:
+        cfg["host"] = a.host
+    if a.api_key:
+        cfg["api_key"] = a.api_key
+    cfg_path = ROOT / f"strata-{tag.lower()}.json"
+    cfg_path.write_text(json.dumps(cfg, indent=1), encoding="utf-8")
+    script = write_run_script(tag, cfg_path, port)
+    ok(f"start script: {script.name}")
+
+    say()
+    say("All set.")
+    say(f"  API (OpenAI):     http://127.0.0.1:{port}/v1   (any API key; model name: anything)")
+    say(f"  API (Anthropic):  http://127.0.0.1:{port}/v1/messages")
+    if a.host and a.host not in ("127.0.0.1", "localhost"):
+        say(f"  Other devices:    the server window prints this Mac's address (http://<IP>:{port}/)"
+            + ("" if a.api_key else " - no API key set: anyone on your network can use it"))
+    say(f"  Next time:        just run ./setup.sh (or ./{script.name}) - it starts right away")
+    if a.no_start:
+        return 0
+    return start(cfg_path, port)
 
 
 # ------------------------------------------------------------------------------------------------ the data folder
@@ -2118,8 +2452,11 @@ def data_folder(requested: str | None) -> tuple:
     """(the data folder, folders on other drives that still hold model files).  Moves the model files of this folder
     and of earlier Strata folders on the same drive into the data folder, and points their configs there."""
     settings = load_settings()
+    # a Mac keeps them INSIDE the Strata folder (Strata-data, git-ignored): its config names them by paths relative to
+    # the folder, so the folder can move; only a --data-dir is remembered there
     dest = Path(requested).expanduser().resolve() if requested else \
-        Path(settings["data_dir"]) if settings.get("data_dir") else ROOT.parent / "Strata-data"
+        Path(settings["data_dir"]) if settings.get("data_dir") else \
+        ROOT / "Strata-data" if MAC else ROOT.parent / "Strata-data"
     try:
         dest.mkdir(parents=True, exist_ok=True)
     except OSError as e:                                # e.g. no write access next to the Strata folder
@@ -2128,10 +2465,13 @@ def data_folder(requested: str | None) -> tuple:
     elsewhere = []
     # #198: the data folder remembered before (a --data-dir to a new place) is a source too, and so is a Strata-data
     # folder nested in any of them (an install that kept its models one level down)
-    sources = [ROOT, *other_installs(settings)]
+    others = other_installs(settings)
+    sources = [ROOT, *others]
     if settings.get("data_dir") and Path(settings["data_dir"]) != dest:
         sources.append(Path(settings["data_dir"]))
     sources += [f / "Strata-data" for f in list(sources) if (f / "Strata-data") != dest]
+    # on a Mac another Strata folder's files are its own (its config names them relative to it): used, never moved
+    foreign = {*others, *(f / "Strata-data" for f in others)} if MAC else set()
     seen = set()
     for folder in sources:
         key = os.path.normcase(str(folder))
@@ -2140,7 +2480,7 @@ def data_folder(requested: str | None) -> tuple:
         seen.add(key)
         if folder == dest or not has_data(folder):
             continue
-        if not same_drive(folder, dest):
+        if not same_drive(folder, dest) or folder in foreign:
             elsewhere.append(folder)                    # another drive: used where it is (no 70 GB copy)
             continue
         # the downloads merge file by file (the same file wherever it came from); a prepared pack or MTP layer moves
@@ -2164,7 +2504,7 @@ def data_folder(requested: str | None) -> tuple:
         else:
             ok(f"model files from {folder} moved to {dest} (a new copy of Strata finds them there)")
     installs = [str(ROOT)] + [p for p in settings.get("installs", []) if p != str(ROOT) and Path(p).is_dir()]
-    save_settings({**settings, "data_dir": str(dest), "installs": installs[:20]})
+    save_settings({**settings, **({"data_dir": str(dest)} if requested or not MAC else {}), "installs": installs[:20]})
     return dest, elsewhere
 
 
@@ -2212,6 +2552,14 @@ def installed_configs():
     return sorted(ROOT.glob("strata-*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
 
 
+def cfg_file(cfg_path: Path, cfg: dict, p) -> Path:
+    """A path of a run config as the server reads it: relative paths are its "cwd"'s, and a relative "cwd" is the
+    config's folder's (a Mac config names everything relative to the Strata folder).  Absolute paths stay as they are."""
+    cwd = cfg.get("cwd")
+    base = Path(cfg_path).parent / cwd if cwd else Path(".")
+    return base / p
+
+
 def source_version() -> str:
     """The engine version the source tree builds (CMakeLists.txt's project version)."""
     m = re.search(r"project\(strata VERSION ([\d.]+)", (ROOT / "CMakeLists.txt").read_text(encoding="utf-8"))
@@ -2255,9 +2603,12 @@ def hardware_key(cfg: dict) -> str:
 def calibrate_config(cfg_path: Path) -> bool:
     """Measure the engine's hardware-dependent settings on this PC (tools/calibrate.py), write them into the run
     config and remember them per PC and model in the settings file, so an update or a reinstall keeps them."""
+    cfg = json.loads(cfg_path.read_text(encoding="utf-8-sig"))
+    if cfg.get("backend") == "metal":                  # tools/calibrate.py tunes NVIDIA settings (PCIe share, ...)
+        warn("tuning is for NVIDIA PCs: a Mac runs the measured settings of data/mac-metal.json")
+        return False
     sys.path.insert(0, str(ROOT / "tools"))
     import calibrate as CAL
-    cfg = json.loads(cfg_path.read_text(encoding="utf-8-sig"))
     say()
     say("  Tuning Strata for this PC: the output speed is measured with a few engine settings (the PCIe share, the")
     say("  draft depth, the CPU threads). It takes about 5-10 minutes; the PC is busy meanwhile.")
@@ -2292,7 +2643,7 @@ def upgrade_config(cfg_path: Path, cfg: dict) -> dict:
     KV streaming is dropped: its RAM copy must be pinned, and the driver pins only about 1 GB there."""
     a = cfg.get("args", [])
     changed = False
-    ver = engine_version(cfg["exe"]) if "--prefill" in a else (0, 0, 0)
+    ver = engine_version(cfg_file(cfg_path, cfg, cfg["exe"])) if "--prefill" in a else (0, 0, 0)
     if "--prefill" in a and a[a.index("--prefill") + 1] == "2048" and ver >= (0, 1, 13):
         a[a.index("--prefill") + 1] = "auto"
         changed = True
@@ -2315,7 +2666,8 @@ def start(cfg_path: Path, port: int | None, gpu: int | list | None = None, open_
           layer_split=None, keep=None) -> int:
     """keep: settings given on this start that the model keeps from now on (--host, --api-key, --draft-vocab)."""
     cfg = upgrade_config(cfg_path, json.loads(cfg_path.read_text(encoding="utf-8-sig")))
-    missing = [p for p in [cfg["exe"], *[a for a in cfg["args"] if a.endswith(".gguf")]] if not Path(p).exists()]
+    missing = [p for p in [cfg["exe"], *[a for a in cfg["args"] if a.endswith(".gguf")]]
+               if not cfg_file(cfg_path, cfg, p).exists()]
     if missing:
         fail(f"{cfg_path.name} refers to missing files: {missing[0]}", "run it again with --setup to repair")
     keep = {k: v for k, v in (keep or {}).items() if v is not None}
@@ -2325,11 +2677,17 @@ def start(cfg_path: Path, port: int | None, gpu: int | list | None = None, open_
         ok("saved for this model: " + ", ".join("api key" if k == "api_key" else f"{k.replace('_', ' ')} {v}"
                                                 for k, v in keep.items()))
     cfg_path.touch()                                     # the most recently used model
-    if "--mtp" in cfg["args"][:-1]:
+    metal = cfg.get("backend") == "metal"
+    # the draft subset changes the draft head's memory; on a Mac no drafts are made, so the measured MTP folder stays
+    if "--mtp" in cfg["args"][:-1] and not metal:
         refresh_draft_vocab(Path(cfg["args"][cfg["args"].index("--mtp") + 1]), cfg.get("draft_vocab", "cjk"))
     cmd = [sys.executable, str(ROOT / "serve" / "server.py"), "--engine", "strata", "--config", str(cfg_path),
            "--port", str(port or cfg.get("port", 8080))]
-    if cfg.get("backend") == "hip":                    # AMD, numbered as HIP numbers them (setup's KFD order)
+    if metal:                                          # one GPU, sharing the Mac's memory: nothing to pick or check
+        if gpu is not None:
+            warn("--gpu / --gpus are for a PC: a Mac has one GPU")
+        gpu, found = None, []
+    elif cfg.get("backend") == "hip":                  # AMD, numbered as HIP numbers them (setup's KFD order)
         amd = amd_gpus()
         if isinstance(gpu, list):                      # --gpus: saved, this model runs on these cards from now on
             cards = amd_parse_gpus(",".join(str(i) for i in gpu), amd)
@@ -2357,7 +2715,7 @@ def start(cfg_path: Path, port: int | None, gpu: int | list | None = None, open_
                 ok(f"GPU: {g['name']} ({g['vram_gb']:.0f} GB, AMD)")
     else:
         found = gpus()
-    if cfg.get("backend") == "hip":
+    if cfg.get("backend") in ("hip", "metal"):
         pass
     elif isinstance(gpu, list):                        # --gpus: saved, this model runs on these cards from now on
         check_gpus(gpu, found, yes=yes, named=True)
@@ -2373,7 +2731,7 @@ def start(cfg_path: Path, port: int | None, gpu: int | list | None = None, open_
     use = gpu if gpu is not None else cfg.get("gpu")
     if isinstance(use, list) and split_mmap(cfg):     # #364 #384: a resident low-RAM config on several GPUs
         cfg_path.write_text(json.dumps(cfg, indent=1), encoding="utf-8")
-    if cfg.get("backend") == "hip":
+    if cfg.get("backend") in ("hip", "metal"):
         pass
     elif isinstance(use, list):
         check_gpus(use, found, "(chosen for this model) ", yes=True, named=True)
@@ -2391,16 +2749,21 @@ def start(cfg_path: Path, port: int | None, gpu: int | list | None = None, open_
     gb = 0.0
     if "--native" in cfg["args"]:
         try:
-            gb = Path(cfg["args"][cfg["args"].index("--native") + 1]).stat().st_size / 1e9
+            gb = cfg_file(cfg_path, cfg, cfg["args"][cfg["args"].index("--native") + 1]).stat().st_size / 1e9
         except (OSError, IndexError):
             pass
     say()
     say("  " + "-" * 100)
-    say(f"  Starting {cfg.get('model_name', 'the model')}: it loads {f'about {gb:.0f} GB' if gb >= 1 else '34-55 GB'} "
-        "into RAM and locks part of it for the GPU.")
-    say("  While it does, YOUR PC CAN BE SLOW OR STOP RESPONDING FOR 1-3 MINUTES (longer the first time after a")
-    say("  restart). That is normal: please wait and don't close this window - the browser opens when it is ready.")
-    say("  Later, closing this window stops the model.")
+    if metal:
+        say(f"  Starting {cfg.get('model_name', 'the model')} on this Mac's GPU: it reads its 33 GiB of experts into the")
+        say("  memory the GPU uses (30 seconds to about 1.5 minutes; faster when macOS still has them cached). The")
+        say("  browser opens when it is ready. Ctrl+C here (or closing this window) stops the model.")
+    else:
+        say(f"  Starting {cfg.get('model_name', 'the model')}: it loads {f'about {gb:.0f} GB' if gb >= 1 else '34-55 GB'} "
+            "into RAM and locks part of it for the GPU.")
+        say("  While it does, YOUR PC CAN BE SLOW OR STOP RESPONDING FOR 1-3 MINUTES (longer the first time after a")
+        say("  restart). That is normal: please wait and don't close this window - the browser opens when it is ready.")
+        say("  Later, closing this window stops the model.")
     say("  " + "-" * 100)
     if not WIN and os.environ.get("STRATA_EXECV"):
         # Replace this process instead of spawning a child. The Docker image sets STRATA_EXECV=1,
@@ -2488,6 +2851,13 @@ def write_run_script(model, cfg_path, port):
         script = ROOT / f"run-{model.lower()}.bat"
         script.write_text("@echo off\r\ntitle Strata " + model + "\r\ncd /d \"" + str(ROOT) + "\"\r\n" +
                           " ".join(f'"{x}"' for x in serve) + "\r\nif errorlevel 1 pause\r\n", encoding="utf-8")
+    elif MAC:                     # from its own folder, with paths relative to it (the config's are too)
+        script = ROOT / f"run-{model.lower()}.sh"
+        venv = Path(sys.prefix).absolute() == (ROOT / ".venv").absolute()
+        script.write_text("#!/bin/sh\ncd \"$(dirname \"$0\")\" || exit 1\nexec "
+                          + (".venv/bin/python" if venv else f'"{sys.executable}"') + " serve/server.py "
+                          f"--engine strata --config \"{cfg_path.name}\" --port {port} --open\n", encoding="utf-8")
+        script.chmod(0o755)
     else:
         script = ROOT / f"run-{model.lower()}.sh"
         script.write_text("#!/bin/sh\ncd \"" + str(ROOT) + "\"\nexec " + " ".join(f'"{x}"' for x in serve) + "\n",
@@ -2573,6 +2943,9 @@ def main() -> int:
     ap.add_argument("--yes", action="store_true", help="accept the recommended answers")
     ap.add_argument("--setup", action="store_true", help="install another model or change settings")
     ap.add_argument("--no-start", action="store_true", help="install only, do not start the model")
+    ap.add_argument("--download-only", action="store_true",
+                    help="Mac (./download-model.sh): only download the model files (the GGUFs and the MTP layer) into "
+                         "the data folder (--data-dir) or --gguf-dir; setup then finds them and downloads nothing")
     ap.add_argument("--build", action="store_true", help="compile the engine instead of using the ready-made one")
     ap.add_argument("--prebuilt", default=os.environ.get("STRATA_PREBUILT_URL", PREBUILT_URL),
                     help="where the ready-made engine is (a URL folder or a local folder)")
@@ -2608,25 +2981,17 @@ def main() -> int:
             a.gpu = int(a.gpu)
         else:
             ap.error(f"--gpu takes a GPU number as nvidia-smi numbers them, e.g. --gpu 1 (or --gpus 0,2), not {a.gpu!r}")
-    say("Strata - Qwen3.8-Flash-Next on a normal PC (a GPU + system RAM + CPU)")
-    if MAC:
-        # The engine is CUDA (NVIDIA) or HIP (AMD); a Mac has neither, and its CPU is not x86 either, so the model
-        # cannot run here.  What a Mac CAN do (docs/MAC.md): the server, the web app and the API against the mock
-        # engine, and the C++/Python test suites.  This stops before creating folders or downloading anything.
-        cpu, _, _ = cpu_info()
-        say()
-        say(f"  This is a Mac ({cpu}, {ram_gb():.0f} GB RAM): the model's engine cannot run here. Strata's engine")
-        say("  needs an NVIDIA GeForce RTX 20/30/40/50 or a supported AMD Radeon graphics card (CUDA or HIP), and")
-        say("  macOS offers neither. Run Strata on a Windows or Linux PC with such a card.")
-        say()
-        say("  A Mac is good for working ON Strata - docs/MAC.md has the measured steps:")
-        say("    cmake -S . -B build -DSTRATA_BUILD_TESTS=ON && cmake --build build && ctest --test-dir build")
-        say(f"    {'.venv/bin/python' if os.path.exists(ROOT / '.venv' / 'bin' / 'python') else 'python3'} -m serve.server --engine mock --port 8080")
-        return 1
+    say("Strata - Qwen3.8-Flash-Next on an Apple-Silicon Mac (its GPU, Metal)" if MAC else
+        "Strata - Qwen3.8-Flash-Next on a normal PC (a GPU + system RAM + CPU)")
+    if a.download_only and not MAC:
+        ap.error("--download-only is the Mac's model download (./download-model.sh); on a PC setup downloads the model "
+                 "itself (resumable)")
     data, elsewhere = data_folder(a.data_dir)          # the model files: in the data folder, found from any copy
     roots = [data, *elsewhere]
     if a.models_dir is None:
         a.models_dir = str(data / "models")
+    if a.download_only:                                # the model files only: no engine, no config, no start
+        return install_mac(a, data, roots, a.port or 8080)
 
     # ---- 0. already installed: just start it
     have = installed_configs()
@@ -2682,6 +3047,8 @@ def main() -> int:
         if pick <= len(have):
             return start(have[pick - 1], a.port, run_gpu, yes=a.yes, layer_split=a.layer_split,
                      keep={"host": a.host, "api_key": a.api_key, "draft_vocab": a.draft_vocab})
+    if MAC:                                            # the Metal engine and the measured Mac setup
+        return install_mac(a, data, roots, port)
 
     # ---- 1. the PC
     step(1, "checking your PC")

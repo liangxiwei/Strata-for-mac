@@ -47,7 +47,13 @@ The CUDA/HIP engine is ported to Metal (Apple M2 Max, macOS 26.5) end to end:
   625 MiB output-head view produced no clear overall gain and was removed, along with larger FP16
   views, GR rewrites and a gate fusion that only moved the full-model result by about 0.1%.
   Short and 2D copies also avoid compute/blit pass switches. No eager graph commit is introduced.
-* **Current local server config:** `/Users/liangxw/src/xproject/petproject/IQ2_XS/strata-mac-optimized.json`.
+* **Installed by setup now (2026-10-03, after round 26):** `./download-model.sh` + `./setup.sh` compile the Metal
+  engine into `engine/strata` and write `strata-iq2_xs.json` from `data/mac-metal.json` (the settings below, paths
+  relative to the repo); the model files live in the repo's git-ignored `Strata-data/` (models/IQ2_XS, packs/iq2_xs,
+  mtp/rt - moved there from the old IQ2_XS/ folder). Same output text and speed as the round-26 binary:
+  `bench/results/2026-10-03-metal-setup/`. The old `IQ2_XS/strata-mac-optimized.json` named below points at the
+  files' old place and is superseded.
+* **Current local server config (until setup):** `/Users/liangxw/src/xproject/petproject/IQ2_XS/strata-mac-optimized.json`.
   It uses 32,768 capacity, FP16 KV, 1,024-token prefill, and
   `--spec 4 --mtp-max-t 1 --suffix-draft 0`. The measured draft count is zero. All 24,576 experts
   reside in the GPU cache (33.02 GiB); `--mmap-experts --no-prefill-borrow` avoids another pinned
@@ -111,7 +117,7 @@ ctest --test-dir build-metal --output-on-failure  # 50 entries (metal_mmvq_decod
 ctest --test-dir build-metal --output-on-failure -R '^(iq_parity|iq_multi_parity|metal_gemm_test|metal_smoke)$'
 
 # the server (all addresses stay local)
-python3 -m serve.server --engine strata --config /Users/liangxw/src/xproject/petproject/IQ2_XS/strata-mac-optimized.json --port 8080
+.venv/bin/python -m serve.server --engine strata --config strata-iq2_xs.json --port 8080   # setup's config (engine/strata)
 curl http://127.0.0.1:8080/v1/models                                   # works (READY)
 curl http://127.0.0.1:8080/v1/chat/completions -H "Content-Type: application/json" \
   -d '{"model":"qwen3.8-flash-next","messages":[{"role":"user","content":"请简短介绍你自己。"}],"max_tokens":96,"temperature":0,"chat_template_kwargs":{"enable_thinking":false}}'
@@ -140,7 +146,10 @@ the ring-poll cadence (200 us is the Metal default and the measured knee - do no
 
 ## Paths
 
-* Repo: /Users/liangxw/src/xproject/petproject/Strata (branch main, ALL WORK IS UNCOMMITTED - commit is
+* Model data now: `Strata-data/` in the repo (see "Installed by setup now" above); the lines below are the layout
+  before that move.
+* Repo: /Users/liangxw/src/xproject/petproject/Strata (branch main, committed in f90370f and after - this note was
+  written when ALL WORK WAS UNCOMMITTED - commit is
   the new owner's call together with the user).
 * Model data: /Users/liangxw/src/xproject/petproject/IQ2_XS/ - two GGUF shards (68.03 GB), pack-full/
   (1.43 GiB native pack + tokenizer, no separate experts.bin), mtp/rt (preserved draft runtime),

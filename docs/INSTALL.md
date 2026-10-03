@@ -138,7 +138,8 @@ the engine you had.
   by setup; next to it `run-<model>.bat` / `.sh`, the log `strata-<model>.log` and, when you use "Use for other
   apps too", `strata-<model>.shared-settings.json`.
 - **The model files** (`models/`, `packs/`, `mtp/`, 70-120 GB): in **`Strata-data` next to the Strata folder**, or
-  wherever `--data-dir` put them.
+  wherever `--data-dir` put them. On a Mac: in `Strata-data` *inside* the Strata folder (git-ignored, named by
+  relative paths in its config; [MAC.md](MAC.md#what-setup-does-on-a-mac)).
 - **Where that data folder is:** `%APPDATA%\Strata\settings.json` on Windows, `~/.config/strata/settings.json` on
   Linux ([details](DETAILS.md#before-you-start)).
 - **The program itself:** `.venv/`, `engine/` and `third_party/` in the Strata folder.

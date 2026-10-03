@@ -1,0 +1,93 @@
+{
+  "config": {
+    "exe": "/Users/liangxw/src/xproject/petproject/Strata/build-metal/strata",
+    "exe_sha256": "02bf0dfec002de459972fbeac2440d2394206fa0f4f0c621be6c84f8f62336aa",
+    "args": [
+      "--pack",
+      "/Users/liangxw/src/xproject/petproject/IQ2_XS/pack-full",
+      "--native",
+      "/Users/liangxw/src/xproject/petproject/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+      "--ple-gguf",
+      "/Users/liangxw/src/xproject/petproject/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+      "--max-context",
+      "32768",
+      "--spec",
+      "4",
+      "--spec-min-p",
+      "0.5",
+      "--prefill",
+      "1024",
+      "--expert-profile",
+      "/Users/liangxw/src/xproject/petproject/Strata/data/expert-profile.bin",
+      "--expert-cache",
+      "auto",
+      "--mtp",
+      "/Users/liangxw/src/xproject/petproject/IQ2_XS/mtp/rt",
+      "--mtp-max-t",
+      "1",
+      "--suffix-draft",
+      "0",
+      "--mmap-experts",
+      "--no-prefill-borrow"
+    ],
+    "env": {
+      "STRATA_METAL_IQ4_EXPAND": "0",
+      "STRATA_DECODE_TIMING": "1"
+    },
+    "doc_tokens": 30000
+  },
+  "startup_s": 95.898816208,
+  "runs": [
+    {
+      "kind": "short chat",
+      "prompt_tokens": 31,
+      "generated": 256,
+      "reused": 0,
+      "prompt_ms": 3452.9,
+      "decode_ms": 10658.4,
+      "decode_tok_s": 24.018614426180292,
+      "text_start": "# Engineering Resilience: How Bridges Are Designed to Survive Earthquakes\n\nBridges are among the most"
+    },
+    {
+      "kind": "short chat",
+      "prompt_tokens": 31,
+      "generated": 256,
+      "reused": 0,
+      "prompt_ms": 1253.6,
+      "decode_ms": 10732.8,
+      "decode_tok_s": 23.85211687537269,
+      "text_start": "**地下脉络：城市地铁系统的规划与建设**\n\n城市地铁不仅是现代都市交通的动脉，更是衡量一个"
+    },
+    {
+      "kind": "short chat",
+      "prompt_tokens": 35,
+      "generated": 256,
+      "reused": 0,
+      "prompt_ms": 1435.5,
+      "decode_ms": 10799.2,
+      "decode_tok_s": 23.705459663678788,
+      "text_start": "Modern CPU execution is a marvel of engineering, designed to maximize throughput by overlapping the processing of multiple instructions simultaneously. While a"
+    },
+    {
+      "kind": "short chat",
+      "prompt_tokens": 33,
+      "generated": 256,
+      "reused": 0,
+      "prompt_ms": 1382.5,
+      "decode_ms": 10842.2,
+      "decode_tok_s": 23.61144417184704,
+      "text_start": "一杯咖啡从田间到餐桌的旅程，是一场跨越地理与时间的精密协作，其过程大致可分为种植、采摘"
+    },
+    {
+      "kind": "document",
+      "prompt_tokens": 30000,
+      "generated": 64,
+      "reused": 0,
+      "prompt_ms": 152896.5,
+      "prefill_tok_s": 196.21116245303196,
+      "decode_ms": 2818.5,
+      "decode_tok_s": 22.707113712967892,
+      "text_start": "Strata distributes memory across multiple tiers, keeping the most frequently used experts in GPU VRAM while storing all 24,576 experts in RAM for CPU computation when they are not cached on"
+    }
+  ]
+}

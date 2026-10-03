@@ -621,6 +621,21 @@ def gpu_list(cfg: dict) -> list[int]:
     return [int(str(x).strip()) for x in items if str(x).strip() != ""]
 
 
+def config_paths(cfg: dict, folder: Path) -> dict:
+    """A relative "cwd" is the config file's folder's, and with a "cwd" the relative "tokenizer" and "log" are its
+    (as "exe" and the engine's arguments are): a config that names everything relative to the Strata folder (setup
+    on a Mac) starts from any directory.  Absolute paths, and a config without a "cwd", are left as they are."""
+    if not cfg.get("cwd"):
+        return cfg
+    cfg = dict(cfg)
+    cwd = Path(cfg["cwd"]) if os.path.isabs(cfg["cwd"]) else (folder / cfg["cwd"]).absolute()
+    cfg["cwd"] = os.path.normpath(str(cwd))
+    for k in ("tokenizer", "log"):
+        if isinstance(cfg.get(k), str) and cfg[k] and not os.path.isabs(cfg[k]):
+            cfg[k] = os.path.normpath(str(cwd / cfg[k]))
+    return cfg
+
+
 def engine_args(cfg: dict) -> list[str]:
     """The engine's arguments: the config's, and with several GPUs the layer split across them ("layer_split" in the
     config: "auto" by default, or the first layer of each later GPU's share, e.g. "18" or "16,32")."""
@@ -2436,6 +2451,7 @@ def main() -> int:
                                           "server's model; also \"before_load\" in the config, a string or a list)")
     a = ap.parse_args()
     cfg = json.loads(Path(a.config).read_text(encoding="utf-8-sig")) if a.config else {}   # Notepad adds a BOM
+    cfg = config_paths(cfg, Path(a.config).parent) if a.config else cfg
     if a.gpu is not None:
         cfg["gpu"] = int(a.gpu) if a.gpu.strip().isdigit() else a.gpu
     a.host = a.host or cfg.get("host") or "127.0.0.1"   # issue #26: the run scripts pass no --host, the config can

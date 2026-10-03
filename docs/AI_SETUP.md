@@ -7,10 +7,8 @@ version of everything below is [INSTALL.md](INSTALL.md).
 
 Work through the steps in order. Tell the user what you are doing in plain words; they may not be technical.
 
-> **Not on this page: macOS.** The model's engine needs an NVIDIA or AMD graphics card (CUDA or HIP), which a Mac
-> does not have - if the user's machine is a Mac, the model cannot run there at all. Do not follow the steps below;
-> [docs/MAC.md](MAC.md) says what a Mac is good for instead (developing and testing the server, the web app and the
-> CPU-side code), and `./setup.sh` on a Mac says the same and stops.
+> **On a Mac:** follow [the Mac section](#on-a-mac-apple-silicon) at the end instead of steps 1-6. The model runs on
+> an Apple-Silicon Mac's GPU (Metal) with this repository: https://github.com/liangxiwei/Strata-for-mac.
 
 ## 0. Ground rules
 
@@ -193,6 +191,31 @@ line when it is ready; the engine log is `strata-<model>.log` in the Strata fold
 
 More: [TROUBLESHOOTING.md](TROUBLESHOOTING.md) and the [full table](DETAILS.md#troubleshooting). If it still fails,
 collect `strata-<model>.log` and the setup output, and suggest an issue at https://github.com/Niko1221/Strata/issues.
+
+## On a Mac (Apple Silicon)
+
+Measured on an M2 Max with 96 GB: IQ2_XS, 32K context, about 24 tokens/s ([MAC.md](MAC.md)).
+
+1. **Check:** `uname -m` must print `arm64`; memory: `sysctl -n hw.memsize` (96 GB measured; under 60 GB setup
+   stops); disk: `df -h .`, ~80 GB free.
+2. **Xcode** must be installed (App Store) and opened once - you cannot install it for the user; ask them. The Metal
+   Toolchain is downloaded by setup (`--yes` accepts), or by `xcodebuild -downloadComponent MetalToolchain`.
+3. **Get it:** `git clone https://github.com/liangxiwei/Strata-for-mac.git Strata && cd Strata`
+4. **The model files** (68 GB + ~5 GB, resumable; run it in the background and poll):
+
+   ```
+   ./download-model.sh                     # into Strata-data/ inside the folder
+   ./download-model.sh --gguf-dir <folder>    # GGUFs the user already has (or wants there)
+   ```
+
+   Behind a blocked huggingface.co: `HF_ENDPOINT=https://hf-mirror.com ./download-model.sh`.
+5. **Install without starting:** `./setup.sh --yes --no-start` (compiles the Metal engine, 25 s on an M2 Max, and
+   writes `strata-iq2_xs.json` + `run-iq2_xs.sh`; it downloads nothing that step 4 fetched).
+6. **Start:** `nohup ./run-iq2_xs.sh > strata-server.out 2>&1 &`, then continue with step 7 above. Loading takes
+   30 s - 1.5 min. The engine log is `strata-iq2_xs.log`.
+
+Images, the speed projection, `--gpu`/`--gpus` and calibration are PC features. Stop the server with
+`kill -TERM <server pid>` (or Ctrl+C in its window).
 
 ## Alternative: the MCP server
 

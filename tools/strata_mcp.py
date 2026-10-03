@@ -490,8 +490,10 @@ class Strata:
         def val(k):
             return a[a.index(k) + 1] if k in a and a.index(k) + 1 < len(a) else None
         tag = path.stem[len("strata-"):]
+        # relative paths are the config's "cwd"'s, a relative "cwd" the config folder's (as serve/server.py reads them)
+        base = path.parent / cfg["cwd"] if isinstance(cfg.get("cwd"), str) and cfg["cwd"] else Path(".")
         missing = [p for p in [cfg.get("exe"), *[x for x in a if isinstance(x, str) and x.endswith(".gguf")]]
-                   if not p or not Path(p).exists()]
+                   if not p or not (base / p).exists()]
         script = self.root / f"run-{tag}.{'bat' if WIN else 'sh'}"
         vis = cfg.get("vision")
         return {"model": tag, "config": path.name, "model_name": cfg.get("model_name"),

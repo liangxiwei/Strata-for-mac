@@ -1,8 +1,8 @@
 #!/bin/sh
-# Strata for Linux (and the macOS development setup): the first run installs everything and starts the model;
-# later runs just start it.  Needs only an NVIDIA driver (or, for an AMD Radeon card, the kernel's amdgpu
-# driver: see docs/AMD_HIP.md).  On a Mac the engine cannot run (it needs an NVIDIA or AMD card); setup.py
-# says so and points at docs/MAC.md, which has the server-and-tests steps that DO work there.
+# Strata for Linux and macOS: the first run installs everything and starts the model; later runs just start it.
+# Linux needs only an NVIDIA driver (or, for an AMD Radeon card, the kernel's amdgpu driver: see docs/AMD_HIP.md).
+# An Apple-Silicon Mac needs Xcode: setup.py compiles the Metal engine with it and sets up the measured IQ2_XS
+# configuration (docs/MAC.md); ./download-model.sh fetches the model files alone, beforehand.
 # Python (with venv) is installed through apt/dnf/pacman/brew if it is missing (asks for sudo where it needs it).
 cd "$(dirname "$0")" || exit 1
 # Python 3.10+ that can make a venv WITH pip: Debian/Ubuntu ship `venv` without `ensurepip` (that is the separate

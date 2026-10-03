@@ -1,0 +1,17 @@
+{
+ "about": "The Metal engine's run settings on an Apple-Silicon Mac: what setup.py writes into strata-<model>.json there. These are the measured ones (README, docs/MAC.md): all experts resident in the Mac's memory and decoded on the GPU as one graph (--mmap-experts --no-prefill-borrow), 1,024-token prompt chunks, FP16 KV, the MTP layer loaded (the server needs it) but no drafts (--mtp-max-t 1 --suffix-draft 0: on the M2 Max the checking cost more than it saved). {pack} {gguf} {ple} {profile} {mtp} {context} are filled in by setup.",
+ "measured_on": "Apple M2 Max (38-core GPU, 96 GB), macOS 26.5, Xcode 26.1, IQ2_XS",
+ "evidence": "bench/results/2026-10-03-metal-readme/ (24 tok/s writing, 196 tok/s reading a 30,000-token prompt)",
+ "model": "IQ2_XS",
+ "family": "qwen",
+ "context": 32768,
+ "ram_gb": 96,
+ "footprint_gb": 40.3,
+ "args": ["--pack", "{pack}", "--native", "{gguf}", "--ple-gguf", "{ple}", "--max-context", "{context}",
+          "--spec", "4", "--spec-min-p", "0.5", "--prefill", "1024", "--expert-profile", "{profile}",
+          "--expert-cache", "auto", "--mtp", "{mtp}", "--mtp-max-t", "1", "--suffix-draft", "0",
+          "--mmap-experts", "--no-prefill-borrow"],
+ "env": {"STRATA_METAL_IQ4_EXPAND": "0"},
+ "cmake": ["-DSTRATA_ENABLE_METAL=ON", "-DSTRATA_METAL_ENGINE=ON", "-DSTRATA_NATIVE_EXPERTS=ON",
+           "-DSTRATA_BUILD_TESTS=OFF"]
+}
