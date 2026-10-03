@@ -1,0 +1,4 @@
+Canonical expert dequant: 0 differences
+Q2 tiled gate/up: relative L2 0
+Q2 tiled down: relative L2 0
+Metal GEMM: 0 failures (60 FP16/BF16 cases, tails, strided outputs, beta=0/1)

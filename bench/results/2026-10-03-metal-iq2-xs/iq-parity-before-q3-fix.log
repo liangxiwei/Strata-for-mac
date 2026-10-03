@@ -1,0 +1,39 @@
+Start testing: Oct 03 11:48 CST
+----------------------------------------------------------
+18/46 Testing: iq_parity
+18/46 Test: iq_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/iq_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"iq_parity" start time: Oct 03 11:48 CST
+Output:
+----------------------------------------------------------
+IQ2_XXS  prefill row slice: 0 differences
+IQ2_XXS  type 16   32 x   256  dequant rel 0.00e+00  mmvq rel 5.40e-03 (ncols 1..8)  ok
+IQ2_XS   prefill row slice: 0 differences
+IQ2_XS   type 17   32 x   256  dequant rel 0.00e+00  mmvq rel 5.93e-03 (ncols 1..8)  ok
+IQ2_S    prefill row slice: 0 differences
+IQ2_S    type 22   32 x   256  dequant rel 0.00e+00  mmvq rel 5.52e-03 (ncols 1..8)  ok
+IQ3_XXS  prefill row slice: 0 differences
+IQ3_XXS  type 18   32 x   256  dequant rel 0.00e+00  mmvq rel 5.00e-03 (ncols 1..8)  ok
+IQ3_S    prefill row slice: 0 differences
+IQ3_S    type 21   32 x   256  dequant rel 0.00e+00  mmvq rel 5.11e-03 (ncols 1..8)  ok
+IQ1_M    prefill row slice: 0 differences
+IQ1_M    type 29   32 x   256  dequant rel 0.00e+00  mmvq rel 5.00e-03 (ncols 1..8)  ok
+IQ4_NL   prefill row slice: 0 differences
+IQ4_NL   type 20   32 x   256  dequant rel 0.00e+00  mmvq rel 5.01e-03 (ncols 1..8)  ok
+IQ4_XS   prefill row slice: 0 differences
+IQ4_XS   type 23   32 x   256  dequant rel 0.00e+00  mmvq rel 5.98e-03 (ncols 1..8)  ok
+Q2_0     prefill row slice: 0 differences
+Q2_0     type 42   32 x   256  dequant rel 0.00e+00  mmvq rel 5.37e-03 (ncols 1..8)  ok
+Q3_K     prefill row slice: 2681 differences
+Q3_K     type 11   32 x   256  dequant rel 0.00e+00  mmvq rel 4.75e-03 (ncols 1..8)  ok
+iq_parity: 1 failures
+<end of output>
+Test time =   1.33 sec
+----------------------------------------------------------
+Test Failed.
+"iq_parity" end time: Oct 03 11:48 CST
+"iq_parity" time elapsed: 00:00:01
+----------------------------------------------------------
+
+End testing: Oct 03 11:48 CST

@@ -1,0 +1,18 @@
+[
+  {
+    "file": "audit-short-reference/engine.log",
+    "checks": 144,
+    "values": 14745600,
+    "different": 0,
+    "nonfinite": 0,
+    "max_abs": 0.0
+  },
+  {
+    "file": "audit-10k-reference/engine.log",
+    "checks": 144,
+    "values": 8601600,
+    "different": 0,
+    "nonfinite": 0,
+    "max_abs": 0.0
+  }
+]

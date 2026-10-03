@@ -1,0 +1,181 @@
+{
+  "binary_sha256": "02bf0dfec002de459972fbeac2440d2394206fa0f4f0c621be6c84f8f62336aa",
+  "runs": {
+    "off-a": {
+      "sha256": "02bf0dfec002de459972fbeac2440d2394206fa0f4f0c621be6c84f8f62336aa",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_METAL_GDN_INPLACE": "0"
+      },
+      "extra_view_mib": 0,
+      "prefill_tok_s": 187.17338244762888,
+      "cold_decode_tok_s": 22.656070233817726,
+      "warm_decode_ms": [
+        11368.8,
+        11367.0,
+        11390.8
+      ],
+      "warm_median_ms": 11368.8,
+      "warm_median_tok_s": 22.51776792625431,
+      "metrics": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2747.81M  free = 1348.19M  (encrypted)",
+        "startup_seconds": 33.768951583,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2747.81M  free = 1348.19M  (encrypted)",
+        "child_peak_rss_bytes": 36417224704
+      },
+      "output_ids_identical_to_round21": true,
+      "vs_off_median_pct": 3.3882203926535848,
+      "saved_ms_per_token": 1.5046875000000028
+    },
+    "off-b": {
+      "sha256": "02bf0dfec002de459972fbeac2440d2394206fa0f4f0c621be6c84f8f62336aa",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_METAL_GDN_INPLACE": "0"
+      },
+      "extra_view_mib": 0,
+      "prefill_tok_s": 183.92259066004303,
+      "cold_decode_tok_s": 23.0857328367496,
+      "warm_decode_ms": [
+        11732.4,
+        11754.0,
+        11908.7
+      ],
+      "warm_median_ms": 11754.0,
+      "warm_median_tok_s": 21.77981963586864,
+      "metrics": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2747.81M  free = 1348.19M  (encrypted)",
+        "startup_seconds": 41.726373,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2747.81M  free = 1348.19M  (encrypted)",
+        "child_peak_rss_bytes": 36299702272
+      },
+      "output_ids_identical_to_round21": true,
+      "vs_off_median_pct": 0.0,
+      "saved_ms_per_token": 0.0
+    },
+    "off-c": {
+      "sha256": "02bf0dfec002de459972fbeac2440d2394206fa0f4f0c621be6c84f8f62336aa",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_METAL_GDN_INPLACE": "0"
+      },
+      "extra_view_mib": 0,
+      "prefill_tok_s": 175.44629150401335,
+      "cold_decode_tok_s": 21.196790673412107,
+      "warm_decode_ms": [
+        12066.9,
+        12347.5,
+        11302.5
+      ],
+      "warm_median_ms": 12066.9,
+      "warm_median_tok_s": 21.215059377304858,
+      "metrics": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2747.81M  free = 1348.19M  (encrypted)",
+        "startup_seconds": 43.985086875,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2747.81M  free = 1348.19M  (encrypted)",
+        "child_peak_rss_bytes": 36357767168
+      },
+      "output_ids_identical_to_round21": true,
+      "vs_off_median_pct": -2.593043780921356,
+      "saved_ms_per_token": -1.2222656249999986
+    },
+    "on-a": {
+      "sha256": "02bf0dfec002de459972fbeac2440d2394206fa0f4f0c621be6c84f8f62336aa",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0"
+      },
+      "extra_view_mib": 0,
+      "prefill_tok_s": 177.9394258606485,
+      "cold_decode_tok_s": 21.953896816684964,
+      "warm_decode_ms": [
+        11320.3,
+        11244.9,
+        11529.5
+      ],
+      "warm_median_ms": 11320.3,
+      "warm_median_tok_s": 22.614241672040496,
+      "metrics": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2747.81M  free = 1348.19M  (encrypted)",
+        "startup_seconds": 31.190371291,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2747.81M  free = 1348.19M  (encrypted)",
+        "child_peak_rss_bytes": 36382523392
+      },
+      "output_ids_identical_to_round21": true,
+      "vs_off_median_pct": 3.8311705520171824,
+      "saved_ms_per_token": 1.6941406250000028
+    },
+    "on-b": {
+      "sha256": "02bf0dfec002de459972fbeac2440d2394206fa0f4f0c621be6c84f8f62336aa",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0"
+      },
+      "extra_view_mib": 0,
+      "prefill_tok_s": 168.401199016537,
+      "cold_decode_tok_s": 21.43209959228779,
+      "warm_decode_ms": [
+        12458.7,
+        12110.4,
+        11231.3
+      ],
+      "warm_median_ms": 12110.4,
+      "warm_median_tok_s": 21.13885585942661,
+      "metrics": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2747.81M  free = 1348.19M  (encrypted)",
+        "startup_seconds": 43.373715958000005,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2747.81M  free = 1348.19M  (encrypted)",
+        "child_peak_rss_bytes": 36115513344
+      },
+      "output_ids_identical_to_round21": true,
+      "vs_off_median_pct": -2.942925089179549,
+      "saved_ms_per_token": -1.3921874999999986
+    },
+    "on-c": {
+      "sha256": "02bf0dfec002de459972fbeac2440d2394206fa0f4f0c621be6c84f8f62336aa",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0"
+      },
+      "extra_view_mib": 0,
+      "prefill_tok_s": 183.62673825661102,
+      "cold_decode_tok_s": 22.811519817507843,
+      "warm_decode_ms": [
+        11304.0,
+        11335.5,
+        11267.0
+      ],
+      "warm_median_ms": 11304.0,
+      "warm_median_tok_s": 22.64685067232838,
+      "metrics": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2747.81M  free = 1348.19M  (encrypted)",
+        "startup_seconds": 49.607447166,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2747.81M  free = 1348.19M  (encrypted)",
+        "child_peak_rss_bytes": 36404658176
+      },
+      "output_ids_identical_to_round21": true,
+      "vs_off_median_pct": 3.9808917197452276,
+      "saved_ms_per_token": 1.7578125
+    },
+    "quick": {
+      "sha256": "02bf0dfec002de459972fbeac2440d2394206fa0f4f0c621be6c84f8f62336aa",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0"
+      },
+      "extra_view_mib": 0,
+      "prefill_tok_s": 185.19067231621676,
+      "cold_decode_tok_s": 23.056416168311838,
+      "warm_decode_ms": [
+        11122.1
+      ],
+      "warm_median_ms": 11122.1,
+      "warm_median_tok_s": 23.017235953641848,
+      "metrics": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2747.81M  free = 1348.19M  (encrypted)",
+        "startup_seconds": 39.609098542,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2747.81M  free = 1348.19M  (encrypted)",
+        "child_peak_rss_bytes": 36371283968
+      },
+      "output_ids_identical_to_round21": true,
+      "vs_off_median_pct": 5.68148101527588,
+      "saved_ms_per_token": 2.4683593749999986
+    }
+  }
+}

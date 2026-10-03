@@ -1,0 +1,6 @@
+native_gemm_gu_22 rows 5184 (20.2 per expert):  orig 17.64 ms  16x32_22 18.69 ms  16x64_22 15.71 ms  32x32_22 21.45 ms  32x64_22 33.86 ms  32x64_24 18.15 ms  64x64_24 26.31 ms  16x128_14 28.28 ms  32x128_24 33.05 ms
+native_gemm_down_42 rows 5184 (20.2 per expert):  orig 9.12 ms  16x32_22 9.01 ms  16x64_22 7.34 ms  32x32_22 10.06 ms  32x64_22 14.76 ms  32x64_24 9.10 ms  64x64_24 12.60 ms  16x128_14 11.43 ms  32x128_24 14.05 ms
+native_gemm_gu_22 rows 19934 (77.9 per expert):  orig 53.34 ms  16x32_22 57.66 ms  16x64_22 49.53 ms  32x32_22 52.83 ms  32x64_22 80.17 ms  32x64_24 40.93 ms  64x64_24 42.26 ms  16x128_14 79.14 ms  32x128_24 74.68 ms
+native_gemm_down_42 rows 19934 (77.9 per expert):  orig 26.59 ms  16x32_22 27.38 ms  16x64_22 22.27 ms  32x32_22 23.75 ms  32x64_22 34.07 ms  32x64_24 20.95 ms  64x64_24 21.48 ms  16x128_14 35.47 ms  32x128_24 34.54 ms
+native_gemm_gu_16 rows 4536 (17.7 per expert):  orig 16.24 ms  16x32_22 17.06 ms  16x64_22 14.11 ms  32x32_22 19.41 ms  32x64_22 29.84 ms  32x64_24 16.64 ms  64x64_24 24.14 ms  16x128_14 24.33 ms  32x128_24 29.22 ms
+native_gemm_gu_16 rows 19773 (77.2 per expert):  orig 50.53 ms  16x32_22 53.50 ms  16x64_22 44.37 ms  32x32_22 47.62 ms  32x64_22 77.51 ms  32x64_24 41.17 ms  64x64_24 43.37 ms  16x128_14 75.01 ms  32x128_24 69.11 ms

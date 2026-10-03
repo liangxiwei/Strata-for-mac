@@ -1,0 +1,61 @@
+dd_resident_gu_22        gate 0 up 0 bit differences of 326400 each
+dd2_gu_22                gate 0 up 0 bit differences of 326400 each
+or2_gu_22                gate 0 up 0 bit differences of 326400 each
+tg2_gu_22                gate 0 up 0 bit differences of 326400 each
+w2r2d_gu_22              gate 0 up 0 bit differences of 326400 each
+w1r1o_gu_22              gate 0 up 0 bit differences of 326400 each
+ta2_gu_22                gate 0 up 0 bit differences of 326400 each
+floorL_gu_22             gate 326400 up 326400 bit differences of 326400 each (timing floor, not exact)
+floorG_gu_22             gate 326400 up 326400 bit differences of 326400 each (timing floor, not exact)
+dd_resident_down_42      down 0 bit differences of 1305600
+or4_down_42              down 0 bit differences of 1305600
+dd2_down_42              down 0 bit differences of 1305600
+dd4_down_42              down 0 bit differences of 1305600
+  dd2_down_42                   86.22 us
+  dd2_gu_22                    161.60 us
+  dd4_down_42                   73.39 us
+  dd_resident_down_42          119.92 us
+  dd_resident_gu_22            190.38 us
+  floorG_gu_22                 106.82 us
+  floorL_gu_22                  84.27 us
+  native_resident_down_42      110.36 us
+  native_resident_gu_22        172.25 us
+  or2_gu_22                    168.51 us
+  or4_down_42                   92.71 us
+  ta2_gu_22                    247.25 us
+  tg2_gu_22                    176.17 us
+  w1r1o_gu_22                  205.61 us
+  w2r2d_gu_22                  179.31 us
+dd_resident_gu_16        gate 0 up 0 bit differences of 326400 each
+dd2_gu_16                gate 0 up 0 bit differences of 326400 each
+or2_gu_16                gate 0 up 0 bit differences of 326400 each
+tg2_gu_16                gate 0 up 0 bit differences of 326400 each
+  dd2_gu_16                    112.18 us
+  dd_resident_gu_16            133.32 us
+  native_resident_gu_16        112.94 us
+  or2_gu_16                    102.71 us
+  tg2_gu_16                    124.22 us
+iq3_s 2560x6144 bit differences (of 147456): dd_mmvq_21=0 or2_mmvq_21=0 dd2_mmvq_21=0 dd4_mmvq_21=0
+  dd2_mmvq_21                   75.02 us  90.1 GB/s
+  dd4_mmvq_21                   73.37 us  92.1 GB/s
+  dd_mmvq_21                    83.12 us  81.3 GB/s
+  mmvq_multi_kernel_21_1        84.16 us  80.3 GB/s
+  or2_mmvq_21                   83.10 us  81.3 GB/s
+iq3_s 2560x640 bit differences (of 15360): dd_mmvq_21=0 or2_mmvq_21=0 dd2_mmvq_21=0 dd4_mmvq_21=0
+  dd2_mmvq_21                   14.84 us  47.4 GB/s
+  dd4_mmvq_21                   20.04 us  35.1 GB/s
+  dd_mmvq_21                    12.57 us  56.0 GB/s
+  mmvq_multi_kernel_21_1        15.33 us  45.9 GB/s
+  or2_mmvq_21                   17.15 us  41.1 GB/s
+iq3_s 4096x2560 bit differences (of 61440): dd_mmvq_21=0 or2_mmvq_21=0 dd2_mmvq_21=0 dd4_mmvq_21=0
+  dd2_mmvq_21                   45.93 us  98.1 GB/s
+  dd4_mmvq_21                   46.80 us  96.3 GB/s
+  dd_mmvq_21                    49.36 us  91.3 GB/s
+  mmvq_multi_kernel_21_1        55.00 us  81.9 GB/s
+  or2_mmvq_21                   50.58 us  89.1 GB/s
+iq3_s 2560x12288 bit differences (of 233472): dd_mmvq_21=0 or2_mmvq_21=0 dd2_mmvq_21=0 dd4_mmvq_21=0
+  dd2_mmvq_21                  101.54 us  133.1 GB/s
+  dd4_mmvq_21                   97.45 us  138.7 GB/s
+  dd_mmvq_21                   114.43 us  118.1 GB/s
+  mmvq_multi_kernel_21_1       114.00 us  118.6 GB/s
+  or2_mmvq_21                  109.91 us  123.0 GB/s

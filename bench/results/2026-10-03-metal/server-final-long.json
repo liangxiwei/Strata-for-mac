@@ -1,0 +1,37 @@
+{
+  "id": "chatcmpl-72bf08356ea04c4e9034a324",
+  "object": "chat.completion",
+  "created": 1790993925,
+  "model": "qwen3.8-flash-next",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "基于提供的文本片段，提取出的关键信息如下：\n\n1. **项目代号与验收日期**：银杏项目的验收日期为10月18日。\n2. **核心目标**：项目旨在降低本地推理的首字延迟，并通过统一内存保存模型权重来优化性能。\n3. **技术实现与验证**：通过分析算子运行时间、处理中文问答及代码片段等测试数据，确认模型在减少等待时间及保持状态一致性方面的效果。"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 971,
+    "completion_tokens": 103,
+    "total_tokens": 1074,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "timings": {
+    "cache_n": 0,
+    "prompt_n": 971,
+    "prompt_ms": 7801.3,
+    "prompt_per_token_ms": 8.034,
+    "prompt_per_second": 124.5,
+    "predicted_n": 103,
+    "predicted_ms": 5666.7,
+    "predicted_per_token_ms": 55.017,
+    "predicted_per_second": 18.2,
+    "draft_n": 68,
+    "draft_n_accepted": 54
+  }
+}

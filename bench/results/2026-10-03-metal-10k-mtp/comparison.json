@@ -1,0 +1,67 @@
+{
+  "input_tokens_identical": true,
+  "token_file_sha256": "96e2502f0bc4050f82025444bee48b655254eac9b176b732bbd61163a6a2af28",
+  "configs_identical_except_mtp_max_t_and_log": true,
+  "rows": [
+    {
+      "mode": "mtp-off",
+      "mtp_max_t": 1,
+      "prefill_tokens_per_s": 107.6,
+      "first_text_s": 93.03887679200001,
+      "decode_tokens_per_s": 19.00223424707358,
+      "decode_ms": 13472.1,
+      "decode_throughput_change_percent": 0.0,
+      "draft_accepted": 0,
+      "draft_offered": 0,
+      "acceptance_percent": null,
+      "output_identical_to_baseline": true,
+      "needle_matches": {
+        "银杏": false,
+        "10月18日": false,
+        "AX-7319": false
+      },
+      "http_wall_s": 106.467432875
+    },
+    {
+      "mode": "mtp-t2",
+      "mtp_max_t": 2,
+      "prefill_tokens_per_s": 107.1,
+      "first_text_s": 93.465624166,
+      "decode_tokens_per_s": 16.882868504876907,
+      "decode_ms": 15163.3,
+      "decode_throughput_change_percent": -11.153245006034307,
+      "draft_accepted": 90,
+      "draft_offered": 119,
+      "acceptance_percent": 75.63025210084034,
+      "output_identical_to_baseline": true,
+      "needle_matches": {
+        "银杏": false,
+        "10月18日": false,
+        "AX-7319": false
+      },
+      "http_wall_s": 108.58345458299999
+    },
+    {
+      "mode": "mtp-on",
+      "mtp_max_t": 4,
+      "prefill_tokens_per_s": 105.5,
+      "first_text_s": 94.89072300000001,
+      "decode_tokens_per_s": 14.172304217367715,
+      "decode_ms": 18063.4,
+      "decode_throughput_change_percent": -25.4176954504689,
+      "draft_accepted": 128,
+      "draft_offered": 201,
+      "acceptance_percent": 63.681592039801,
+      "output_identical_to_baseline": true,
+      "needle_matches": {
+        "银杏": false,
+        "10月18日": false,
+        "AX-7319": false
+      },
+      "http_wall_s": 112.90847745800001
+    }
+  ],
+  "all_outputs_identical": true,
+  "quality_note": "Planted-field checks are separate from throughput and text equality; inspect each row.",
+  "scope": "One frozen 10,000-token prompt; 256 output tokens; one fresh server per configuration."
+}

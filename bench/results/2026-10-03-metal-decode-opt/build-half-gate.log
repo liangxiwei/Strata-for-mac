@@ -1,0 +1,220 @@
+[  1%] Strata Metal: compiling /Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/bf16_gemv.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/cvec.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/dequant_bf16.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/dequant_s2.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/elementwise.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/fused_gdn.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/fused_gr.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/gdn.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/gr.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/iq_kernels.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/kv_q4.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/kv_q8.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/kv_stream.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/native_flash_attn.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/native_gdn.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/native_gdn_preprocess.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/native_gr.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/native_mmvq.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/native_moe.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/native_ple_postops.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/native_qsa.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/native_qsa_indexer.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/native_qsa_score.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/native_rope.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/native_router.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/ple.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/poison.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/prefill.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_decode_attn.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_prompt_attn.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_select.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/quantize_act.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/rope.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/router_top10.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/runtime_copy.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/s2_expert_grouped.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/s2_gemv.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/s2_gemv_fast.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/s2_gemv_q8.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/s2_gemv_quads.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/s_gemv.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/sampler.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/shared_expert.metal;/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/verify_kernels.metal
+[  2%] Built target strata-dequant
+[  2%] Built target gguf_reader_test
+[  3%] Built target strata-plan
+[  5%] Built target gguf_split_test
+[  6%] Built target strata-gguf
+[  8%] Built target strata_spec
+[ 13%] Built target ggml-base
+[ 13%] Built target bf16_bits_test
+[ 13%] Built target conv_cache_test
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/bf16_gemv.metal:70:15: warning: comparison of integers of different signs: 'uint' (aka 'unsigned int') and 'int' [-Wsign-compare]
+        if (t < off) scratch[t] += scratch[t + off];
+            ~ ^ ~~~
+[ 15%] Built target coupled_draft_test
+[ 16%] Built target controller_test
+[ 16%] Built target draft_policy_test
+[ 17%] Built target suffix_drafter_test
+1 warning generated.
+[ 25%] Built target ggml-cpu
+[ 27%] Built target strata_kernels_cpu
+[ 28%] Built target expert_parity
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/elementwise.metal:174:9: warning: variable 'hit' is used uninitialized whenever 'if' condition is false [-Wsometimes-uninitialized]
+    if (t_in_tg == 0) {
+        ^~~~~~~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/elementwise.metal:182:9: note: uninitialized use occurs here
+    if (hit) {
+        ^~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/elementwise.metal:174:5: note: remove the 'if' if its condition is always true
+    if (t_in_tg == 0) {
+    ^~~~~~~~~~~~~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/elementwise.metal:173:24: note: initialize the variable 'hit' to silence this warning
+    threadgroup int hit;
+                       ^
+                        = 0
+[ 30%] Built target expert_q2_neon_test
+[ 30%] Built target expert_multi_test
+[ 30%] Built target pool_stress
+[ 31%] Built target pool_test
+1 warning generated.
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/gr.metal:7:20: warning: unused variable 'GR_THREADS' [-Wunused-const-variable]
+constant const int GR_THREADS = 256;
+                   ^
+1 warning generated.
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa.metal:299:9: warning: variable 's_cgt' is used uninitialized whenever 'if' condition is false [-Wsometimes-uninitialized]
+    if (t == 0) {
+        ^~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa.metal:313:36: note: uninitialized use occurs here
+    const long eq_budget = width - s_cgt;
+                                   ^~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa.metal:299:5: note: remove the 'if' if its condition is always true
+    if (t == 0) {
+    ^~~~~~~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa.metal:265:27: note: initialize the variable 's_cgt' to silence this warning
+    threadgroup long s_cgt;
+                          ^
+                           = 0
+1 warning generated.
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_decode_attn.metal:207:1: warning: comparison of integers of different signs: 'uint' (aka 'unsigned int') and 'const int' [-Wsign-compare]
+DA_CHUNK_KERNEL(attn_chunk_kernel_m0, 0)
+^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_decode_attn.metal:204:9: note: expanded from macro 'DA_CHUNK_KERNEL'
+        DA_CHUNK_BODY(KV_MODE)                                                                        \
+        ^~~~~~~~~~~~~~~~~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_decode_attn.metal:115:15: note: expanded from macro 'DA_CHUNK_BODY'
+        if (t < n_here) {                                                                             \
+            ~ ^ ~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_decode_attn.metal:208:1: warning: comparison of integers of different signs: 'uint' (aka 'unsigned int') and 'const int' [-Wsign-compare]
+DA_CHUNK_KERNEL(attn_chunk_kernel_m1, 1)
+^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_decode_attn.metal:204:9: note: expanded from macro 'DA_CHUNK_KERNEL'
+        DA_CHUNK_BODY(KV_MODE)                                                                        \
+        ^~~~~~~~~~~~~~~~~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_decode_attn.metal:115:15: note: expanded from macro 'DA_CHUNK_BODY'
+        if (t < n_here) {                                                                             \
+            ~ ^ ~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_decode_attn.metal:209:1: warning: comparison of integers of different signs: 'uint' (aka 'unsigned int') and 'const int' [-Wsign-compare]
+DA_CHUNK_KERNEL(attn_chunk_kernel_m2, 2)
+^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_decode_attn.metal:204:9: note: expanded from macro 'DA_CHUNK_KERNEL'
+        DA_CHUNK_BODY(KV_MODE)                                                                        \
+        ^~~~~~~~~~~~~~~~~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_decode_attn.metal:115:15: note: expanded from macro 'DA_CHUNK_BODY'
+        if (t < n_here) {                                                                             \
+            ~ ^ ~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_decode_attn.metal:210:1: warning: comparison of integers of different signs: 'uint' (aka 'unsigned int') and 'const int' [-Wsign-compare]
+DA_CHUNK_KERNEL(attn_chunk_kernel_m3, 3)
+^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_decode_attn.metal:204:9: note: expanded from macro 'DA_CHUNK_KERNEL'
+        DA_CHUNK_BODY(KV_MODE)                                                                        \
+        ^~~~~~~~~~~~~~~~~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_decode_attn.metal:115:15: note: expanded from macro 'DA_CHUNK_BODY'
+        if (t < n_here) {                                                                             \
+            ~ ^ ~~~~~~
+4 warnings generated.
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_prompt_attn.metal:179:1: warning: comparison of integers of different signs: 'uint' (aka 'unsigned int') and 'const int' [-Wsign-compare]
+PA_KERNEL(prompt_attn_kernel_m0, 0)   // FP16 pools
+^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_prompt_attn.metal:111:23: note: expanded from macro 'PA_KERNEL'
+                if (t < nh) {                                                                         \
+                    ~ ^ ~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_prompt_attn.metal:180:1: warning: comparison of integers of different signs: 'uint' (aka 'unsigned int') and 'const int' [-Wsign-compare]
+PA_KERNEL(prompt_attn_kernel_m1, 1)   // INT8 codes + fp16 scales per 64
+^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_prompt_attn.metal:111:23: note: expanded from macro 'PA_KERNEL'
+                if (t < nh) {                                                                         \
+                    ~ ^ ~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_prompt_attn.metal:181:1: warning: comparison of integers of different signs: 'uint' (aka 'unsigned int') and 'const int' [-Wsign-compare]
+PA_KERNEL(prompt_attn_kernel_m3, 3)   // hybrid K8V4: INT8 K, V dequantized from q4_0 through fp16
+^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/qsa_prompt_attn.metal:111:23: note: expanded from macro 'PA_KERNEL'
+                if (t < nh) {                                                                         \
+                    ~ ^ ~~
+3 warnings generated.
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/router_top10.metal:66:9: warning: variable 's_inv' is used uninitialized whenever 'if' condition is false [-Wsometimes-uninitialized]
+    if (tid == 0) {
+        ^~~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/router_top10.metal:72:23: note: uninitialized use occurs here
+    const float inv = s_inv;
+                      ^~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/router_top10.metal:66:5: note: remove the 'if' if its condition is always true
+    if (tid == 0) {
+    ^~~~~~~~~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/router_top10.metal:44:28: note: initialize the variable 's_inv' to silence this warning
+    threadgroup float s_inv;
+                           ^
+                            = 0.0
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/metal/router_top10.metal:16:20: warning: unused variable 'RT_MAX_THREADS' [-Wunused-const-variable]
+constant const int RT_MAX_THREADS = 512;
+                   ^
+2 warnings generated.
+[ 31%] Strata Metal: embedding strata.metallib
+[ 31%] Building OBJCXX object CMakeFiles/strata_metal_kernels.dir/generated/strata_metallib.mm.o
+[ 32%] Linking OBJCXX static library libstrata_metal_kernels.a
+[ 32%] Built target strata_metal_kernels
+[ 35%] Built target strata_core
+[ 35%] Linking CXX executable platform_memory_test
+[ 35%] Linking CXX executable strata-device
+[ 36%] Built target platform_memory_test
+[ 36%] Built target strata-device
+[ 37%] Building OBJCXX object CMakeFiles/strata_kernels.dir/src/kernels/metal/fused_gr.mm.o
+[ 37%] Building OBJCXX object CMakeFiles/strata_kernels.dir/src/kernels/metal/shared_expert.mm.o
+[ 37%] Linking CXX static library libstrata_kernels.a
+[ 57%] Built target strata_kernels
+[ 58%] Building CXX object CMakeFiles/metal_shared_gate_test.dir/tests/core/metal_shared_gate_test.cpp.o
+[ 58%] Linking CXX executable metal_copy_test
+[ 58%] Linking CXX executable elementwise_parity
+[ 60%] Linking CXX executable metal_smoke
+[ 61%] Linking CXX executable dequant_s2_parity
+[ 61%] Linking CXX executable quantize_act_parity
+[ 61%] Linking CXX executable s2_gemv_parity
+[ 61%] Building CXX object CMakeFiles/metal_mmvq_decode_test.dir/tests/core/metal_mmvq_decode_test.cpp.o
+[ 62%] Built target metal_copy_test
+[ 62%] Built target metal_smoke
+[ 63%] Built target elementwise_parity
+[ 63%] Built target s2_gemv_parity
+[ 63%] Built target quantize_act_parity
+[ 63%] Built target dequant_s2_parity
+[ 65%] Linking CXX executable router_top10_parity
+[ 65%] Linking CXX executable rope_parity
+[ 65%] Linking CXX executable bf16_gemv_parity
+[ 66%] Linking CXX executable kv_q8_parity
+[ 66%] Linking CXX executable cvec_parity
+[ 66%] Linking CXX executable gr_parity
+[ 66%] Built target router_top10_parity
+[ 67%] Built target rope_parity
+[ 68%] Built target bf16_gemv_parity
+[ 68%] Built target kv_q8_parity
+[ 70%] Built target cvec_parity
+[ 71%] Built target gr_parity
+[ 71%] Linking CXX executable gdn_parity
+[ 71%] Linking CXX executable sampler_parity
+[ 71%] Linking CXX executable shared_expert_parity
+[ 71%] Linking CXX executable iq_parity
+[ 72%] Linking CXX executable iq_multi_parity
+[ 73%] Linking CXX executable s_gemv_parity
+[ 73%] Built target gdn_parity
+[ 73%] Built target sampler_parity
+[ 75%] Built target shared_expert_parity
+[ 76%] Linking CXX executable qsa_parity
+[ 76%] Built target iq_multi_parity
+[ 76%] Built target s_gemv_parity
+[ 76%] Built target iq_parity
+[ 77%] Linking CXX executable qsa_prompt_attn_parity
+[ 77%] Linking CXX executable metal_shared_gate_test
+[ 78%] Linking CXX executable kv_q4_parity
+[ 78%] Linking CXX executable kv_stream_parity
+[ 78%] Linking CXX executable kv_hybrid_parity
+[ 80%] Linking CXX executable s2_expert_grouped_parity
+[ 80%] Built target qsa_parity
+[ 80%] Built target qsa_prompt_attn_parity
+[ 80%] Built target metal_shared_gate_test
+[ 80%] Built target kv_q4_parity
+[ 81%] Linking CXX executable ple_parity
+[ 81%] Linking CXX executable s2_gemv_q8_parity
+[ 81%] Built target s2_expert_grouped_parity
+[ 81%] Linking CXX executable mmvq_multi_parity
+[ 81%] Built target kv_stream_parity
+[ 82%] Built target kv_hybrid_parity
+[ 82%] Building CXX object CMakeFiles/metal_fused_gr_test.dir/tests/core/metal_fused_gr_test.cpp.o
+[ 83%] Built target strata_prefill
+[ 83%] Built target ple_parity
+[ 85%] Built target s2_gemv_q8_parity
+[ 85%] Built target mmvq_multi_parity
+[ 91%] Built target strata_engine
+[ 92%] Linking CXX executable metal_gemm_test
+[ 92%] Linking CXX executable metal_mmvq_decode_test
+[ 93%] Linking CXX executable expert_cache_per_layer_test
+[ 93%] Linking CXX executable native_dense_ple_key_test
+[ 93%] Linking CXX executable strata
+[ 95%] Linking CXX executable file_expert_source_test
+[ 96%] Linking CXX executable expert_layout_test
+[ 96%] Built target metal_gemm_test
+[ 96%] Built target metal_mmvq_decode_test
+[ 96%] Built target expert_cache_per_layer_test
+[ 97%] Built target strata
+[ 98%] Built target native_dense_ple_key_test
+[ 98%] Built target expert_layout_test
+[ 98%] Built target file_expert_source_test
+[100%] Linking CXX executable metal_fused_gr_test
+[100%] Built target metal_fused_gr_test

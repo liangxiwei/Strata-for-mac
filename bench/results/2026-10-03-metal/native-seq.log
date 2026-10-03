@@ -1,0 +1,28 @@
+strata generate: 1879 MiB of weights loaded from /Users/liangxw/src/xproject/petproject/Q2_0/pack-full (301 canonical tensors skipped: served natively)
+strata generate: 301 native projection matrices, 1376.20 MiB of weights
+strata generate: the SSD is kept awake while rows are read: one page of the table after 100 ms without a read, until 60 s after the last request (STRATA_SSD_KEEPALIVE=0 turns it off)
+strata generate: PLE on, table 320001536 rows of /Users/liangxw/src/xproject/petproject/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00002-of-00002.gguf
+strata generate: GPU 0: Apple M2 Max, compute capability 10.0
+strata generate: expert arena: cudaHostRegister PORTABLE ok; normal pages (no hugetlb on macOS)
+strata generate: loaded 31.64 GiB at 3.31 GiB/s
+strata generate: experimental native Q5_K head, 437043200 bytes
+strata generate: 11 expert-pool workers + the host thread
+strata generate: session is up (engine 0.1.34)
+strata generate: sampling greedy
+strata generate: position 0, token 9707 (prompt)
+strata generate: position 22, token 45589 (prompt)
+strata generate: position 23, token 13 (prompt)
+layers dumped            /tmp/strata-native-seq-layers.bin (48 layers + the input x 4 streams x 2560 per position)
+prompt  : 9707 11 6319 1440 11 2834 10265 11 19147 1079 3844 11 32114 12488 131464 144162 1773 11 1871 1879 3300 51016 45589 13
+output  : 198
+decode                   1 tokens in 167.9 ms  ->  5.96 tok/s
+prefill                  23 tokens in 4109.5 ms  ->  5.60 tok/s  (time to first token 4277.5 ms)
+  per token              167.895 ms/token (WALL CLOCK: embed, layers, head, sample)
+  token host phases      PLE 0.662  embed 0.124  LAYERS 168.044  head 1.914  readback 6.532  sample 0.950  (sum 178.226 of 167.895 ms)
+  ple io: 384 rows, 0.0% row-cache hits, 384 SSD reads (1.6 MB), read p50 435 us p99 992 us, blocked 14.319 ms total (submit 0.822 ms), cache 384/1048576 rows, SSD kept awake by 27 reads (slowest 7.2 ms)
+  the CPU expert pool    32.288 ms/token over 48 layers (24 positions, 1152 dispatches)
+  pool phases              wait-park 0.000  drain 31.983  re-park 0.000  ms/token
+  expert blobs           11520 blobs read
+  rings seen MID-GRAPH   1105 of 1152 over 24 positions
+  ring latency           2.704 ms of a 3.498 ms layer
+  host after ring        37.366 ms/token over 24 positions (0.778 ms/layer, after the ring)

@@ -1,0 +1,9 @@
+prompt_attn_kernel_m0: maxThreads 1024, static threadgroup 26512 B
+pa2_m0: maxThreads 1024, static threadgroup 14272 B
+pa3_m0: maxThreads 448, static threadgroup 14272 B
+finite   pos  9000: original 126.42 ms  pa2 47.70 ms  pa3 107.80 ms  (differ: pa2 0, pa3 0 of 6291456; 0 non-finite in the reference)
+finite   pos  1500: original 116.87 ms  pa2 45.06 ms  pa3 99.11 ms  (differ: pa2 0, pa3 0 of 6291456; 0 non-finite in the reference)
+finite   pos 30000: original 126.85 ms  pa2 46.61 ms  pa3 108.43 ms  (differ: pa2 0, pa3 0 of 6291456; 0 non-finite in the reference)
+specials pos  9000: original 126.61 ms  pa2 48.90 ms  pa3 109.65 ms  (differ: pa2 0, pa3 0 of 6291456; 67328 non-finite in the reference)
+specials pos  1500: original 113.17 ms  pa2 41.56 ms  pa3 93.77 ms  (differ: pa2 0, pa3 0 of 6291456; 1522176 non-finite in the reference)
+specials pos 30000: original 126.91 ms  pa2 47.80 ms  pa3 108.96 ms  (differ: pa2 0, pa3 0 of 6291456; 6144 non-finite in the reference)

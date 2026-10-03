@@ -424,6 +424,47 @@ void check_all() {
         ck(cudaFreeHost(h_host), "free host blob");
     }
 
+#if defined(STRATA_METAL_BACKEND)
+    // Resident MTP/verify graphs must read THIS replay's expert IDs, not bind
+    // the zero or stale pointer table that existed while recording the graph.
+    {
+        constexpr int T = 4, n = T * K;
+        int32_t* d_ids = dalloc<int32_t>(n);
+        int32_t* d_dst = dalloc<int32_t>(n);
+        std::vector<int32_t> ids(n), dst(n);
+        std::iota(dst.begin(), dst.end(), 0);
+        up(d_dst, dst);
+        const Scratch s = make_scratch(n);
+        float* d_out = dalloc<float>((size_t) n * H);
+        cudaStream_t stream{};
+        cudaGraph_t graph{};
+        cudaGraphExec_t exec{};
+        ck(cudaStreamCreate(&stream), "resident stream");
+        ck(cudaStreamBeginCapture(stream, cudaStreamCaptureModeThreadLocal), "resident capture");
+        k::moe_hit_grouped_s2_multi(fx.d, d_ids, d_dst, nullptr, n, BLOB, d_x, d_xs, K, s.p, d_out, stream);
+        ck(cudaStreamEndCapture(stream, &graph), "resident end capture");
+        ck(cudaGraphInstantiate(&exec, graph, 0), "resident instantiate");
+        ck(cudaGraphDestroy(graph), "resident source destroy");
+        for (int replay = 0; replay < 2; ++replay) {
+            std::vector<Entry> ent(n);
+            for (int i = 0; i < n; ++i) {
+                ids[i] = (i + replay * 3) % fx.nb;
+                ent[i] = {fx.hb(ids[i]), i / K, i};
+            }
+            up(d_ids, ids);
+            ck(cudaGraphLaunch(exec, stream), "resident replay");
+            ck(cudaStreamSynchronize(stream), "resident sync");
+            Run r;
+            r.out = down(d_out, (size_t) n * H);
+            r.scratch = down((const uint8_t*) s.p, (size_t) s.bytes);
+            reference("resident graph with changed expert IDs", r, s, ent, x, &xs);
+        }
+        ck(cudaGraphExecDestroy(exec), "resident exec destroy");
+        ck(cudaStreamDestroy(stream), "resident stream destroy");
+        cudaFree(d_ids); cudaFree(d_dst); cudaFree(d_out); cudaFree(s.p);
+    }
+#endif
+
     // ---- 5. moe_group_resident + moe_grouped_s2: the MTP layer (experts resident at base + id * BLOB)
     {
         const int T = 5, n = T * K;
@@ -529,8 +570,15 @@ void bench() {
     cudaDeviceProp prop{};
     ck(cudaGetDevice(&dev), "dev");
     ck(cudaGetDeviceProperties(&prop, dev), "props");
-    const int nb = std::max(48, (int) (3ull * (size_t) prop.l2CacheSize / BLOB) + 8);
-    std::printf("bench: %s, L2 %d MB, %d blobs (%.0f MB) cycled\n", prop.name, prop.l2CacheSize >> 20, nb,
+#ifdef STRATA_METAL_BACKEND
+    // the Metal shim's cudaDeviceProp has no l2CacheSize; the M2 Max's L2 is 32 MB (bench-only heuristic -
+    // the parity checks never come through here)
+    const size_t l2_bytes = 32ull << 20;
+#else
+    const size_t l2_bytes = (size_t) prop.l2CacheSize;
+#endif
+    const int nb = std::max(48, (int) (3ull * l2_bytes / BLOB) + 8);
+    std::printf("bench: %s, L2 %d MB, %d blobs (%.0f MB) cycled\n", prop.name, (int) (l2_bytes >> 20), nb,
                 nb * (double) BLOB / 1e6);
     std::mt19937 rng(7);
     Fixture fx;
@@ -557,9 +605,9 @@ void bench() {
     auto time = [&](const std::function<void(int)>& call) {
         call(0);
         ck(cudaDeviceSynchronize(), "warm");
-        ck(cudaEventRecord(e0), "rec");
+        ck(cudaEventRecord(e0, nullptr), "rec");   // 2-arg form: the Metal shim has no default stream arg
         for (int i = 0; i < ITERS; ++i) call(i % SETS);
-        ck(cudaEventRecord(e1), "rec");
+        ck(cudaEventRecord(e1, nullptr), "rec");
         ck(cudaEventSynchronize(e1), "sync");
         float ms = 0;
         ck(cudaEventElapsedTime(&ms, e0, e1), "elapsed");

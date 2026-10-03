@@ -1,0 +1,45 @@
+Follow-up prompt: 100290 tokens
+First streamed text after 3.081 seconds
+{
+  "wall_s": 10.700655165999999,
+  "first_text_s": 3.080734041,
+  "timings": {
+    "cache_n": 100255,
+    "prompt_n": 35,
+    "prompt_ms": 2590.3,
+    "prompt_per_token_ms": 74.009,
+    "prompt_per_second": 13.5,
+    "predicted_n": 128,
+    "predicted_ms": 7673.8,
+    "predicted_per_token_ms": 59.952,
+    "predicted_per_second": 16.7,
+    "draft_n": 0,
+    "draft_n_accepted": 0
+  },
+  "usage": {
+    "prompt_tokens": 100290,
+    "completion_tokens": 128,
+    "total_tokens": 100418,
+    "prompt_tokens_details": {
+      "cached_tokens": 100255
+    }
+  },
+  "finish_reason": "length",
+  "content": "这段文本是一堆关于“Strata”、“DASLab”、“Fusion”、“S2”、“Kernels”、“Cuda”、“C++”、“Python”、“Linux”、“Windows”、“Mac”、“GPU”、“RAM”、“VRAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”、“RAM”",
+  "reasoning_content": "",
+  "needle_matches": {
+    "银杏": false,
+    "10月18日": false,
+    "AX-7319": false
+  },
+  "health": {
+    "status": "ok",
+    "max_context": 131072,
+    "model": "qwen3.8-flash-next",
+    "images": false,
+    "api_key": false,
+    "loaded": true,
+    "service": "strata"
+  },
+  "sampled_peak_engine_rss_gib": 9.9844970703125
+}

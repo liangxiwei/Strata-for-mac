@@ -34,6 +34,7 @@ endif()
 
 option(STRATA_ENABLE_CUDA "Build the CUDA targets (Phase 2+)" OFF)
 option(STRATA_ENABLE_HIP "Build the HIP targets for wave32 AMD GPUs (gfx1100, gfx1201; gfx1030 unvalidated)" OFF)
+option(STRATA_ENABLE_METAL "Build the Metal backend for Apple-Silicon Macs (docs/PORT_METAL/)" OFF)
 option(STRATA_PREFILL_MMQ "Build the optional GGML MMQ prefill path for HIP" OFF)
 # CUDA: MMQ prompt kernels for Q4_K / Q5_K / Q5_1 (Unsloth's UD-Q4_K_XL experts).  Off by default: the engine loads
 # every kernel when it starts (CUDA_MODULE_LOADING=EAGER), so these took ~5 MB of VRAM - 1-3 expert slots - from every
@@ -48,6 +49,9 @@ if(STRATA_ENABLE_CUDA AND STRATA_ENABLE_HIP)
 endif()
 if(STRATA_ENABLE_HIP)
   include(cmake/hip_backend.cmake)
+endif()
+if(STRATA_ENABLE_METAL)
+  include(cmake/metal_backend.cmake)
 endif()
 # The test suite and the micro benchmarks live in tests/ and bench/micro/, which the published source leaves out.
 set(_strata_tests_default OFF)
@@ -115,6 +119,11 @@ elseif(STRATA_ENABLE_HIP)
   set(_strata_gpu_runtime_target strata_hip_runtime)
   set(_strata_gpu_blas_target roc::hipblas)
   set(_strata_gpu_include_directories ${STRATA_HIP_COMPAT_INCLUDE_DIR})
+elseif(STRATA_ENABLE_METAL)
+  # docs/PORT_METAL/: the CUDA-shaped host code compiles against the Metal shim; GEMM (MPS) arrives with M4
+  set(_strata_gpu_runtime_target strata_metal_runtime)
+  set(_strata_gpu_blas_target "")
+  set(_strata_gpu_include_directories "")
 endif()
 
 # Warnings live on an INTERFACE target the project's own code links, NOT in add_compile_options: applied
@@ -735,6 +744,179 @@ if(STRATA_ENABLE_CUDA OR STRATA_ENABLE_HIP)
   endif()
 endif()
 
+# ---- the Metal backend (docs/PORT_METAL/) ----------------------------------------------
+# A parallel section, not a weave into the CUDA/HIP blocks above: those are the validated PC backends and stay
+# untouched.  What is here: the runtime core (device.cu / pinned.cu compiled as C++ - both host-only once
+# poison_kernel moved to poison.metal - plus graph.cpp, weights.cpp, layout.cpp against the shim), the Metal
+# kernel library (one .metal + one .mm per ported CUDA file), and the parity tests of the ported files.  The
+# engine targets (strata_engine, strata_prefill, strata) join at M5, when every kernel file is ported.
+if(STRATA_ENABLE_METAL)
+  set_source_files_properties(src/core/device.cu src/core/pinned.cu PROPERTIES LANGUAGE CXX)
+  add_library(strata_core STATIC src/core/device.cu src/core/pinned.cu src/platform/memory.cpp
+                               src/core/graph.cpp src/core/weights.cpp src/core/layout.cpp)
+  target_include_directories(strata_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  target_link_libraries(strata_core PUBLIC strata_plan strata_warnings strata_metal_runtime strata_metal_kernels)
+
+  add_executable(strata-device src/core/device_main.cpp)
+  target_link_libraries(strata-device PRIVATE strata_core)
+
+  # M1 (docs/PORT_METAL/): the three truths every kernel port leans on - launch round-trip, the CPU<->GPU
+  # doorbell without a sync, and tape replay on live buffers - with measured numbers.
+  add_executable(metal_smoke src/platform/metal_smoke.mm)
+  target_link_libraries(metal_smoke PRIVATE strata_kernels strata_metal_runtime)
+  if(STRATA_BUILD_TESTS)
+    add_test(NAME metal_smoke COMMAND metal_smoke 100)
+    add_executable(metal_copy_test tests/core/metal_copy_test.cpp)
+    target_link_libraries(metal_copy_test PRIVATE strata_kernels strata_metal_runtime)
+    add_test(NAME metal_copy_test COMMAND metal_copy_test)
+    add_test(NAME metal_copy_blit_test COMMAND metal_copy_test --blit)
+    add_executable(metal_mmvq_decode_test tests/core/metal_mmvq_decode_test.cpp)
+    target_link_libraries(metal_mmvq_decode_test PRIVATE strata_kernels strata_metal_runtime)
+    add_test(NAME metal_mmvq_decode_test COMMAND metal_mmvq_decode_test)
+    add_executable(metal_direct_dot_test tests/core/metal_direct_dot_test.cpp)
+    target_link_libraries(metal_direct_dot_test PRIVATE strata_kernels strata_metal_runtime)
+    add_test(NAME metal_direct_dot_test COMMAND metal_direct_dot_test)
+  endif()
+
+  file(GLOB _strata_metal_launchers CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/kernels/metal/*.mm)
+  add_library(strata_kernels STATIC ${_strata_metal_launchers}
+                          src/kernels/ngram.cpp src/ngram/ple_reader.cpp src/platform/direct_file.cpp)
+  target_include_directories(strata_kernels PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  target_link_libraries(strata_kernels PUBLIC strata_core strata_artifact strata_metal_kernels)
+
+  if(STRATA_BUILD_TESTS)
+    enable_testing()
+    # a ported file's parity test runs the moment its stem is listed in STRATA_METAL_PORTED
+    # (cmake/metal_backend.cmake; docs/PORT_METAL/STATUS.md is the same list in human form)
+    # (kernel-file stem : its parity executable); a test builds only when its file is ported
+    set(_strata_metal_parity_pairs
+        "elementwise:elementwise_parity"
+        "dequant_s2:dequant_s2_parity"
+        "s2_gemv:s2_gemv_parity"
+        "quantize_act:quantize_act_parity"
+        "router_top10:router_top10_parity"
+        "rope:rope_parity"
+        "kv_q8:kv_q8_parity"
+        "bf16_gemv:bf16_gemv_parity"
+        "cvec:cvec_parity"       # landed with fused_gr (K16): its pending-write check is fused_gr_read's
+        "gr:gr_parity"           # landed with fused_gr (K16): the fused multi/single/Graph checks need it
+        # the waves below this line are pre-registered for parallel porting: a test appears only when its
+        # stem's .mm exists (the EXISTS gate below), so an unported stem never breaks anyone's build
+        "gdn:gdn_parity"
+        "sampler:sampler_parity"
+        "s_gemv:s_gemv_parity"
+        "shared_expert:shared_expert_parity"
+        "iq_kernels:iq_parity"
+        "iq_kernels:iq_multi_parity"
+        "qsa:qsa_parity"
+        "qsa_prompt_attn:qsa_prompt_attn_parity"
+        "kv_q4:kv_q4_parity"
+        "kv_q4:kv_hybrid_parity"     # needs kv_q4 + kv_stream, both the kv wave's files
+        "kv_stream:kv_stream_parity"
+        "s2_expert_grouped:s2_expert_grouped_parity"
+        "ple:ple_parity"
+        "s2_gemv_q8:s2_gemv_q8_parity"
+        "native_mmvq:mmvq_multi_parity")   # CUDA's own multi_exact test, runnable against Metal now
+    # most parity tests self-test with --selftest; a few take positional geometry instead (the CUDA tree
+    # registers them the same way) - qsa_prompt_attn_parity reads argv[1..3] as ctx_len/threads/runs
+    set(_strata_metal_parity_args "qsa_prompt_attn_parity:32768 2048 5")
+    foreach(_pair IN LISTS _strata_metal_parity_pairs)
+      string(REPLACE ":" ";" _kv "${_pair}")
+      list(GET _kv 0 _stem)
+      list(GET _kv 1 _test)
+      set(_args "--selftest")
+      foreach(_argpair IN LISTS _strata_metal_parity_args)
+        if(_argpair MATCHES "^${_test}:(.*)$")
+          set(_args "${CMAKE_MATCH_1}")
+        endif()
+      endforeach()
+      if("${_stem}" IN_LIST STRATA_METAL_PORTED AND NOT TARGET ${_test}
+         AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/kernels/metal/${_stem}.mm")
+        add_executable(${_test} src/kernels/${_test}.cpp)
+        target_link_libraries(${_test} PRIVATE strata_kernels strata_metal_runtime)
+        separate_arguments(_args_list NATIVE_COMMAND "${_args}")
+        add_test(NAME ${_test} COMMAND ${_test} ${_args_list})
+      endif()
+    endforeach()
+    # ple_parity needs a PLE table artifact: with the real shard provisioned the env var is unnecessary;
+    # until then a deterministic sparse stand-in (gen/ple_fixture.py, values are 2^-24 multiples so the
+    # probe rows solve exactly) is cloned into the build dir as ple_table.gguf
+    if(TARGET ple_parity)
+      set_tests_properties(ple_parity PROPERTIES ENVIRONMENT "STRATA_PLE_GGUF=${CMAKE_BINARY_DIR}/ple_table.gguf")
+    endif()
+    add_executable(platform_memory_test src/platform/memory_test.cpp)
+    target_link_libraries(platform_memory_test PRIVATE strata_core)
+    add_test(NAME platform_memory_test COMMAND platform_memory_test)
+
+    # ---- M4/M5 (docs/PORT_METAL/): the prefill GEMM (MPS), the engine library, the strata program ----
+    # Opt-in until the waves land them green (STRATA_METAL_ENGINE=ON in the working build dir): the
+    # engine's .cpp sources compile against the shim as-is; prefill's gemm/kernels compile from Metal
+    # ports (src/prefill/{gemm,kernels}.mm replace the .cu) and only exist once M4 writes them.
+    option(STRATA_METAL_ENGINE "Build the prefill + engine + strata program on Metal (M4/M5, in progress)" OFF)
+    if(STRATA_METAL_ENGINE)
+      add_library(strata_engine STATIC src/core/layer.cpp src/core/session.cpp src/core/expert_source.cpp
+        src/core/remote_experts.cpp src/core/expert_cache.cpp src/core/native_head.cpp src/core/native_dense.cpp
+        src/core/verify.cpp src/core/mtp.cpp src/core/conversation_snapshot.cpp src/core/conversation_state.cpp
+        src/core/conversation_memory.cpp)
+      target_include_directories(strata_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+      target_link_libraries(strata_engine PUBLIC strata_core strata_kernels strata_kernels_cpu
+        strata_metal_runtime)
+      if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/prefill/gemm.mm" AND
+         EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/prefill/kernels.mm")
+        add_library(strata_prefill STATIC src/prefill/prefill.cpp src/prefill/gemm.mm src/prefill/kernels.mm)
+        target_include_directories(strata_prefill PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+        find_library(MTL_MPS MetalPerformanceShaders REQUIRED)
+        target_link_libraries(strata_prefill PUBLIC strata_core strata_kernels strata_metal_runtime
+          ${MTL_MPS})
+        add_executable(strata src/program/generate.cpp)
+        target_link_libraries(strata PRIVATE strata_engine strata_prefill strata_spec strata_metal_runtime)
+        if(STRATA_BUILD_TESTS)
+          add_executable(metal_gemm_test tests/core/metal_gemm_test.cpp)
+          target_link_libraries(metal_gemm_test PRIVATE strata_prefill)
+          add_test(NAME metal_gemm_test COMMAND metal_gemm_test)
+          add_executable(metal_fused_gr_test tests/core/metal_fused_gr_test.cpp)
+          target_link_libraries(metal_fused_gr_test PRIVATE strata_kernels)
+          add_test(NAME metal_fused_gr_test COMMAND metal_fused_gr_test)
+        endif()
+      endif()
+      # the engine's own tests, gated like the CUDA tree registers them (M5 verified them passing)
+      if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/core/file_expert_source_test.cpp")
+        add_executable(file_expert_source_test tests/core/file_expert_source_test.cpp)
+        target_link_libraries(file_expert_source_test PRIVATE strata_engine)
+        add_test(NAME file_expert_source_test COMMAND file_expert_source_test)
+        set_tests_properties(file_expert_source_test PROPERTIES TIMEOUT 60)
+      endif()
+      if(STRATA_BUILD_TESTS AND STRATA_NATIVE_EXPERTS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/core/expert_layout_test.cpp")
+        add_executable(expert_layout_test tests/core/expert_layout_test.cpp)
+        target_link_libraries(expert_layout_test PRIVATE strata_engine)
+        add_test(NAME expert_layout_test COMMAND expert_layout_test ${CMAKE_CURRENT_SOURCE_DIR}/tests/data/native_experts)
+        set_tests_properties(expert_layout_test PROPERTIES TIMEOUT 60)
+        add_executable(native_dense_ple_key_test tests/core/native_dense_ple_key_test.cpp)
+        target_link_libraries(native_dense_ple_key_test PRIVATE strata_engine)
+        add_test(NAME native_dense_ple_key_test COMMAND native_dense_ple_key_test)
+        set_tests_properties(native_dense_ple_key_test PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 60)
+        add_executable(expert_cache_per_layer_test tests/core/expert_cache_per_layer_test.cpp)
+        target_link_libraries(expert_cache_per_layer_test PRIVATE strata_engine)
+        add_test(NAME expert_cache_per_layer_test COMMAND expert_cache_per_layer_test)
+        set_tests_properties(expert_cache_per_layer_test PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 60)
+      endif()
+    endif()
+  endif()
+endif()
+
+# ---- CPU architecture ----
+# The expert kernels' fast paths are x86 intrinsics (AVX-512 VNNI / VBMI, AVX2); everything else - the pool,
+# the layout table, the spec components, the GGUF tools - is portable C++.  On another CPU (an Apple-Silicon Mac,
+# an ARM server) the x86 kernel files are left out of the build and the portable scalar paths stand in for them
+# (src/kernels/cpu/expert.cpp: the scalar transcription is the implementation there, not a fallback).
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|i[3-6]86)$")
+  set(STRATA_X86_CPU ON)
+else()
+  set(STRATA_X86_CPU OFF)
+  message(STATUS "Strata: ${CMAKE_SYSTEM_PROCESSOR} CPU - the AVX2/AVX-512 expert kernels are compiled out, the "
+                 "scalar paths build in their place (the GPU engine needs x86; this build is the CPU-side targets)")
+endif()
+
 # ---- strata_kernels_cpu (P2.S3) ----
 #
 # A SEPARATE LIBRARY from `strata_kernels`, and `/arch:AVX512` is set on the SOURCE rather than on the target
@@ -776,18 +958,26 @@ if(STRATA_BUILD_TESTS OR STRATA_BUILD_CONVERSATION_TESTS)
 endif()
 
 add_library(strata_kernels_cpu STATIC src/kernels/cpu/expert.cpp src/kernels/cpu/pool.cpp
-            src/kernels/cpu/expert_layout.cpp src/kernels/cpu/q2_avx2.cpp)
+            src/kernels/cpu/expert_layout.cpp)
+if(STRATA_X86_CPU)
+  target_sources(strata_kernels_cpu PRIVATE src/kernels/cpu/q2_avx2.cpp)
+endif()
 target_include_directories(strata_kernels_cpu PUBLIC include)
 # Plan v0.3 P6: only the kernel files get the AVX-512 / AVX2 flags; the pool and the probe run on any x86-64,
-# and the engine picks the kernels at run time (cpu_avx512_ok).
+# and the engine picks the kernels at run time (cpu_avx512_ok).  Non-x86 CPUs (an Apple-Silicon Mac) get none of
+# these files or flags: their scalar replacements are compiled into expert.cpp itself.
 if(MSVC)
-  set_source_files_properties(src/kernels/cpu/expert.cpp PROPERTIES COMPILE_OPTIONS "/arch:AVX512")
-  set_source_files_properties(src/kernels/cpu/q2_avx2.cpp PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
+  if(STRATA_X86_CPU)
+    set_source_files_properties(src/kernels/cpu/expert.cpp PROPERTIES COMPILE_OPTIONS "/arch:AVX512")
+    set_source_files_properties(src/kernels/cpu/q2_avx2.cpp PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
+  endif()
 else()
   # GCC/Clang spell it differently, and `-mavx512vnni` alone is not enough: VBMI is a separate feature bit.
-  set_source_files_properties(src/kernels/cpu/expert.cpp
-                              PROPERTIES COMPILE_OPTIONS "-mavx512f;-mavx512bw;-mavx512vl;-mavx512dq;-mavx512vnni;-mavx512vbmi;-mf16c;-mfma")
-  set_source_files_properties(src/kernels/cpu/q2_avx2.cpp PROPERTIES COMPILE_OPTIONS "-mavx2;-mfma;-mf16c")
+  if(STRATA_X86_CPU)
+    set_source_files_properties(src/kernels/cpu/expert.cpp
+                                PROPERTIES COMPILE_OPTIONS "-mavx512f;-mavx512bw;-mavx512vl;-mavx512dq;-mavx512vnni;-mavx512vbmi;-mf16c;-mfma")
+    set_source_files_properties(src/kernels/cpu/q2_avx2.cpp PROPERTIES COMPILE_OPTIONS "-mavx2;-mfma;-mf16c")
+  endif()
 endif()
 find_package(Threads REQUIRED)
 target_link_libraries(strata_kernels_cpu PUBLIC Threads::Threads)
@@ -837,19 +1027,27 @@ if(STRATA_NATIVE_EXPERTS)
     add_subdirectory(${strata_llamacpp_SOURCE_DIR}/ggml ${CMAKE_BINARY_DIR}/ggml EXCLUDE_FROM_ALL)
   endif()
   # part of strata_kernels_cpu (the pool calls these and they call its CPU probe: one library, so GNU ld's
-  # one-pass static linking has no cycle to resolve)
-  target_sources(strata_kernels_cpu PRIVATE src/kernels/cpu/native_expert.cpp src/kernels/cpu/iq_avx512.cpp
-                                           src/kernels/cpu/iq_avx2.cpp src/kernels/cpu/kq_avx2.cpp)
+  # one-pass static linking has no cycle to resolve).  The iq/kq kernels are x86 intrinsics; on another CPU
+  # (an Apple-Silicon Mac) they stay out and native_expert.cpp's ggml-cpu fallback carries the dots (NEON there).
+  target_sources(strata_kernels_cpu PRIVATE src/kernels/cpu/native_expert.cpp)
+  if(STRATA_X86_CPU)
+    target_sources(strata_kernels_cpu PRIVATE src/kernels/cpu/iq_avx512.cpp
+                                             src/kernels/cpu/iq_avx2.cpp src/kernels/cpu/kq_avx2.cpp)
+  endif()
   target_include_directories(strata_kernels_cpu PRIVATE third_party/ggml)
   if(MSVC)
-    set_source_files_properties(src/kernels/cpu/iq_avx512.cpp PROPERTIES COMPILE_OPTIONS "/arch:AVX512")
-    set_source_files_properties(src/kernels/cpu/iq_avx2.cpp PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
-    set_source_files_properties(src/kernels/cpu/kq_avx2.cpp PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
+    if(STRATA_X86_CPU)
+      set_source_files_properties(src/kernels/cpu/iq_avx512.cpp PROPERTIES COMPILE_OPTIONS "/arch:AVX512")
+      set_source_files_properties(src/kernels/cpu/iq_avx2.cpp PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
+      set_source_files_properties(src/kernels/cpu/kq_avx2.cpp PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
+    endif()
   else()
-    set_source_files_properties(src/kernels/cpu/iq_avx512.cpp PROPERTIES COMPILE_OPTIONS
-                                "-mavx512f;-mavx512bw;-mavx512vl;-mavx512dq;-mavx512vnni;-mavx512vbmi;-mf16c;-mfma")
-    set_source_files_properties(src/kernels/cpu/iq_avx2.cpp PROPERTIES COMPILE_OPTIONS "-mavx2;-mfma;-mf16c")
-    set_source_files_properties(src/kernels/cpu/kq_avx2.cpp PROPERTIES COMPILE_OPTIONS "-mavx2;-mfma;-mf16c")
+    if(STRATA_X86_CPU)
+      set_source_files_properties(src/kernels/cpu/iq_avx512.cpp PROPERTIES COMPILE_OPTIONS
+                                  "-mavx512f;-mavx512bw;-mavx512vl;-mavx512dq;-mavx512vnni;-mavx512vbmi;-mf16c;-mfma")
+      set_source_files_properties(src/kernels/cpu/iq_avx2.cpp PROPERTIES COMPILE_OPTIONS "-mavx2;-mfma;-mf16c")
+      set_source_files_properties(src/kernels/cpu/kq_avx2.cpp PROPERTIES COMPILE_OPTIONS "-mavx2;-mfma;-mf16c")
+    endif()
   endif()
   target_link_libraries(strata_kernels_cpu PUBLIC ggml-cpu ggml-base)
   target_compile_definitions(strata_kernels_cpu PUBLIC STRATA_NATIVE_EXPERTS=1)
@@ -996,6 +1194,11 @@ if(STRATA_BUILD_TESTS)
   add_executable(expert_multi_test src/kernels/cpu/expert_multi_test.cpp)
   target_link_libraries(expert_multi_test PRIVATE strata_kernels_cpu)
   add_test(NAME expert_multi_test COMMAND expert_multi_test)
+  if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64|ARM64)$")
+    add_executable(expert_q2_neon_test tests/core/expert_q2_neon_test.cpp)
+    target_link_libraries(expert_q2_neon_test PRIVATE strata_kernels_cpu)
+    add_test(NAME expert_q2_neon_test COMMAND expert_q2_neon_test)
+  endif()
 
   add_executable(expert_parity src/kernels/cpu/expert_parity.cpp)
   target_link_libraries(expert_parity PRIVATE strata_kernels_cpu)

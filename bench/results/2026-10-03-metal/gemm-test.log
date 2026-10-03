@@ -1,0 +1,1 @@
+Metal GEMM: 0 failures (60 FP16/BF16 cases, tails, strided outputs, beta=0/1)

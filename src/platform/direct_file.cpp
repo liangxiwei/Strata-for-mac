@@ -305,7 +305,14 @@ DirectFile::~DirectFile() { close(); delete impl_; }
 
 bool DirectFile::open(const std::string& path, std::string& err) {
     close();
+#if defined(__APPLE__)
+    // macOS has no O_DIRECT; F_NOCACHE is its "do not pollute the page cache" per-file switch, which is what
+    // this class wants the direct flag for (the aligned pread paths work the same).
+    impl_->fd = ::open(path.c_str(), O_RDONLY);
+    if (impl_->fd >= 0) (void) fcntl(impl_->fd, F_NOCACHE, 1);
+#else
     impl_->fd = ::open(path.c_str(), O_RDONLY | O_DIRECT);
+#endif
     if (impl_->fd < 0) { err = "DirectFile: cannot open " + path; return false; }
     struct stat st;
     if (fstat(impl_->fd, &st) != 0) { err = "DirectFile: cannot size " + path; close(); return false; }

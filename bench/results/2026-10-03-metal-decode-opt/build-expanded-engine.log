@@ -1,0 +1,102 @@
+[  1%] Built target strata-plan
+[  3%] Built target strata-gguf
+[  3%] Built target gguf_reader_test
+[  3%] Built target gguf_split_test
+[  3%] Built target strata-dequant
+[  6%] Built target strata_spec
+[ 11%] Built target ggml-base
+[ 13%] Built target strata_metal_kernels
+[ 13%] Built target bf16_bits_test
+[ 13%] Built target conv_cache_test
+[ 15%] Built target coupled_draft_test
+[ 16%] Built target controller_test
+[ 16%] Built target draft_policy_test
+[ 17%] Built target suffix_drafter_test
+[ 25%] Built target ggml-cpu
+[ 27%] Built target strata_core
+[ 30%] Built target strata-device
+[ 30%] Built target platform_memory_test
+[ 32%] Built target strata_kernels_cpu
+[ 33%] Built target expert_q2_neon_test
+[ 36%] Built target expert_parity
+[ 36%] Built target pool_test
+[ 37%] Built target pool_stress
+[ 37%] Built target expert_multi_test
+[ 38%] Building OBJCXX object CMakeFiles/strata_kernels.dir/src/kernels/metal/native_mmvq.mm.o
+[ 38%] Linking CXX static library libstrata_kernels.a
+[ 58%] Built target strata_kernels
+[ 58%] Linking CXX executable metal_smoke
+[ 58%] Linking CXX executable metal_copy_test
+[ 58%] Linking CXX executable quantize_act_parity
+[ 60%] Linking CXX executable dequant_s2_parity
+[ 61%] Linking CXX executable router_top10_parity
+[ 61%] Linking CXX executable s2_gemv_parity
+[ 61%] Linking CXX executable elementwise_parity
+[ 62%] Linking CXX executable metal_mmvq_decode_test
+[ 62%] Built target metal_smoke
+[ 62%] Built target router_top10_parity
+[ 62%] Built target dequant_s2_parity
+[ 62%] Built target metal_copy_test
+[ 62%] Built target metal_mmvq_decode_test
+[ 63%] Built target s2_gemv_parity
+[ 65%] Built target quantize_act_parity
+[ 66%] Built target elementwise_parity
+[ 67%] Linking CXX executable rope_parity
+[ 67%] Linking CXX executable bf16_gemv_parity
+[ 67%] Linking CXX executable cvec_parity
+[ 67%] Linking CXX executable gr_parity
+[ 67%] Linking CXX executable kv_q8_parity
+[ 67%] Linking CXX executable sampler_parity
+[ 67%] Linking CXX executable gdn_parity
+[ 67%] Linking CXX executable s_gemv_parity
+[ 67%] Built target rope_parity
+[ 68%] Built target bf16_gemv_parity
+[ 70%] Built target kv_q8_parity
+[ 71%] Built target cvec_parity
+[ 72%] Built target gr_parity
+[ 73%] Built target sampler_parity
+[ 73%] Built target gdn_parity
+[ 73%] Built target s_gemv_parity
+[ 75%] Linking CXX executable iq_parity
+[ 75%] Linking CXX executable shared_expert_parity
+[ 75%] Linking CXX executable iq_multi_parity
+[ 76%] Linking CXX executable qsa_parity
+[ 76%] Linking CXX executable qsa_prompt_attn_parity
+[ 76%] Linking CXX executable kv_hybrid_parity
+[ 76%] Linking CXX executable kv_q4_parity
+[ 77%] Linking CXX executable kv_stream_parity
+[ 77%] Built target iq_parity
+[ 78%] Built target shared_expert_parity
+[ 80%] Built target iq_multi_parity
+[ 80%] Built target qsa_prompt_attn_parity
+[ 80%] Built target qsa_parity
+[ 80%] Built target kv_hybrid_parity
+[ 81%] Built target kv_q4_parity
+[ 81%] Linking CXX executable s2_expert_grouped_parity
+[ 81%] Linking CXX executable ple_parity
+[ 81%] Built target kv_stream_parity
+[ 82%] Linking CXX executable s2_gemv_q8_parity
+[ 82%] Linking CXX executable mmvq_multi_parity
+[ 82%] Linking CXX executable metal_fused_gr_test
+[ 83%] Built target strata_prefill
+[ 83%] Building CXX object CMakeFiles/strata_engine.dir/src/core/native_head.cpp.o
+[ 85%] Building CXX object CMakeFiles/strata_engine.dir/src/core/native_dense.cpp.o
+[ 85%] Linking CXX executable metal_gemm_test
+[ 85%] Built target s2_expert_grouped_parity
+[ 85%] Built target ple_parity
+[ 86%] Built target s2_gemv_q8_parity
+[ 86%] Built target mmvq_multi_parity
+[ 87%] Built target metal_fused_gr_test
+[ 88%] Built target metal_gemm_test
+[ 88%] Linking CXX static library libstrata_engine.a
+[ 93%] Built target strata_engine
+[ 93%] Linking CXX executable expert_cache_per_layer_test
+[ 95%] Linking CXX executable file_expert_source_test
+[ 96%] Linking CXX executable strata
+[ 98%] Linking CXX executable expert_layout_test
+[ 98%] Linking CXX executable native_dense_ple_key_test
+[100%] Built target expert_cache_per_layer_test
+[100%] Built target native_dense_ple_key_test
+[100%] Built target expert_layout_test
+[100%] Built target strata
+[100%] Built target file_expert_source_test

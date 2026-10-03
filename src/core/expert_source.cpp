@@ -41,6 +41,10 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#if defined(__APPLE__)   // Metal port: host_statistics64 + sysctl, the macOS branch of available_memory_bytes
+#include <mach/mach.h>
+#include <sys/sysctl.h>
+#endif
 #endif
 
 // a 64-bit seek (as in pinned.cu): the 32-bit `fseek` wraps past 4 GiB, and the spelling differs per platform
@@ -50,6 +54,31 @@
 #else
 #define STRATA_FSEEK64(f, o) fseeko((f), (off_t) (o), SEEK_SET)
 #endif
+#endif
+
+// Metal port (Apple Silicon): kq_avx2.cpp - the AVX2 file that defines this on x86 - is compiled out on this
+// CPU, and RouterLookahead (below) is the engine's only caller, so the portable transcription lives here.
+// Same arithmetic as the AVX2 loop (bf16 bits shifted into an f32, times x, summed per row per token), in
+// scalar order: on this backend this is the implementation, not a fallback (the repo's own CPU-side rule).
+#if !defined(_MSC_VER) && !defined(__x86_64__) && !defined(__i386__)
+namespace strata::kernels::cpu {
+void bf16_rows_dot_multi(const uint16_t* w, int rows, int cols, const float* x, int nt, float* out) {
+    for (int r = 0; r < rows; ++r) {
+        const uint16_t* wr = w + (size_t) r * (size_t) cols;
+        for (int t = 0; t < nt; ++t) {
+            const float* xt = x + (size_t) t * (size_t) cols;
+            float acc = 0.0f;
+            for (int c = 0; c < cols; ++c) {
+                const uint32_t b = (uint32_t) wr[c] << 16;   // bf16 -> f32, the AVX2 shift
+                float f;
+                std::memcpy(&f, &b, 4);
+                acc += f * xt[c];
+            }
+            out[(size_t) t * (size_t) rows + (size_t) r] = acc;
+        }
+    }
+}
+}   // namespace strata::kernels::cpu
 #endif
 
 namespace strata::core {
@@ -272,6 +301,20 @@ bool available_memory_bytes(uint64_t& bytes) {
         }
     }
     return resolved_v2;
+#elif defined(__APPLE__)
+    // Metal port: macOS has no _SC_AVPHYS_PAGES; Mach's VM stats give the same "free without swapping first"
+    // pool Linux's MemAvailable approximates (free + inactive + purgeable pages).
+    mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
+    vm_statistics64_data_t vm;
+    if (host_statistics64(mach_host_self(), HOST_VM_INFO64, (host_info64_t) &vm, &count) != KERN_SUCCESS)
+        return false;
+    uint64_t page_bytes = 0;
+    size_t page_bytes_len = sizeof page_bytes;
+    if (sysctlbyname("hw.pagesize", &page_bytes, &page_bytes_len, nullptr, 0) != 0 || page_bytes == 0) return false;
+    const uint64_t pages = (uint64_t) vm.free_count + vm.inactive_count + vm.purgeable_count;
+    if (pages > std::numeric_limits<uint64_t>::max() / page_bytes) return false;
+    bytes = pages * page_bytes;
+    return bytes > 0;
 #else
     const long pages = sysconf(_SC_AVPHYS_PAGES);
     const long page_bytes = sysconf(_SC_PAGESIZE);
@@ -1271,10 +1314,12 @@ bool FileExpertSource::pin_cache_complement(
                 fail("FileExpertSource: madvise could not release mapped expert layer " + std::to_string(layer));
                 return;
             }
+#if !defined(__APPLE__)   // Metal port: macOS has no posix_fadvise; the madvise above already dropped the pages
             if (posix_fadvise(fd_, (off_t) layer_offset, (off_t) layer_bytes, POSIX_FADV_DONTNEED) != 0) {
                 fail("FileExpertSource: posix_fadvise could not release expert layer " + std::to_string(layer));
                 return;
             }
+#endif
             }
 #endif
             const int64_t done = layers_done.fetch_add(1) + 1;

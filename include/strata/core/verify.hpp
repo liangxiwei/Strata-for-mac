@@ -49,6 +49,7 @@ struct VerifyHits {
     const uint64_t* slot_off = nullptr;   ///< E-6: host per-slot offsets when slots differ in size (null: slot * blob)
     int64_t n_slots = 0;                  ///< E-6: how many (for the device copy)
     int64_t blob = 0;
+    bool all_resident = false;            ///< fully resident immutable arena, including native IQ (Metal)
 };
 
 class Verifier {
@@ -176,6 +177,10 @@ private:
     bool device_plan_ = false;            ///< E-6: resident-only layers planned on the device (STRATA_VERIFY_DEVICE_PLAN)
     uint32_t* skip_ = nullptr;            ///< E-6: per group, the ring whose plan the device built (0: the host's)
     unsigned long long* slot_off_d_ = nullptr;   ///< E-6: the slot offsets on the device
+#if defined(STRATA_METAL_BACKEND)
+    int iq_check_windows_ = 0;             ///< opt-in real-model resident/grouped expert comparison
+    float* iq_check_out_ = nullptr;
+#endif
     int64_t lb_ = 0, le_ = -1;           ///< set_stage: the layers this verifier runs (-1: to the last)
     const float* hand_in_ = nullptr;
     float* hand_out_ = nullptr;
@@ -205,6 +210,14 @@ private:
     cudaStream_t cs_ = nullptr;
     cudaGraphExec_t exec_[9] = {};
     cudaGraphExec_t commit_exec_ = nullptr;
+    // Metal, all experts resident: a one-token window writes its GDN state back in place (the tail kernel with
+    // n_keep = 1, the very state the commit would compute), and the commit then replays commit_nogdn_exec_ - the
+    // same graph without the GDN recurrence. STRATA_METAL_GDN_INPLACE=0 keeps the recurrence in the commit.
+    cudaGraphExec_t commit_nogdn_exec_ = nullptr;
+    int32_t* gdn_keep1_ = nullptr;        // device constant 1: the n_keep the in-place step reads
+    bool gdn_write_capture_ = false;      // record_window: write the GDN state back (set while capturing)
+    bool exec1_writes_gdn_ = false;       // exec_[1] was recorded that way
+    bool last_gdn_written_ = false;       // the last run() already advanced the GDN state
 
     // mapped staging (host pointer, device alias)
     int32_t* h_tok_ = nullptr;   int32_t* m_tok_ = nullptr;     // T

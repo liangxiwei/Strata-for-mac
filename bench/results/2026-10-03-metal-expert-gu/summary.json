@@ -1,0 +1,158 @@
+{
+  "binary_sha256": "a6b703a909aa243a56f4a271b330bf47ced2d1b27da8a46c45778f61e5d75c94",
+  "runs": {
+    "r1-a": {
+      "sha256": "a6b703a909aa243a56f4a271b330bf47ced2d1b27da8a46c45778f61e5d75c94",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_METAL_EXPERT_GU_R2": "0"
+      },
+      "extra_view_mib": 0,
+      "prefill_tok_s": 121.31991211585567,
+      "cold_decode_tok_s": 22.73554827307525,
+      "warm_decode_ms": [
+        11369.0,
+        11256.1,
+        11276.7
+      ],
+      "warm_median_ms": 11276.7,
+      "warm_median_tok_s": 22.7016769090248,
+      "metrics": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2706.75M  free = 1389.25M  (encrypted)",
+        "startup_seconds": 60.4289085,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2706.75M  free = 1389.25M  (encrypted)",
+        "child_peak_rss_bytes": 36563091456
+      },
+      "output_ids_identical_to_round21": true,
+      "vs_r1_median_pct": 0.0,
+      "saved_ms_per_token": 0.0
+    },
+    "r1-b": {
+      "sha256": "a6b703a909aa243a56f4a271b330bf47ced2d1b27da8a46c45778f61e5d75c94",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_METAL_EXPERT_GU_R2": "0"
+      },
+      "extra_view_mib": 0,
+      "prefill_tok_s": 119.85033090676365,
+      "cold_decode_tok_s": 22.507077420829596,
+      "warm_decode_ms": [
+        11477.9,
+        11425.5,
+        11164.2
+      ],
+      "warm_median_ms": 11425.5,
+      "warm_median_tok_s": 22.40602161830992,
+      "metrics": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2706.75M  free = 1389.25M  (encrypted)",
+        "startup_seconds": 27.510330749999998,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2706.75M  free = 1389.25M  (encrypted)",
+        "child_peak_rss_bytes": 36986552320
+      },
+      "output_ids_identical_to_round21": true,
+      "vs_r1_median_pct": -1.3023500065642568,
+      "saved_ms_per_token": -0.5812499999999972
+    },
+    "r1-c": {
+      "sha256": "a6b703a909aa243a56f4a271b330bf47ced2d1b27da8a46c45778f61e5d75c94",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_METAL_EXPERT_GU_R2": "0"
+      },
+      "extra_view_mib": 0,
+      "prefill_tok_s": 117.48189310322546,
+      "cold_decode_tok_s": 22.83430854859426,
+      "warm_decode_ms": [
+        11212.7,
+        11123.2,
+        11196.3
+      ],
+      "warm_median_ms": 11196.3,
+      "warm_median_tok_s": 22.86469637290891,
+      "metrics": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2706.75M  free = 1389.25M  (encrypted)",
+        "startup_seconds": 31.818751332999998,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2706.75M  free = 1389.25M  (encrypted)",
+        "child_peak_rss_bytes": 36460560384
+      },
+      "output_ids_identical_to_round21": true,
+      "vs_r1_median_pct": 0.718094370461686,
+      "saved_ms_per_token": 0.3140625000000057
+    },
+    "r2-a": {
+      "sha256": "a6b703a909aa243a56f4a271b330bf47ced2d1b27da8a46c45778f61e5d75c94",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0"
+      },
+      "extra_view_mib": 0,
+      "prefill_tok_s": 120.53958339109187,
+      "cold_decode_tok_s": 22.45614035087719,
+      "warm_decode_ms": [
+        11335.5,
+        11390.5,
+        11349.1
+      ],
+      "warm_median_ms": 11349.1,
+      "warm_median_tok_s": 22.556854728568783,
+      "metrics": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2706.75M  free = 1389.25M  (encrypted)",
+        "startup_seconds": 29.55430225,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2706.75M  free = 1389.25M  (encrypted)",
+        "child_peak_rss_bytes": 36434526208
+      },
+      "output_ids_identical_to_round21": true,
+      "vs_r1_median_pct": -0.6379360477923313,
+      "saved_ms_per_token": -0.2828124999999986
+    },
+    "r2-b": {
+      "sha256": "a6b703a909aa243a56f4a271b330bf47ced2d1b27da8a46c45778f61e5d75c94",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0"
+      },
+      "extra_view_mib": 0,
+      "prefill_tok_s": 119.834532477555,
+      "cold_decode_tok_s": 22.556059738314463,
+      "warm_decode_ms": [
+        11282.5,
+        11258.5,
+        11294.1
+      ],
+      "warm_median_ms": 11282.5,
+      "warm_median_tok_s": 22.690006647462884,
+      "metrics": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2706.75M  free = 1389.25M  (encrypted)",
+        "startup_seconds": 33.571704167,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2706.75M  free = 1389.25M  (encrypted)",
+        "child_peak_rss_bytes": 36386390016
+      },
+      "output_ids_identical_to_round21": true,
+      "vs_r1_median_pct": -0.05140704631064752,
+      "saved_ms_per_token": -0.022656249999997158
+    },
+    "r2-c": {
+      "sha256": "a6b703a909aa243a56f4a271b330bf47ced2d1b27da8a46c45778f61e5d75c94",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0"
+      },
+      "extra_view_mib": 0,
+      "prefill_tok_s": 121.39693885478985,
+      "cold_decode_tok_s": 22.691615625304696,
+      "warm_decode_ms": [
+        11262.3,
+        11484.5,
+        11255.7
+      ],
+      "warm_median_ms": 11262.3,
+      "warm_median_tok_s": 22.730703319925773,
+      "metrics": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2706.75M  free = 1389.25M  (encrypted)",
+        "startup_seconds": 45.454983125000005,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2706.75M  free = 1389.25M  (encrypted)",
+        "child_peak_rss_bytes": 36337729536
+      },
+      "output_ids_identical_to_round21": true,
+      "vs_r1_median_pct": 0.12786020617459037,
+      "saved_ms_per_token": 0.056250000000005684
+    }
+  }
+}

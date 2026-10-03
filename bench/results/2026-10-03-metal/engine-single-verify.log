@@ -1,0 +1,37 @@
+strata generate: 1879 MiB of weights loaded from /Users/liangxw/src/xproject/petproject/Q2_0/pack-full (301 canonical tensors skipped: served natively)
+strata generate: 301 native projection matrices, 1376.20 MiB of weights
+strata generate: the SSD is kept awake while rows are read: one page of the table after 100 ms without a read, until 60 s after the last request (STRATA_SSD_KEEPALIVE=0 turns it off)
+strata generate: profile /Users/liangxw/src/xproject/petproject/Strata/data/expert-profile.bin: 24576 ranked pairs, built for 24576 slots
+strata generate: PLE on, table 320001536 rows of /Users/liangxw/src/xproject/petproject/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00002-of-00002.gguf
+strata mtp: draft layer loaded, 867 MiB of VRAM (experts 675, dense 111), files read in 0.30 s (2609 MiB/s)
+strata generate: GPU 0: Apple M2 Max, compute capability 10.0
+strata generate: expert arena: cudaHostRegister PORTABLE ok; normal pages (no hugetlb on macOS)
+strata generate: loaded 31.64 GiB at 2.89 GiB/s
+strata generate: experimental native Q5_K head, 437043200 bytes
+strata generate: Metal unified expert arena: 24576 experts, 31.64 GiB, no extra copy
+strata generate: expert cache 24576 slots, 31.64 GiB of shared weights; policy is
+                 all experts resident in unified memory, immutable, no eviction.
+strata generate: R4 hit path ON - resident experts are computed on the GPU
+strata generate: 11 expert-pool workers + the host thread
+strata generate: session is up (engine 0.1.34)
+strata generate: token graph hit path: 24576 resident experts, decided on the device
+strata generate: token graph captured (48 layers, one launch per token)
+strata serve: the prompt path allocates its own buffers (too few cache slots to borrow)
+strata hc: METAL: the hyper-connection read runs as the plain one (the split and staged variants are CUDA stagings of the same arithmetic; this port has one read)
+strata verify: --pcie-mode 0 -> 1 on Metal (direct reads of the mapped arena; rules 11 + 9)
+strata verify: window up to 2 tokens, 32.3 MiB of device buffers
+strata serve: 40589 MiB of VRAM free with everything loaded
+strata verify: captured the 2-token window, all experts on Metal
+strata verify: captured the 1-token window, all experts on Metal
+strata decode timing: 40 windows, avg T 1.00, 1.00 tokens/window, 47.45 ms/window = verify 47.34 (GPU-reach wait 0.00 + per-layer host 0.00 [plan 0.00 actq 0.00 jobs 0.00 CPU 0.00] + stage 0.37) + commit/emit 0.11 + draft 0.00; per layer-window: CPU experts 0.00 (0.00 entries), VRAM hits 0.00, PCIe 0.00
+strata serve: prompt 25 tokens = 0 reused + 25 read in 4059 ms (6.2 tok/s), 40 generated in 1898 ms (21.1 tok/s), drafts accepted 0 of 0, 1 checkpoints
+strata serve: decode expert cache hit rate: 100.0% (19200 hits / 19200 lookups)
+strata decode timing: 103 windows, avg T 1.00, 1.00 tokens/window, 53.48 ms/window = verify 53.22 (GPU-reach wait 0.00 + per-layer host 0.00 [plan 0.00 actq 0.00 jobs 0.00 CPU 0.00] + stage 1.47) + commit/emit 0.26 + draft 0.00; per layer-window: CPU experts 0.00 (0.00 entries), VRAM hits 0.00, PCIe 0.00
+strata serve: prompt 971 tokens = 0 reused + 971 read in 7583 ms (128.0 tok/s), 103 generated in 5508 ms (18.7 tok/s), drafts accepted 0 of 0, 1 checkpoints
+strata serve: decode expert cache hit rate: 100.0% (49440 hits / 49440 lookups)
+strata decode timing: 85 windows, avg T 1.00, 1.00 tokens/window, 52.59 ms/window = verify 52.38 (GPU-reach wait 0.00 + per-layer host 0.00 [plan 0.00 actq 0.00 jobs 0.00 CPU 0.00] + stage 0.67) + commit/emit 0.21 + draft 0.00; per layer-window: CPU experts 0.00 (0.00 entries), VRAM hits 0.00, PCIe 0.00
+strata serve: prompt 1100 tokens = 964 reused + 136 read in 2790 ms (48.7 tok/s), 85 generated in 4470 ms (19.0 tok/s), drafts accepted 0 of 0, 2 checkpoints
+strata serve: decode expert cache hit rate: 100.0% (40800 hits / 40800 lookups)
+strata decode timing: 40 windows, avg T 1.00, 1.00 tokens/window, 50.58 ms/window = verify 50.43 (GPU-reach wait 0.00 + per-layer host 0.00 [plan 0.00 actq 0.00 jobs 0.00 CPU 0.00] + stage 0.01) + commit/emit 0.15 + draft 0.00; per layer-window: CPU experts 0.00 (0.00 entries), VRAM hits 0.00, PCIe 0.00
+strata serve: prompt 25 tokens = 0 reused + 25 read in 1197 ms (20.9 tok/s), 40 generated in 2023 ms (19.8 tok/s), drafts accepted 0 of 0, 1 checkpoints
+strata serve: decode expert cache hit rate: 100.0% (19200 hits / 19200 lookups)

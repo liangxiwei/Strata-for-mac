@@ -3,7 +3,8 @@
 Strata runs the Qwen3.8-Flash-Next mixture-of-experts model (and its Coder, Swift 1.5 and Unsloth variants) on a
 normal PC: one NVIDIA or AMD graphics card plus system RAM, on Windows or Linux. It has a C++/CUDA/HIP engine
 (`src/`, `include/`), a Python server with an OpenAI- and Anthropic-compatible API and a web app (`serve/`), and a
-one-click installer (`setup.py`, started by `START-HERE.bat` / `setup.sh`).
+one-click installer (`setup.py`, started by `START-HERE.bat` / `setup.sh`). The engine needs CUDA or HIP, so the
+model does not run on macOS - developing and testing everything else on a Mac does: [docs/MAC.md](docs/MAC.md).
 
 ## Installing Strata for a user
 

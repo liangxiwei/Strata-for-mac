@@ -64,7 +64,7 @@ const char* name_of(int t) {
         default: return "?";
     }
 }
-int block_values(int t) { return t == 20 ? 32 : t == 42 ? 64 : 256; }
+int block_values(int t) { return t == 20 || t == 7 || t == 8 ? 32 : t == 42 ? 64 : 256; }
 
 // `rows` rows of `n` values of format t: random bytes, then a finite fp16 scale in every block
 std::vector<uint8_t> random_rows(int t, int64_t rows, int64_t n, std::mt19937& rng) {
@@ -81,6 +81,10 @@ std::vector<uint8_t> random_rows(int t, int64_t rows, int64_t n, std::mt19937& r
         } else {
             const uint16_t h = (uint16_t) ((sgn(rng) == 0 ? 0x8000 : 0) | (ex(rng) << 10) | man(rng));   // 2^-13 .. 2^-6
             std::memcpy(&w[o], &h, 2);
+            if (t == 7 || t == 12 || t == 13) {   // Q5_1 / Q4_K / Q5_K also have an FP16 minimum
+                const uint16_t m = (uint16_t) ((ex(rng) << 10) | man(rng));
+                std::memcpy(&w[o + 2], &m, 2);
+            }
         }
     }
     return w;
@@ -268,6 +272,80 @@ void check_grouped(int gu, int dt, int64_t H, int64_t FF, cudaStream_t s, std::m
     }
 }
 
+#if defined(STRATA_METAL_BACKEND)
+// Captured native routes must read the current device ids/residency, including sized slots, repeated
+// experts, missing entries, multiple tokens and untouched output guards. The established per-group
+// path supplies the arithmetic reference; iq_parity separately validates the quantized weights.
+void check_resident(int gu, int dt, int H, int FF, int tokens, bool sized, cudaStream_t s, std::mt19937& rng) {
+    constexpr int K = 3, NE = 5;
+    const int cap = tokens * K;
+    Grouped G(gu, dt, H, FF, std::vector<int>(cap, 1), tokens, rng);
+    const size_t stride = G.L.bytes + 64;
+    std::vector<uint64_t> offsets(NE);
+    for (int i = 1; i < NE; ++i) offsets[i] = offsets[i - 1] + stride + (sized ? i * 64 : 0);
+    auto* arena = dalloc<uint8_t>(offsets.back() + stride);
+    for (int i = 0; i < NE; ++i)
+        ck(cudaMemcpy(arena + offsets[i], G.blobs[i % cap], G.L.bytes, cudaMemcpyDeviceToDevice), "resident blob");
+    auto* doff = dalloc<uint64_t>(NE);
+    ck(cudaMemcpy(doff, offsets.data(), NE * sizeof(uint64_t), cudaMemcpyHostToDevice), "offsets");
+    auto* ids = dalloc<int32_t>(cap);
+    auto* route = dalloc<int32_t>(cap);
+    auto* res = dalloc<int32_t>(NE);
+    auto* mapping = dalloc<int32_t>(NE);
+    k::quantize_q8_1_rows(G.dx, tokens, H, G.dxq, s);
+    ck(cudaStreamSynchronize(s), "resident input");
+    cudaGraph_t graph = nullptr;
+    cudaGraphExec_t exec = nullptr;
+    ck(cudaStreamBeginCapture(s, cudaStreamCaptureModeGlobal), "resident capture");
+    ck(cudaMemcpyAsync(ids, route, cap * sizeof(int32_t), cudaMemcpyDeviceToDevice, s), "capture route");
+    ck(cudaMemcpyAsync(res, mapping, NE * sizeof(int32_t), cudaMemcpyDeviceToDevice, s), "capture residency");
+    k::native_expert_resident(G.L, arena, sized ? doff : nullptr, stride, ids, res, NE,
+                              tokens, K, G.dxq, G.dscr, G.dout, s);
+    ck(cudaStreamEndCapture(s, &graph), "resident end capture");
+    ck(cudaGraphInstantiate(&exec, graph, 0), "resident instantiate");
+    ck(cudaGraphDestroy(graph), "destroy resident source graph");
+    size_t diff = 0, nonfinite = 0;
+    for (int pass = 0; pass < 3; ++pass) {
+        std::vector<int32_t> hr(cap), hm(NE), start(1, 0), dst, tok;
+        std::vector<unsigned long long> ptr(cap);
+        for (int i = 0; i < NE; ++i) hm[i] = (NE - 1 - i + pass) % NE;
+        if (pass == 2) hm[2] = -1;
+        for (int e = 0; e < cap; ++e) {
+            hr[e] = (e * 3 + pass) % NE;
+            if (pass == 2 && e == 0) hr[e] = -1;
+            const int slot = hr[e] < 0 ? -1 : hm[hr[e]];
+            if (slot >= 0) {
+                ptr[e] = (unsigned long long) (arena + offsets[slot]);
+                dst.push_back(e); tok.push_back(e / K);
+            }
+            start.push_back((int) dst.size());
+        }
+        ck(cudaMemcpy(G.dptr, ptr.data(), cap * 8, cudaMemcpyHostToDevice), "reference pointers");
+        ck(cudaMemcpy(G.dstart, start.data(), (cap + 1) * 4, cudaMemcpyHostToDevice), "reference starts");
+        ck(cudaMemcpy(G.ddst, dst.data(), dst.size() * 4, cudaMemcpyHostToDevice), "reference destinations");
+        ck(cudaMemcpy(G.dtok, tok.data(), tok.size() * 4, cudaMemcpyHostToDevice), "reference tokens");
+        auto ref = G.result(true, s);
+        for (int e = 0; e < cap; ++e)
+            if (hr[e] < 0 || hm[hr[e]] < 0) std::fill_n(ref.begin() + (size_t) e * H, H, 0.f);
+        ck(cudaMemcpy(route, hr.data(), cap * 4, cudaMemcpyHostToDevice), "new route");
+        ck(cudaMemcpy(mapping, hm.data(), NE * 4, cudaMemcpyHostToDevice), "new residency");
+        ck(cudaMemset(G.dout, 0xff, G.out_floats * 4), "resident output guard");
+        ck(cudaGraphLaunch(exec, s), "resident replay");
+        ck(cudaStreamSynchronize(s), "resident sync");
+        std::vector<float> out(G.out_floats);
+        ck(cudaMemcpy(out.data(), G.dout, out.size() * 4, cudaMemcpyDeviceToHost), "resident result");
+        for (size_t i = 0; i < out.size(); ++i) diff += std::memcmp(&ref[i], &out[i], 4) != 0;
+        for (size_t i = 0; i < (size_t) cap * H; ++i)
+            nonfinite += !std::isfinite(ref[i]) || !std::isfinite(out[i]);
+    }
+    std::printf("resident %d/%d %dx%d T=%d %s slots, three changing graph replays: %zu differences, %zu nonfinite\n",
+                gu, dt, H, FF, tokens, sized ? "sized" : "uniform", diff, nonfinite);
+    if (diff || nonfinite) ++g_fail;
+    cudaGraphExecDestroy(exec);
+    cudaFree(arena); cudaFree(doff); cudaFree(ids); cudaFree(route); cudaFree(res); cudaFree(mapping);
+}
+#endif
+
 // ------------------------------------------------------------------------------------------------ --bench
 float time_ms(cudaStream_t s, int it, const auto& fn) {
     cudaEvent_t e0, e1;
@@ -340,6 +418,12 @@ int main(int argc, char** argv) {
         for (int dt : {20, 42}) check_grouped(gu, dt, 2560, 640, s, rng);   // the model's shape
         check_grouped(gu, 23, 1024, 512, s, rng);                           // IQ4_XS down needs n_ff % 256 == 0
     }
+#if defined(STRATA_METAL_BACKEND)
+    for (int gu : {16, 17, 18, 21, 22, 23, 29, 42, 12, 13, 8})
+        for (int dt : {20, 23, 42, 7, 8}) check_resident(gu, dt, 512, 256, 4, true, s, rng);
+    for (int gu : {16, 17, 22, 29})
+        for (int t : {1, 2, 8}) check_resident(gu, 42, 2560, 640, t, false, s, rng);
+#endif
     if (do_bench) bench(s, rng);
     std::printf("iq_multi_parity: %d failures\n", g_fail);
     cudaStreamDestroy(s);

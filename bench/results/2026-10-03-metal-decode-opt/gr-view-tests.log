@@ -1,0 +1,10 @@
+Internal ctest changing into directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+Test project /Users/liangxw/src/xproject/petproject/Strata/build-metal
+    Start  6: metal_mmvq_decode_test
+1/2 Test  #6: metal_mmvq_decode_test ...........   Passed    1.29 sec
+    Start 34: metal_fused_gr_test
+2/2 Test #34: metal_fused_gr_test ..............   Passed    0.76 sec
+
+100% tests passed, 0 tests failed out of 2
+
+Total Test time (real) =   2.05 sec

@@ -1,0 +1,25 @@
+strata generate: 1879 MiB of weights loaded from /Users/liangxw/src/xproject/petproject/Q2_0/pack-full (301 canonical tensors skipped: served natively)
+strata generate: 301 native projection matrices, 1376.20 MiB of weights
+strata generate: the SSD is kept awake while rows are read: one page of the table after 100 ms without a read, until 60 s after the last request (STRATA_SSD_KEEPALIVE=0 turns it off)
+strata generate: PLE on, table 320001536 rows of /Users/liangxw/src/xproject/petproject/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00002-of-00002.gguf
+strata generate: GPU 0: Apple M2 Max, compute capability 10.0
+strata generate: expert arena: cudaHostRegister PORTABLE ok; normal pages (no hugetlb on macOS)
+strata generate: loaded 31.64 GiB at 3.24 GiB/s
+strata generate: experimental native Q5_K head, 437043200 bytes
+strata generate: 11 expert-pool workers + the host thread
+strata generate: session is up (engine 0.1.34)
+strata generate: sampling greedy
+strata generate: position 0, token 9707 (prompt)
+layers dumped            /tmp/strata-native-layers.bin (48 layers + the input x 4 streams x 2560 per position)
+prompt  : 9707
+output  : 16451
+decode                   1 tokens in 256.3 ms  ->  3.90 tok/s
+  per token              256.294 ms/token (WALL CLOCK: embed, layers, head, sample)
+  token host phases      PLE 0.180  embed 0.257  LAYERS 246.778  head 1.902  readback 6.441  sample 0.735  (sum 256.294 of 256.294 ms)
+  ple io: 16 rows, 0.0% row-cache hits, 16 SSD reads (0.1 MB), read p50 242 us p99 340 us, blocked 0.120 ms total (submit 0.025 ms), cache 16/1048576 rows, SSD kept awake by 2 reads (slowest 5.3 ms)
+  the CPU expert pool    22.951 ms/token over 48 layers (1 positions, 48 dispatches)
+  pool phases              wait-park 0.000  drain 22.547  re-park 0.000  ms/token
+  expert blobs           480 blobs read
+  rings seen MID-GRAPH   44 of 48 over 1 positions
+  ring latency           4.530 ms of a 5.339 ms layer
+  host after ring        29.049 ms/token over 1 positions (0.605 ms/layer, after the ring)

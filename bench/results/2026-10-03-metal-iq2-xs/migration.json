@@ -1,0 +1,298 @@
+{
+  "old_model_directory": "/Users/liangxw/src/xproject/petproject/Q2_0",
+  "replacement_directory": "/Users/liangxw/src/xproject/petproject/IQ2_XS",
+  "status": "completed",
+  "files": [
+    {
+      "path": "Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00001-of-00002.gguf",
+      "bytes": 37623740192,
+      "links": 1
+    },
+    {
+      "path": "Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00002-of-00002.gguf",
+      "bytes": 28800138432,
+      "links": 2
+    },
+    {
+      "path": "download.log",
+      "bytes": 121906,
+      "links": 1
+    },
+    {
+      "path": "download.sh",
+      "bytes": 871,
+      "links": 1
+    },
+    {
+      "path": "mtp/mtp-inventory.json",
+      "bytes": 7513,
+      "links": 1
+    },
+    {
+      "path": "mtp/mtp-inventory.md",
+      "bytes": 2437,
+      "links": 1
+    },
+    {
+      "path": "mtp/mtp-manifest.json",
+      "bytes": 11643,
+      "links": 1
+    },
+    {
+      "path": "mtp/mtp-q2_0.gguf",
+      "bytes": 889017216,
+      "links": 1
+    },
+    {
+      "path": "mtp/mtp-q2_0.gguf.report.json",
+      "bytes": 3589,
+      "links": 1
+    },
+    {
+      "path": "mtp/rt/dense.bin",
+      "bytes": 116099072,
+      "links": 2
+    },
+    {
+      "path": "mtp/rt/dense.txt",
+      "bytes": 1851,
+      "links": 2
+    },
+    {
+      "path": "mtp/rt/experts.bin",
+      "bytes": 707788800,
+      "links": 2
+    },
+    {
+      "path": "mtp/tensors/mtp.fc_embedding.weight.bin",
+      "bytes": 13107200,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.fc_hidden.weight.bin",
+      "bytes": 13107200,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.hyper_connection_mixer.hc_norm.weight.bin",
+      "bytes": 20480,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.hyper_connection_mixer.input_mix_weight_down.weight.bin",
+      "bytes": 6553600,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.hyper_connection_mixer.input_mix_weight_up.weight.bin",
+      "bytes": 6553600,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.attn_hyper_connection.block_inject_weight.weight.bin",
+      "bytes": 81920,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.attn_hyper_connection.hc_norm.weight.bin",
+      "bytes": 20480,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.attn_hyper_connection.input_mix_weight_down.weight.bin",
+      "bytes": 6553600,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.attn_hyper_connection.input_mix_weight_up.weight.bin",
+      "bytes": 6553600,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.mlp.experts.down_proj.bin",
+      "bytes": 1677721600,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.mlp.experts.gate_up_proj.bin",
+      "bytes": 3355443200,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.mlp.gate.weight.bin",
+      "bytes": 2621440,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.mlp.shared_expert.down_proj.weight.bin",
+      "bytes": 3276800,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.mlp.shared_expert.gate_proj.weight.bin",
+      "bytes": 3276800,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.mlp.shared_expert.up_proj.weight.bin",
+      "bytes": 3276800,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.mlp.shared_expert_gate.weight.bin",
+      "bytes": 5120,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.mlp_hyper_connection.block_inject_weight.weight.bin",
+      "bytes": 81920,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.mlp_hyper_connection.hc_norm.weight.bin",
+      "bytes": 20480,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.mlp_hyper_connection.input_mix_weight_down.weight.bin",
+      "bytes": 6553600,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.mlp_hyper_connection.input_mix_weight_up.weight.bin",
+      "bytes": 6553600,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.self_attn.indexer.index_qk_proj.weight.bin",
+      "bytes": 3276800,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.self_attn.indexer.k_layernorm.weight.bin",
+      "bytes": 256,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.self_attn.indexer.q_layernorm.weight.bin",
+      "bytes": 256,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.self_attn.k_norm.weight.bin",
+      "bytes": 512,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.self_attn.k_proj.weight.bin",
+      "bytes": 2621440,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.self_attn.o_proj.weight.bin",
+      "bytes": 31457280,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.self_attn.q_norm.weight.bin",
+      "bytes": 512,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.self_attn.q_proj.weight.bin",
+      "bytes": 62914560,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.layers.0.self_attn.v_proj.weight.bin",
+      "bytes": 2621440,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.pre_fc_norm_embedding.weight.bin",
+      "bytes": 5120,
+      "links": 1
+    },
+    {
+      "path": "mtp/tensors/mtp.pre_fc_norm_hidden.weight.bin",
+      "bytes": 20480,
+      "links": 1
+    },
+    {
+      "path": "pack-full/dense.bin",
+      "bytes": 5842501120,
+      "links": 1
+    },
+    {
+      "path": "pack-full/embd.bin",
+      "bytes": 476774400,
+      "links": 1
+    },
+    {
+      "path": "pack-full/experts.bin",
+      "bytes": 33973862400,
+      "links": 1
+    },
+    {
+      "path": "pack-full/experts.json",
+      "bytes": 8643,
+      "links": 1
+    },
+    {
+      "path": "pack-full/index.txt",
+      "bytes": 105618,
+      "links": 1
+    },
+    {
+      "path": "pack-full/manifest.json",
+      "bytes": 530307,
+      "links": 1
+    },
+    {
+      "path": "pack-full/tokenizer/chat_template.jinja",
+      "bytes": 9993,
+      "links": 1
+    },
+    {
+      "path": "pack-full/tokenizer/merges.txt",
+      "bytes": 3353258,
+      "links": 1
+    },
+    {
+      "path": "pack-full/tokenizer/token_type.json",
+      "bytes": 744960,
+      "links": 1
+    },
+    {
+      "path": "pack-full/tokenizer/tokenizer.json",
+      "bytes": 541,
+      "links": 1
+    },
+    {
+      "path": "pack-full/tokenizer/vocab.json",
+      "bytes": 5737005,
+      "links": 1
+    },
+    {
+      "path": "strata-mac-optimized.json",
+      "bytes": 1035,
+      "links": 1
+    },
+    {
+      "path": "strata-mac.json",
+      "bytes": 894,
+      "links": 1
+    }
+  ],
+  "apparent_bytes": 113654865392,
+  "bytes_with_single_link": 84030837237,
+  "preserved_shared_assets": [
+    "Identical PLE GGUF shard, verified against repository SHA-256",
+    "MTP runtime in IQ2_XS/mtp/rt, drafting disabled"
+  ],
+  "deleted_directory": "/Users/liangxw/src/xproject/petproject/Q2_0",
+  "deleted_at": "2026-10-03T12:05:07.421897+08:00",
+  "free_disk_bytes_before": 923804721152,
+  "free_disk_bytes_after": 1007835836416,
+  "new_runtime_config": "/Users/liangxw/src/xproject/petproject/IQ2_XS/strata-mac-optimized.json"
+}

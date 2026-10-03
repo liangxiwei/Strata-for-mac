@@ -37,7 +37,9 @@
 
 #include <algorithm>
 #include <atomic>
+#include <functional>
 #include <map>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -47,10 +49,27 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
+#if defined(_MSC_VER) || defined(__x86_64__) || defined(__i386__)
 #include <immintrin.h>
+#define STRATA_VERIFY_PAUSE() _mm_pause()
+#define STRATA_VERIFY_SFENCE() _mm_sfence()
+#else
+// Metal port (Apple Silicon): the seq_cst atomic fences around each doorbell store already carry the ordering
+// the x86 spellings spell; the pause is pipeline politeness only
+#define STRATA_VERIFY_PAUSE() ((void) 0)
+#define STRATA_VERIFY_SFENCE() ((void) 0)
+#endif
 
 namespace strata::core {
 namespace {
+
+// Metal port: one spelling for "this build runs the Metal backend" where a runtime branch reads better than
+// an #if (the shim force-defines STRATA_METAL_BACKEND into every unit of this build)
+#if defined(STRATA_METAL_BACKEND)
+constexpr bool metal_backend = true;
+#else
+constexpr bool metal_backend = false;
+#endif
 
 constexpr float EPS = 1e-6f;
 using Clock = std::chrono::steady_clock;
@@ -127,10 +146,60 @@ std::string released_note(bool drained) {
 }
 // #267 test hook: STRATA_TEST_VERIFY_STALL=N withholds the last layer's flag in the N-th window (1-based), so the
 // GPU spins on a flag nobody raises - the bounded window wait and the release are then what ends it.  Unset: never.
+// Metal port: the hook is OFF on this backend - a withheld flag leaves a spinning kernel that no later store can
+// release (rule 11) and that wedges the GPU if killed; the Metal window never launches such a kernel instead.
 const int64_t g_test_stall = [] {
     const char* e = std::getenv("STRATA_TEST_VERIFY_STALL");
-    return e != nullptr ? (int64_t) std::atoll(e) : (int64_t) 0;
+    return (e != nullptr && !metal_backend) ? (int64_t) std::atoll(e) : (int64_t) 0;
 }();
+
+#if defined(STRATA_METAL_BACKEND)
+// THE METAL WINDOW'S SHAPE (rules 11 and 9, docs/PORT_METAL/PROGRESS.md round 13; measured there):
+//   * rule 11: a GPU kernel already spinning on a mapped-host flag does NOT observe CPU stores made after its
+//     launch - the CUDA tree's mid-flight flag release from the host cannot work here, and a killed spinner
+//     wedges the whole GPU until a sleep/wake cycle.  So no kernel is ever launched spinning: the host raises
+//     a step's flags BEFORE the launches that read them (the pre-set read path the wait kernels were verified
+//     on by K21's probes), which means the window must pause between steps - which the tape allows, because
+//     each cudaGraphLaunch re-encodes its own command buffers.
+//   * rule 9: the grouped expert entries (moe_grouped_s2, native_expert_grouped) read their group-POINTER
+//     tables back to the HOST and bind each group's blob at launch time - a captured launch would freeze the
+//     capture-time bindings (zeros) into every replay, and the real pointers only exist once the pool has
+//     written this window's plan.  So post(l, grp) - the only caller - runs LIVE, un-captured.
+// The window therefore runs as SEGMENTS: the pre(l, grp) chains (stable buffers; the dynamics ride the mapped
+// staging exactly as on CUDA) are captured once each and replayed between the host's steps, each post runs
+// live on the same stream, and the tail (the head + sampler, or a stage's hand-off writes) is a last segment.
+// The pool of step k still overlaps the GPU's post(k-1) + pre(k); the flags keep their CUDA meanings.
+namespace {
+struct MetalWindow {
+    cudaGraphExec_t open_seg = nullptr;   ///< the first groups' pre's, launched when the window starts
+    std::vector<cudaGraphExec_t> after_step;   ///< [k] launched after step k's live post (null: none); [steps-1] = the tail
+    std::function<bool(int64_t, int, cudaStream_t, std::string&)> post;   ///< step k's live post body
+    cudaEvent_t kick = nullptr;   ///< commits the stream's open command buffer after each segment launch
+};
+std::mutex g_metal_mu;
+std::map<std::pair<const Verifier*, int>, MetalWindow> g_metal;
+MetalWindow* metal_window(const Verifier* v, int T, bool create) {
+    std::lock_guard<std::mutex> lk(g_metal_mu);
+    if (create) {
+        MetalWindow& w = g_metal[{v, T}];
+        if (w.kick == nullptr) (void) cudaEventCreateWithFlags(&w.kick, cudaEventDisableTiming);
+        return &w;
+    }
+    const auto it = g_metal.find({v, T});
+    return it == g_metal.end() ? nullptr : &it->second;
+}
+void metal_destroy(const Verifier* v) {
+    std::lock_guard<std::mutex> lk(g_metal_mu);
+    for (auto it = g_metal.begin(); it != g_metal.end();) {
+        if (it->first.first != v) { ++it; continue; }
+        if (it->second.open_seg) cudaGraphExecDestroy(it->second.open_seg);
+        for (cudaGraphExec_t e : it->second.after_step) if (e) cudaGraphExecDestroy(e);
+        if (it->second.kick != nullptr) cudaEventDestroy(it->second.kick);
+        it = g_metal.erase(it);
+    }
+}
+}  // namespace
+#endif
 }  // namespace
 
 bool Verifier::release_gpu_waits(int timeout_ms) {
@@ -141,7 +210,7 @@ bool Verifier::release_gpu_waits(int timeout_ms) {
     for (uint32_t* p : {h_flag_, h_flagA_, h_flagB_})
         if (p != nullptr) *(volatile uint32_t*) p = UINT32_MAX;
     std::atomic_thread_fence(std::memory_order_seq_cst);
-    _mm_sfence();
+    STRATA_VERIFY_SFENCE();
     const OnDevice on_device(device_);
     const Clock::time_point t0 = Clock::now();
     for (cudaStream_t s : {cs_, copy_}) {
@@ -171,14 +240,24 @@ Verifier::~Verifier() {
         Verifier* me = this;
         slot.compare_exchange_strong(me, nullptr);
     }
+#if defined(STRATA_METAL_BACKEND)
+    metal_destroy(this);   // the segmented window's tapes (the CUDA exec_ list stays empty here)
+#endif
     if (cs_) cudaStreamSynchronize(cs_);
     for (auto& e : exec_)
         if (e) cudaGraphExecDestroy(e);
     if (commit_exec_) cudaGraphExecDestroy(commit_exec_);
+    if (commit_nogdn_exec_) cudaGraphExecDestroy(commit_nogdn_exec_);
+    if (gdn_keep1_) cudaFree(gdn_keep1_);
     if (cs_) cudaStreamDestroy(cs_);
     if (copy_) { cudaStreamSynchronize(copy_); cudaStreamDestroy(copy_); }
     if (commit_done_) cudaEventDestroy(commit_done_);
     if (arena_) cudaFree(arena_);
+    if (slot_off_d_) cudaFree(slot_off_d_);
+    if (skip_) cudaFree(skip_);
+#if defined(STRATA_METAL_BACKEND)
+    if (iq_check_out_) cudaFree(iq_check_out_);
+#endif
     void* hosts[] = {h_tok_, h_step_, h_pos_, h_commit_, h_ple_, h_out_, h_x_, h_ids_, h_w_, h_seq_, h_flag_, h_ymiss_,
                      h_flagA_, h_plan_, h_flagB_};
     for (void* h : hosts)
@@ -352,12 +431,46 @@ bool Verifier::init(const WeightTable& wt, const ModelGeometry& g, SessionState&
         err = "verify: event create failed";
         return false;
     }
+#if defined(STRATA_METAL_BACKEND)
+    {
+        const char* v = std::getenv("STRATA_METAL_GDN_INPLACE");
+        if (v == nullptr || std::atoi(v) != 0) {
+            const int32_t one = 1;
+            if (cudaMalloc((void**) &gdn_keep1_, sizeof one) != cudaSuccess ||
+                cudaMemcpy(gdn_keep1_, &one, sizeof one, cudaMemcpyHostToDevice) != cudaSuccess) {
+                if (gdn_keep1_) cudaFree(gdn_keep1_);
+                gdn_keep1_ = nullptr;   // the commit keeps the recurrence
+                cudaGetLastError();
+            }
+        }
+    }
+#endif
     // E-6: a layer whose routed experts are all resident is planned on the device (STRATA_VERIFY_DEVICE_PLAN=1: on;
     // exact, but neutral on RIBPC 1-2 GPUs: off by default)
     {
         const char* v = std::getenv("STRATA_VERIFY_DEVICE_PLAN");
         device_plan_ = v != nullptr && std::atoi(v) != 0;
     }
+#if defined(STRATA_METAL_BACKEND)
+    // Metal port (rule 9): resident_plan builds the group table ON THE DEVICE, but the grouped entries read it
+    // back on the HOST - the device-planned window cannot be served here.  The host-planned path is the one
+    // that runs (device_plan_ stays false whatever the variable says).
+    if (device_plan_) {
+        device_plan_ = false;
+        std::fprintf(stderr, "strata verify: STRATA_VERIFY_DEVICE_PLAN ignored on Metal - the host plans every "
+                             "layer (rule 9: the grouped entries bind blobs at launch time)\n");
+    }
+    // Metal port (rules 11 + 9): pcie_mode 2 stages the PCIe share with fetch_blobs INSIDE the captured window
+    // (not capturable here - it syncs and reads the pointer table), and pcie_mode 0 raises flag B from a host
+    // function that may fire after the next launch (rule 11: a launched waiter would never see it).  Mode 1 -
+    // the grouped kernel reads the mapped arena directly - is the honest mapping on unified memory anyway:
+    // zero copies, flag B raised synchronously inside the pool's fetch call.
+    if (sink_.pcie_mode != 1) {
+        std::fprintf(stderr, "strata verify: --pcie-mode %d -> 1 on Metal (direct reads of the mapped arena; "
+                             "rules 11 + 9)\n", sink_.pcie_mode);
+        sink_.pcie_mode = 1;
+    }
+#endif
     if (device_plan_) {
         bool ok2 = cudaMalloc((void**) &skip_, 64) == cudaSuccess && cudaMemset(skip_, 0, 64) == cudaSuccess;
         if (ok2 && hits.slot_off != nullptr && hits.n_slots > 0) {
@@ -367,6 +480,23 @@ bool Verifier::init(const WeightTable& wt, const ModelGeometry& g, SessionState&
         }
         if (!ok2) { cudaGetLastError(); device_plan_ = false; }
     }
+#if defined(STRATA_METAL_BACKEND)
+    if (const char* check = std::getenv("STRATA_METAL_CHECK_IQ_RESIDENT"))
+        iq_check_windows_ = std::max(0, std::atoi(check));
+    if (iq_check_windows_ && !hits_.all_resident && strata::kernels::cpu::expert_layout().native &&
+        cudaMalloc((void**) &iq_check_out_, (size_t) max_t_ * ss.k * g.n_embd * sizeof(float)) != cudaSuccess) {
+        err = "verify: cannot allocate expert comparison buffer";
+        return false;
+    }
+    if ((hits_.all_resident || iq_check_out_) && hits.slot_off != nullptr && hits.n_slots > 0) {
+        if (cudaMalloc((void**) &slot_off_d_, (size_t) hits.n_slots * sizeof(uint64_t)) != cudaSuccess ||
+            cudaMemcpy(slot_off_d_, hits.slot_off, (size_t) hits.n_slots * sizeof(uint64_t),
+                       cudaMemcpyHostToDevice) != cudaSuccess) {
+            err = "verify: cannot stage resident expert slot offsets";
+            return false;
+        }
+    }
+#endif
     std::fprintf(stderr, "strata verify: window up to %d tokens, %.1f MiB of device buffers\n", max_t,
                  (double) count.used / 1048576.0);
     return true;
@@ -400,7 +530,7 @@ bool Verifier::record_window(int T, cudaStream_t cs, std::string& err) {
     const int64_t TS = (s.idx_block - 1) * ID;
     const bool ple_on = ss.ple.ready() && ple_stage();
     auto Rt = [&](int t) { return R_ + (size_t) t * HC * N; };
-    const int G = (split_ && T >= 2) ? 2 : 1;
+    const int G = (split_ && T >= 2 && !hits_.all_resident) ? 2 : 1;
     static const bool dec_batch = [] { const char* v = std::getenv("STRATA_DEC_BATCH"); return v == nullptr || std::atoi(v) != 0; }();
     auto stamp = [&](int64_t l, int i, int grp) { if (prof_on_ && grp == 0) gpu_stamp(prof_, (int) (l * kProfPer + i), cs); };
     const int tb_[2] = {0, (T + 1) / 2}, te_[2] = {G == 2 ? (T + 1) / 2 : T, T};
@@ -535,9 +665,11 @@ bool Verifier::record_window(int T, cudaStream_t cs, std::string& err) {
                 stamp(l, 4, grp);
                 native_mmvq(wg->native_type, wg->native_data, xq_, z_ + (size_t) tb * ZV, (int) N, (int) ZV, n, cs);
                 stamp(l, 5, grp);
-                // the recurrence from the untouched state over tokens [0, te); outputs only for this group's
+                // the recurrence from the untouched state over tokens [0, te); outputs only for this group's.
+                // A one-token window recorded with gdn_write_capture_ also writes the new state back (n_keep = 1:
+                // the same y, and the state the commit's own step would compute from the same inputs)
                 gdn_step_norm_multi(state, hb, (int) C, gate, beta, z_, (const float*) wnm->data, EPS, y_, (int) HK,
-                                    (int) HV, te, nullptr, cs, tb);
+                                    (int) HV, te, gdn_write_capture_ ? gdn_keep1_ : nullptr, cs, tb);
                 stamp(l, 6, grp);
                 native_quantize_q8_1(y_ + (size_t) tb * ZV, xq_, (int) ZV, n, cs);
                 native_mmvq(wout->native_type, wout->native_data, xq_, bo_ + tb * N, (int) ZV, (int) N, n, cs);
@@ -688,7 +820,7 @@ bool Verifier::record_window(int T, cudaStream_t cs, std::string& err) {
                           hits_.cache_base, slot_off_d_, (long long) hits_.blob,
                           plan_ + (size_t) grp * (size_t) (plan_i32_ + 16), (long long) max_t_ * K, skip_ + grp,
                           (uint32_t) ((l - lb_) * G + grp + 1), cs);
-        doorbell_publish(xm, ids_ + tb * K, w_ + tb * K, (int64_t) n * N, (int64_t) n * K, m_x_ + tb * N,
+        if (!hits_.all_resident) doorbell_publish(xm, ids_ + tb * K, w_ + tb * K, (int64_t) n * N, (int64_t) n * K, m_x_ + tb * N,
                          m_ids_ + tb * K, m_w_ + tb * K, m_seq_, cs);
         stamp(l, 17, grp);
         {
@@ -722,11 +854,46 @@ bool Verifier::record_window(int T, cudaStream_t cs, std::string& err) {
     };
 
     // ---------------------------------------------------------------- post(l, group): experts, combine
-    auto post = [&](int64_t l, int grp) -> bool {
-        const int tb = tb_[grp], te = te_[grp], n = te - tb;
+    // Metal port (rules 11 + 9): post is SELF-CONTAINED - by-value captures plus `this`, no references into
+    // this call's frame - because on that backend it is stored at capture time and run LIVE from run(),
+    // between the window's tape segments, after the host has raised the step's flags.  On CUDA it is called
+    // once, inline, while the single window graph records.
+    auto post = [this, G, tb0(tb_[0]), te0(te_[0]), tb1(tb_[1]), te1(te_[1]), N, K, HC, gs]
+                    (int64_t l, int grp, cudaStream_t cs, std::string& err) -> bool {
+        const int tbv[2] = {tb0, tb1}, tev[2] = {te0, te1};
+        const int tb = tbv[grp], te = tev[grp], n = te - tb;
+        auto stamp = [&](int64_t sl, int i) {
+            if (prof_on_ && grp == 0) gpu_stamp(prof_, (int) (sl * kProfPer + i), cs);
+        };
+        auto Rt = [&](int t) { return R_ + (size_t) t * (size_t) (g_->hc * g_->n_embd); };
         const uint32_t ring = (uint32_t) ((l - lb_) * G + grp + 1);
         const int64_t cap = (int64_t) n * K, capx = (int64_t) max_t_ * K;
         int32_t* pl = plan_ + (size_t) grp * (size_t) (plan_i32_ + 16);
+        const float* expert_parts = parts_ + (size_t) tb * K * N;
+#if defined(STRATA_METAL_BACKEND)
+        if (hits_.all_resident) {
+            float* hit_out = hit_out_ + (size_t) tb * K * N;
+            const auto& lay = strata::kernels::cpu::expert_layout();
+            if (lay.native) {
+                const auto& f = lay.fmt[(size_t) l];
+                const NativeExpertLayout L = native_expert_layout(f.gu_type, f.d_type, f.n_embd, f.n_ff);
+                native_expert_resident(L, hits_.cache_base, (const uint64_t*) slot_off_d_, hits_.blob,
+                                       ids_ + tb * K, hits_.d_res + l * g_->n_expert, (int) g_->n_expert,
+                                       n, (int) K, nat_xq_ + (size_t) tb * (N / 32) * 36,
+                                       hit_scratch_, hit_out, cs);
+            } else {
+            int32_t* slots = pl + 4;
+            int32_t* dst = slots + capx;
+            moe_hit_select_multi(ids_ + tb * K, hits_.d_res + l * g_->n_expert, (int)cap,
+                                 (int)g_->n_expert, slots, dst, pl, cs);
+            moe_hit_grouped_s2_multi(hits_.cache_base, slots, dst, pl, cap, hits_.blob,
+                                     hit_xq_ + (size_t)tb * (N / 32) * 34,
+                                     hit_xs_ + (size_t)tb * (N / 32), (int)K, hit_scratch_, hit_out, cs);
+            }
+            expert_parts = hit_out;
+        } else
+#endif
+        {
         if (device_plan_) {   // E-6: skipped when the device planned this group (all its experts resident)
             wait_flag_ge_or(m_flagA_, ring, skip_ + grp, cs);
             copy_i32_from_mapped_unless(pl, m_plan_ + (size_t) grp * (size_t) plan_i32_, plan_i32_, skip_ + grp, ring, cs);
@@ -734,7 +901,7 @@ bool Verifier::record_window(int T, cudaStream_t cs, std::string& err) {
             wait_flag_ge(m_flagA_, ring, cs);                  // the pool published this group's GPU plan
             copy_i32_from_mapped(pl, m_plan_ + (size_t) grp * (size_t) plan_i32_, plan_i32_, cs);
         }
-        stamp(l, 19, grp);
+        stamp(l, 19);
         const int32_t* p_counts = pl;
         const int32_t* p_start = pl + 4;
         const int32_t* p_dst = p_start + capx + 1;
@@ -743,6 +910,17 @@ bool Verifier::record_window(int T, cudaStream_t cs, std::string& err) {
         const unsigned long long* p_ptr = (const unsigned long long*) (pl + ptr_off);
         const unsigned long long* p_ptr2 = p_ptr + capx;
         const int32_t* p_start2 = pl + ptr_off + 4 * capx;
+#if defined(STRATA_METAL_BACKEND)
+        // rule 9: the grouped entries read gp on the HOST and bind each group's blob from it; on this backend
+        // pass the MAPPED plan words (the pool wrote them; the device copy in `pl` serves the kernels), so
+        // the host read sees final bytes without a stream sync.  The device-planned table (E-6) is off here.
+        const unsigned long long* grp_vram =
+            (const unsigned long long*) (h_plan_ + (size_t) grp * (size_t) plan_i32_ + ptr_off);
+        const unsigned long long* grp_pcie = grp_vram + capx;
+#else
+        const unsigned long long* grp_vram = p_ptr;
+        const unsigned long long* grp_pcie = p_ptr2;
+#endif
         float* hit_out = hit_out_ + (size_t) tb * K * N;
         const auto& lay = strata::kernels::cpu::expert_layout();
         // plan v0.3 P6: the VRAM groups now; the PCIe groups once the copy engine has landed them in staging
@@ -758,8 +936,8 @@ bool Verifier::record_window(int T, cudaStream_t cs, std::string& err) {
                                hit_xs_ + (size_t) tb * (N / 32), hit_scratch_, hit_out, cs);
             }
         };
-        grouped(p_ptr, p_start, p_counts);
-        stamp(l, 20, grp);
+        grouped(grp_vram, p_start, p_counts);
+        stamp(l, 20);
         if (device_plan_) wait_flag_ge_or(m_flagB_, ring, skip_ + grp, cs);
         else wait_flag_ge(m_flagB_, ring, cs);                 // the PCIe share is in staging (DMA) or mapped
         if (sink_.pcie_mode == 2) {                            // stage it with a copy kernel, then point at staging
@@ -768,16 +946,16 @@ bool Verifier::record_window(int T, cudaStream_t cs, std::string& err) {
             fetch_blobs(p_ptr2, p_counts + 2, stage, (int64_t) lay.blob_bytes(l), (int) per, cs);
             rebase_ptrs((unsigned long long*) p_ptr2, p_counts + 2, stage, (int64_t) lay.blob_bytes(l), cs);
         }
-        stamp(l, 21, grp);
-        grouped(p_ptr2, p_start2, p_counts + 2);
-        stamp(l, 22, grp);
+        stamp(l, 21);
+        grouped(grp_pcie, p_start2, p_counts + 2);
+        stamp(l, 22);
         if (device_plan_) {   // no CPU share when the device planned the group: its rows are zeros
             wait_flag_ge_or(m_flag_, ring, skip_ + grp, cs);
             copy_or_zero_from_mapped(parts_ + (size_t) tb * K * N, m_ymiss_ + (size_t) tb * K * N, (long long) n * K * N,
                                      skip_ + grp, ring, cs);
         } else {
             wait_flag_ge(m_flag_, ring, cs);               // the CPU's share is in the mapped rows
-            stamp(l, 23, grp);
+            stamp(l, 23);
             if (dec_batch)   // only the CPU rows cross PCIe (p_dst[0, counts[1]) = the GPU's own rows)
                 copy_rows_from_mapped(parts_ + (size_t) tb * K * N, m_ymiss_ + (size_t) tb * K * N, (int64_t) n * K, N,
                                       p_dst, p_counts + 1, cs);
@@ -785,18 +963,51 @@ bool Verifier::record_window(int T, cudaStream_t cs, std::string& err) {
                 copy_from_mapped(parts_ + (size_t) tb * K * N, m_ymiss_ + (size_t) tb * K * N, (int64_t) n * K * N, cs);
         }
         moe_hit_add(parts_ + (size_t) tb * K * N, hit_out, p_dst, p_counts + 1, cap, N, cs);
+#if defined(STRATA_METAL_BACKEND)
+        // Diagnostic only: compare both algorithms on the very same real-model activations and weights.
+        // This intentionally synchronizes and must never be used for a speed measurement.
+        if (iq_check_out_ && windows < iq_check_windows_) {
+            const auto& f = lay.fmt[(size_t) l];
+            const NativeExpertLayout L = native_expert_layout(f.gu_type, f.d_type, f.n_embd, f.n_ff);
+            native_expert_resident(L, hits_.cache_base, (const uint64_t*) slot_off_d_, hits_.blob,
+                                   ids_ + tb * K, hits_.d_res + l * g_->n_expert, (int) g_->n_expert,
+                                   n, (int) K, nat_xq_ + (size_t) tb * (N / 32) * 36,
+                                   hit_scratch_, iq_check_out_, cs);
+            std::vector<float> ref((size_t) cap * N), test(ref.size());
+            if (cudaStreamSynchronize(cs) != cudaSuccess ||
+                cudaMemcpy(ref.data(), expert_parts, ref.size() * sizeof(float), cudaMemcpyDeviceToHost) != cudaSuccess ||
+                cudaMemcpy(test.data(), iq_check_out_, test.size() * sizeof(float), cudaMemcpyDeviceToHost) != cudaSuccess) {
+                err = "verify: expert comparison readback failed";
+                return false;
+            }
+            size_t different = 0, nonfinite = 0;
+            double max_abs = 0, sq_diff = 0, sq_ref = 0;
+            for (size_t i = 0; i < ref.size(); ++i) {
+                different += std::memcmp(&ref[i], &test[i], sizeof(float)) != 0;
+                nonfinite += !std::isfinite(ref[i]) || !std::isfinite(test[i]);
+                const double d = (double) ref[i] - test[i];
+                max_abs = std::max(max_abs, std::abs(d));
+                sq_diff += d * d;
+                sq_ref += (double) ref[i] * ref[i];
+            }
+            std::fprintf(stderr, "strata IQ check: pos=%lld layer=%lld T=%d values=%zu different=%zu nonfinite=%zu "
+                                 "max_abs=%.9g rel_l2=%.9g\n", (long long) last_pos0_, (long long) l, n,
+                         ref.size(), different, nonfinite, max_abs, std::sqrt(sq_diff / std::max(sq_ref, 1e-30)));
+        }
+#endif
+        }
         if (dec_batch && n > 1 && native_moe_combine_enabled()) {   // one launch for the window's rows
             try {
-                native_moe_combine_multi(parts_ + (size_t) tb * K * N, w_ + tb * K, shared_ + tb * N, bo_ + tb * N, N, K, n, cs);
+                native_moe_combine_multi(expert_parts, w_ + tb * K, shared_ + tb * N, bo_ + tb * N, N, K, n, cs);
             } catch (const std::exception& e) { err = "verify combine: " + std::string(e.what()); return false; }
         } else
         for (int t = tb; t < te; ++t) {
-            MoEBuffers mb = ss.moe;
+            MoEBuffers mb = ss_->moe;
             mb.weights = w_ + t * K; mb.shared = shared_ + t * N;
-            if (!moe_combine_parts(g, l, K, mb, parts_ + (size_t) t * K * N, bo_ + t * N, cs, err)) return false;
+            if (!moe_combine_parts(*g_, l, K, mb, expert_parts + (size_t)(t - tb) * K * N, bo_ + t * N, cs, err)) return false;
         }
-        stamp(l, 24, grp);
-        if (l == g.n_layers - 1) {
+        stamp(l, 24);
+        if (l == g_->n_layers - 1) {
             for (int t = tb; t < te; ++t) gr_write(Rt(t), bo_ + t * N, inj2_ + t * HC, gs, Rt(t), cs);
             if (cvec().covers(l)) cvec_apply(Rt(tb), l, n, HC * N, nullptr, 0, nullptr, 0, false, cs);
         } else if (cvec().covers(l)) {
@@ -807,10 +1018,64 @@ bool Verifier::record_window(int T, cudaStream_t cs, std::string& err) {
 
     for (int grp = 0; grp < G; ++grp)
         if (!pre(lb_, grp)) return false;
+#if defined(STRATA_METAL_BACKEND)
+    // Metal port (rules 11 + 9): the tape so far - the first groups' pre's - is the OPENING segment.  The
+    // capture restarts here; every later pre(l+1, grp) becomes its own segment (cut right after it), post's
+    // stored body runs LIVE from run(), and what remains after the last pre (the head, or a stage's
+    // hand-off) is closed by capture() as the tail.
+    if (!hits_.all_resident) {
+        MetalWindow& w = *metal_window(this, T, true);
+        cudaGraph_t seg = nullptr;
+        if (cudaStreamEndCapture(cs, &seg) != cudaSuccess || seg == nullptr ||
+            cudaGraphInstantiate(&w.open_seg, seg, 0) != cudaSuccess) {
+            if (seg != nullptr) cudaGraphDestroy(seg);
+            w.open_seg = nullptr;
+            err = "verify: the opening segment would not capture";
+            return false;
+        }
+        cudaGraphDestroy(seg);
+        w.post = post;
+        w.after_step.assign((size_t) ((le_ - lb_) * G), nullptr);
+        if (cudaStreamBeginCapture(cs, cudaStreamCaptureModeThreadLocal) != cudaSuccess) {
+            err = "verify: segment capture restart failed";
+            return false;
+        }
+    }
+#endif
     for (int64_t l = lb_; l < le_; ++l)
         for (int grp = 0; grp < G; ++grp) {
-            if (!post(l, grp)) return false;
+#if !defined(STRATA_METAL_BACKEND)
+            if (!post(l, grp, cs, err)) return false;
+#else
+            if (hits_.all_resident && !post(l, grp, cs, err)) return false;
+#endif
             if (l + 1 < le_ && !pre(l + 1, grp)) return false;
+#if defined(STRATA_METAL_BACKEND)
+            // Metal port: pre(l + 1, grp) - just recorded - is the segment that follows post(l, grp) on the
+            // stream, i.e. step (l - lb_) * G + grp of run(); cut the tape so the next pre starts fresh
+            if (!hits_.all_resident && l + 1 < le_) {
+                MetalWindow& w = *metal_window(this, T, false);
+                const size_t slot = (size_t) ((l - lb_) * G + grp);
+                cudaGraph_t seg = nullptr;
+                if (w.after_step.size() <= slot || cudaStreamEndCapture(cs, &seg) != cudaSuccess || seg == nullptr) {
+                    if (seg != nullptr) cudaGraphDestroy(seg);
+                    err = "verify: a window segment would not capture";
+                    return false;
+                }
+                const cudaError_t ie = cudaGraphInstantiate(&w.after_step[slot], seg, 0);
+                if (ie != cudaSuccess) {
+                    if (seg != nullptr) cudaGraphDestroy(seg);   // no exec was made of it
+                    w.after_step[slot] = nullptr;
+                    err = std::string("verify: segment instantiate: ") + cudaGetErrorString(ie);
+                    return false;
+                }
+                cudaGraphDestroy(seg);
+                if (cudaStreamBeginCapture(cs, cudaStreamCaptureModeThreadLocal) != cudaSuccess) {
+                    err = "verify: segment capture restart failed";
+                    return false;
+                }
+            }
+#endif
         }
     if (le_ < g.n_layers) {   // a layer split's earlier stage: hand the residual on, no head
         for (int t = 0; t < T; ++t) {
@@ -885,6 +1150,75 @@ std::string Verifier::profile_report() {
 }
 
 bool Verifier::capture(int T, std::string& err) {
+#if defined(STRATA_METAL_BACKEND)
+    if (hits_.all_resident) {
+        if (exec_[T]) return true;
+        if (cudaStreamBeginCapture(cs_, cudaStreamCaptureModeThreadLocal) != cudaSuccess) {
+            err = "verify: resident capture failed"; return false;
+        }
+        // a one-token window keeps every token it reads: its GDN state is written back here (see verify.hpp)
+        gdn_write_capture_ = T == 1 && gdn_keep1_ != nullptr && lb_ == 0 && next_ == nullptr;
+        const bool ok = record_window(T, cs_, err);
+        if (T == 1) exec1_writes_gdn_ = gdn_write_capture_;
+        gdn_write_capture_ = false;
+        cudaGraph_t graph = nullptr;
+        const cudaError_t ce = cudaStreamEndCapture(cs_, &graph);
+        if (!ok || ce != cudaSuccess || !graph) {
+            if (graph) cudaGraphDestroy(graph);
+            return false;
+        }
+        const cudaError_t ie = cudaGraphInstantiate(&exec_[T], graph, 0);
+        cudaGraphDestroy(graph);
+        if (ie != cudaSuccess) { err = "verify: resident graph instantiate failed"; return false; }
+        std::fprintf(stderr, "strata verify: captured the %d-token window, all experts on Metal\n", T);
+        return true;
+    }
+    // Metal port (rules 11 + 9): the window records as SEGMENTS (see the MetalWindow comment) - the opening
+    // pre's, one segment per later pre, and this tail (the head + sampler, or a stage's hand-off writes).
+    // run() replays them between the host's steps; nothing here may spin, and nothing here is a rule-9 entry.
+    if (metal_window(this, T, false) != nullptr) return true;
+    if (cudaStreamBeginCapture(cs_, cudaStreamCaptureModeThreadLocal) != cudaSuccess) {
+        err = "verify: begin capture failed";
+        return false;
+    }
+    std::string rerr;
+    const bool ok = record_window(T, cs_, rerr);
+    cudaGraph_t tail = nullptr;
+    const cudaError_t ce = cudaStreamEndCapture(cs_, &tail);
+    if (!ok) {
+        if (tail != nullptr) cudaGraphDestroy(tail);
+        metal_destroy(this);   // a half-recorded window leaves nothing registered
+        err = rerr;
+        return false;
+    }
+    if (ce != cudaSuccess) {
+        if (tail != nullptr) cudaGraphDestroy(tail);
+        err = std::string("verify: end capture: ") + cudaGetErrorString(ce);
+        return false;
+    }
+    MetalWindow* w = metal_window(this, T, false);
+    const int G = groups_[T] > 0 ? groups_[T] : 1;
+    const int64_t steps = (int64_t) (le_ - lb_) * G;
+    if (w == nullptr || w->after_step.size() != (size_t) steps) {
+        if (tail != nullptr) cudaGraphDestroy(tail);
+        err = "verify: the window's segments did not record";
+        return false;
+    }
+    if (tail != nullptr) {   // the tail launches after the LAST step's live post
+        const cudaError_t ie = cudaGraphInstantiate(&w->after_step[(size_t) steps - 1], tail, 0);
+        cudaGraphDestroy(tail);
+        if (ie != cudaSuccess) {
+            w->after_step[(size_t) steps - 1] = nullptr;
+            err = std::string("verify: tail instantiate: ") + cudaGetErrorString(ie);
+            return false;
+        }
+    }
+    size_t nseg = w->open_seg != nullptr ? 1u : 0u;
+    for (cudaGraphExec_t e : w->after_step) nseg += e != nullptr ? 1u : 0u;
+    std::fprintf(stderr, "strata verify: captured the %d-token window as %zu tape segments, %lld live posts "
+                         "(the GPU waits release between launches; rule 11)\n", T, nseg, (long long) steps);
+    return true;
+#else
     if (exec_[T] != nullptr) return true;
     if (cudaStreamBeginCapture(cs_, cudaStreamCaptureModeThreadLocal) != cudaSuccess) {
         err = "verify: begin capture failed";
@@ -945,6 +1279,7 @@ bool Verifier::capture(int T, std::string& err) {
     std::fprintf(stderr, "strata verify: captured the %d-token window (upload %s, sync %s)\n", T,
                  cudaGetErrorString(ue), cudaGetErrorString(us));
     return true;
+#endif   // STRATA_METAL_BACKEND
 }
 
 bool Verifier::capture_commit(std::string& err) {
@@ -958,58 +1293,67 @@ bool Verifier::capture_commit(std::string& err) {
                                 (uint64_t) g.ssm_conv_channels * (g.ssm_d_conv - 1);
     const int64_t TS = (s.idx_block - 1) * ID;
     const int64_t HS = (int64_t) NG_HIST * NG_HC_DIM;
-    if (cudaStreamBeginCapture(cs_, cudaStreamCaptureModeThreadLocal) != cudaSuccess) {
-        err = "verify: begin commit capture failed";
-        return false;
-    }
-    bool ok = true;
-    try {
-        copy_i32_from_mapped(commit_, m_commit_, 2 + MT, cs_);
-        int64_t qsa_index = 0, gdn_index = 0;
-        for (int64_t l = 0; l < lb_; ++l) (is_qsa_layer(g, l) ? qsa_index : gdn_index) += 1;
-        for (int64_t l = lb_; l < le_ && ok; ++l) {
-            const LayerView v(*wt_, l);
-            if (!is_qsa_layer(g, l)) {
-                const WeightRef* wnm = need(v, "ssm_norm.weight", err);
-                if (!wnm) { ok = false; break; }
-                float* state = ss.gdn_state + (size_t) (gdn_index - ss.gdn_ord0) * gdn_floats;
-                float* conv = state + (uint64_t) g.ssm_state_size * g.ssm_v_heads * g.ssm_state_size;
-                const float* qkv = qkv_L_ + (size_t) gdn_index * MT * C;
-                gdn_conv_commit(conv, qkv, (int) C, commit_, cs_);
-                gdn_step_norm_multi(state, h_L_ + (size_t) gdn_index * MT * C, (int) C, gate_L_ + (size_t) gdn_index * MT * HV,
-                                    beta_L_ + (size_t) gdn_index * MT * HV, z_, (const float*) wnm->data, EPS, y_dummy_,
-                                    (int) g.ssm_k_heads, (int) HV, (int) MT, commit_, cs_);
-                ++gdn_index;
-            } else {
-                const QsaState& st = ss.qsa_states[qsa_index];
-                const WeightRef* wikn = need(v, "indexer.k_norm.weight", err);
-                if (!wikn) { ok = false; break; }
-                copy_from_mapped(st.idx_tail, tail_snap_ + (size_t) qsa_index * TS, TS, cs_);
-                const QsaIndexerBuffers ib{st.idx_tail, st.idx_dead, st.idx_pooled, st.idx_block_pos};
-                for (int64_t t = 0; t < MT; ++t)
-                    native_qsa_indexer_append(idx_raw_L_ + (size_t) (qsa_index * MT + t) * ID, commit_ + 2 + t, 0,
-                                              (const float*) wikn->data, EPS, ib, s, st.max_cells,
-                                              rope_scaling(), cs_);
-                ++qsa_index;
-            }
+    // the commit graph; with_gdn == false is the same graph without the GDN recurrence (its window already wrote
+    // the state back: see verify.hpp)
+    auto record = [&](bool with_gdn, cudaGraphExec_t* out) -> bool {
+        if (cudaStreamBeginCapture(cs_, cudaStreamCaptureModeThreadLocal) != cudaSuccess) {
+            err = "verify: begin commit capture failed";
+            return false;
         }
-        if (ok && ss.ple.ready() && ple_stage()) copy_indexed(ss.ple.hist, hist_snap_, HS, commit_ + 1, HS, cs_);
-    } catch (const std::exception& e) {
-        err = std::string("verify commit: ") + e.what();
-        ok = false;
-    }
-    cudaGraph_t graph = nullptr;
-    const cudaError_t ce = cudaStreamEndCapture(cs_, &graph);
-    if (!ok) {
-        if (graph) cudaGraphDestroy(graph);
-        return false;
-    }
-    if (ce != cudaSuccess || cudaGraphInstantiate(&commit_exec_, graph, 0) != cudaSuccess) {
-        if (graph) cudaGraphDestroy(graph);
-        err = std::string("verify: commit capture: ") + cudaGetErrorString(ce);
-        return false;
-    }
-    cudaGraphDestroy(graph);
+        bool ok = true;
+        try {
+            copy_i32_from_mapped(commit_, m_commit_, 2 + MT, cs_);
+            int64_t qsa_index = 0, gdn_index = 0;
+            for (int64_t l = 0; l < lb_; ++l) (is_qsa_layer(g, l) ? qsa_index : gdn_index) += 1;
+            for (int64_t l = lb_; l < le_ && ok; ++l) {
+                const LayerView v(*wt_, l);
+                if (!is_qsa_layer(g, l)) {
+                    const WeightRef* wnm = need(v, "ssm_norm.weight", err);
+                    if (!wnm) { ok = false; break; }
+                    float* state = ss.gdn_state + (size_t) (gdn_index - ss.gdn_ord0) * gdn_floats;
+                    float* conv = state + (uint64_t) g.ssm_state_size * g.ssm_v_heads * g.ssm_state_size;
+                    const float* qkv = qkv_L_ + (size_t) gdn_index * MT * C;
+                    gdn_conv_commit(conv, qkv, (int) C, commit_, cs_);
+                    if (with_gdn)
+                        gdn_step_norm_multi(state, h_L_ + (size_t) gdn_index * MT * C, (int) C,
+                                            gate_L_ + (size_t) gdn_index * MT * HV, beta_L_ + (size_t) gdn_index * MT * HV,
+                                            z_, (const float*) wnm->data, EPS, y_dummy_, (int) g.ssm_k_heads, (int) HV,
+                                            (int) MT, commit_, cs_);
+                    ++gdn_index;
+                } else {
+                    const QsaState& st = ss.qsa_states[qsa_index];
+                    const WeightRef* wikn = need(v, "indexer.k_norm.weight", err);
+                    if (!wikn) { ok = false; break; }
+                    copy_from_mapped(st.idx_tail, tail_snap_ + (size_t) qsa_index * TS, TS, cs_);
+                    const QsaIndexerBuffers ib{st.idx_tail, st.idx_dead, st.idx_pooled, st.idx_block_pos};
+                    for (int64_t t = 0; t < MT; ++t)
+                        native_qsa_indexer_append(idx_raw_L_ + (size_t) (qsa_index * MT + t) * ID, commit_ + 2 + t, 0,
+                                                  (const float*) wikn->data, EPS, ib, s, st.max_cells,
+                                                  rope_scaling(), cs_);
+                    ++qsa_index;
+                }
+            }
+            if (ok && ss.ple.ready() && ple_stage()) copy_indexed(ss.ple.hist, hist_snap_, HS, commit_ + 1, HS, cs_);
+        } catch (const std::exception& e) {
+            err = std::string("verify commit: ") + e.what();
+            ok = false;
+        }
+        cudaGraph_t graph = nullptr;
+        const cudaError_t ce = cudaStreamEndCapture(cs_, &graph);
+        if (!ok) {
+            if (graph) cudaGraphDestroy(graph);
+            return false;
+        }
+        if (ce != cudaSuccess || cudaGraphInstantiate(out, graph, 0) != cudaSuccess) {
+            if (graph) cudaGraphDestroy(graph);
+            err = std::string("verify: commit capture: ") + cudaGetErrorString(ce);
+            return false;
+        }
+        cudaGraphDestroy(graph);
+        return true;
+    };
+    if (!record(true, &commit_exec_)) return false;
+    if (gdn_keep1_ != nullptr && !record(false, &commit_nogdn_exec_)) return false;
     return true;
 }
 
@@ -1055,6 +1399,101 @@ bool Verifier::run(int T, const int32_t* tokens, int64_t pos0, PoolMultiFn pool,
     for (int t = 0; t < T; ++t) last_tokens_[t] = tokens[t];
     ms_host += ms_since(t0);
     VDBG("staged; launching\n");
+#if defined(STRATA_METAL_BACKEND)
+    const int G = groups_[T] > 0 ? groups_[T] : 1;
+    last_gdn_written_ = false;
+    if (hits_.all_resident) {
+        const cudaError_t e = cudaGraphLaunch(exec_[T], cs_);
+        if (e != cudaSuccess) { err = "verify: resident graph launch failed"; return false; }
+        last_gdn_written_ = T == 1 && exec1_writes_gdn_;
+    } else {
+    // Metal port (rules 11 + 9; see the MetalWindow comment above): the opening segment replays the first
+    // pre's; every step then waits for its pre's doorbell, serves the pool, raises the step's three flags
+    // (A the plan, B the PCIe share, the window flag the CPU's rows) and ONLY THEN launches the step's work -
+    // the live post, whose wait kernels therefore read pre-set flags (the verified pre-set path) and whose
+    // grouped entries bind THIS window's blobs, followed by the next pre segment.  No launch ever spins on a
+    // flag that is still down; the pool of step k overlaps the GPU's post(k-1) and pre(k) as on CUDA.
+    MetalWindow* mw = metal_window(this, T, false);
+    if (mw == nullptr || mw->open_seg == nullptr || !mw->post) {
+        err = "verify: the window's segments are missing (capture failed earlier?)";
+        return false;
+    }
+    {
+        const cudaError_t gl = cudaGraphLaunch(mw->open_seg, cs_);
+        if (gl != cudaSuccess) { err = std::string("verify: segment launch: ") + cudaGetErrorString(gl); return false; }
+        // the runtime's launches accumulate in the stream's open command buffer; an event record is what
+        // commits it (the tape's kernels would otherwise never reach the GPU - measured by the M5 probe)
+        (void) cudaEventRecord(mw->kick, cs_);
+    }
+    VDBG("launched the opening segment\n");
+    volatile uint32_t* const seq = h_seq_;
+    volatile uint32_t* const flag = h_flag_;
+    const int gtb[2] = {0, (T + 1) / 2}, gte[2] = {G == 2 ? (T + 1) / 2 : T, T};
+    const int64_t steps = (int64_t) (le_ - lb_) * G;
+    for (int64_t k = 0; k < steps; ++k) {
+        const int64_t l = lb_ + k / G;
+        const int grp = (int) (k % G);
+        const uint32_t want = (uint32_t) (k + 1);
+        const Clock::time_point a = Clock::now();
+        auto last_flush = a;
+        uint32_t spins = 0;
+        progress_at("verify window: waiting for the GPU to reach layer", l);
+        while (*seq < want) {
+            STRATA_VERIFY_PAUSE();
+            if ((++spins & 1023u) != 0) continue;
+            const auto now = Clock::now();
+            if (now - last_flush > std::chrono::microseconds(2000)) {
+                last_flush = now;
+                const cudaError_t q = cudaStreamQuery(cs_);
+                if (q != cudaErrorNotReady && *seq < want) {
+                    // every segment that should ring `want` was launched steps ago, so an idle stream here
+                    // means that work is gone - the ring will not rise either way
+                    err = "verify: layer " + std::to_string(l) + " never rang (the launched segments drained)";
+                    return false;
+                }
+            }
+            if (now - a > std::chrono::seconds(20)) {
+                // #267: the caller ends the engine; no launched waiter was spinning (its flag was pre-set),
+                // so the drain below is what a wedged GPU would hold up, not a spinner
+                err = "verify: timed out at layer " + std::to_string(l) + released_note(release_gpu_waits(5000));
+                return false;
+            }
+        }
+        const Clock::time_point b = Clock::now();
+        VDBG("layer %lld rang\n", (long long) l);
+        cur_layer_ = want - 1;
+        set_plan_slot(grp);
+        const int tb = gtb[grp], n = gte[grp] - gtb[grp];
+        progress_at("verify window: the CPU experts of layer", l);
+        if (pool != nullptr)
+            pool(user, h_x_ + (size_t) tb * g.n_embd, h_ids_ + (size_t) tb * ss.k, n, ss.k,
+                 h_ymiss_ + (size_t) tb * ss.k * g.n_embd, l);
+        VDBG("layer %lld served\n", (long long) l);
+        progress_tick();
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+        STRATA_VERIFY_SFENCE();
+        if (*(volatile uint32_t*) h_flagA_ != want) {        // the pool did not publish a plan: an empty one
+            sink_.counts[0] = 0;
+            sink_.counts[1] = 0;
+            sink_.counts[2] = 0;
+            sink_.start[0] = 0;
+            sink_.start2[0] = 0;
+            std::atomic_thread_fence(std::memory_order_seq_cst);
+            *(volatile uint32_t*) h_flagA_ = want;
+            raise_flag(h_flagB_, want);
+        }
+        *flag = want;   // the CPU's share - raised BEFORE the post that waits on it is launched (rule 11)
+        if (!mw->post(l, grp, cs_, err)) return false;
+        if (mw->after_step[(size_t) k] != nullptr) {
+            const cudaError_t gl = cudaGraphLaunch(mw->after_step[(size_t) k], cs_);
+            if (gl != cudaSuccess) { err = std::string("verify: segment launch: ") + cudaGetErrorString(gl); return false; }
+            (void) cudaEventRecord(mw->kick, cs_);   // commit: the next ring waits on this segment's work
+        }
+        ms_wait += std::chrono::duration<double, std::milli>(b - a).count();
+        ms_pool += ms_since(b);
+    }
+    }
+#else
     const cudaError_t le = cudaGraphLaunch(exec_[T], cs_);
     if (le != cudaSuccess) { err = std::string("verify: launch: ") + cudaGetErrorString(le); return false; }
     (void) cudaStreamQuery(cs_);
@@ -1074,7 +1513,7 @@ bool Verifier::run(int T, const int32_t* tokens, int64_t pos0, PoolMultiFn pool,
         uint32_t spins = 0;
         progress_at("verify window: waiting for the GPU to reach layer", l);
         while (*seq < want) {
-            _mm_pause();
+            STRATA_VERIFY_PAUSE();
             if ((++spins & 1023u) != 0) continue;
             const auto now = Clock::now();
             if (now - last_flush > std::chrono::microseconds(2000)) {
@@ -1104,7 +1543,7 @@ bool Verifier::run(int T, const int32_t* tokens, int64_t pos0, PoolMultiFn pool,
         VDBG("layer %lld served\n", (long long) l);
         progress_tick();
         std::atomic_thread_fence(std::memory_order_seq_cst);
-        _mm_sfence();
+        STRATA_VERIFY_SFENCE();
         if (*(volatile uint32_t*) h_flagA_ != want) {        // the pool did not publish a plan: an empty one
             sink_.counts[0] = 0;
             sink_.counts[1] = 0;
@@ -1119,6 +1558,7 @@ bool Verifier::run(int T, const int32_t* tokens, int64_t pos0, PoolMultiFn pool,
         ms_wait += std::chrono::duration<double, std::milli>(b - a).count();
         ms_pool += ms_since(b);
     }
+#endif   // STRATA_METAL_BACKEND
     progress_at("verify window: waiting for the GPU to finish the window (flags A/B/M raised)", (int64_t) T);
     // #267: a window the GPU never finishes (a spin kernel that never sees its flag) holds the host here; the stall
     // watchdog then releases every verifier's GPU waits (release_live_verifiers) before it ends the engine, so no
@@ -1180,6 +1620,30 @@ bool Verifier::run(int T, const int32_t* tokens, int64_t pos0, PoolMultiFn pool,
         }
     }
     for (int t = 0; t < T; ++t) out[t] = ((volatile int32_t*) h_out_)[t];
+#if defined(STRATA_METAL_BACKEND)
+    // Opt-in numerical audit. Each file contains int64 [position, T, vocabulary], then T input ids,
+    // T output ids (int32), then T * vocabulary raw FP32 logits. No sampling or state is changed.
+    if (const char* prefix = std::getenv("STRATA_METAL_LOGITS_PREFIX")) {
+        const char* limit = std::getenv("STRATA_METAL_LOGITS_WINDOWS");
+        if (windows < (limit ? std::max(0, std::atoi(limit)) : 1)) {
+            const std::string path = std::string(prefix) + "-" + std::to_string(windows) + ".bin";
+            std::vector<float> h((size_t) T * (size_t) n_vocab_);
+            if (cudaMemcpy(h.data(), head_logits_, h.size() * sizeof(float), cudaMemcpyDeviceToHost) != cudaSuccess) {
+                err = "verify: logits audit readback failed";
+                return false;
+            }
+            std::FILE* file = std::fopen(path.c_str(), "wb");
+            if (!file) { err = "verify: cannot open logits audit " + path; return false; }
+            const int64_t header[] = {pos0, T, n_vocab_};
+            const bool ok = std::fwrite(header, sizeof(header), 1, file) == 1 &&
+                            std::fwrite(tokens, sizeof(int32_t), T, file) == (size_t) T &&
+                            std::fwrite(out, sizeof(int32_t), T, file) == (size_t) T &&
+                            std::fwrite(h.data(), sizeof(float), h.size(), file) == h.size();
+            const int closed = std::fclose(file);
+            if (!ok || closed) { err = "verify: cannot write logits audit " + path; return false; }
+        }
+    }
+#endif
     if (static const bool dbg = std::getenv("STRATA_DBG_NAN") != nullptr; dbg) {   // debug: the first non-finite head
         static bool reported = false;
         if (!reported) {
@@ -1223,8 +1687,8 @@ void Verifier::set_plan_slot(int grp) {
 
 // Flag B only rises: a host function of an earlier layer may run after a later layer already raised it directly.
 void Verifier::raise_flag(uint32_t* flag, uint32_t value) {
-    volatile long* f = (volatile long*) flag;
 #if defined(_WIN32)
+    volatile long* f = (volatile long*) flag;
     long cur = *f;
     while ((uint32_t) cur < value) {
         const long prev = _InterlockedCompareExchange(f, (long) value, cur);
@@ -1254,7 +1718,7 @@ void Verifier::fetch_dma(void* ctx, const uint8_t* const* src, int n, size_t byt
 
 void Verifier::publish_plan(void* ctx) {
     Verifier* v = (Verifier*) ctx;
-    _mm_sfence();
+    STRATA_VERIFY_SFENCE();
     *(volatile uint32_t*) v->h_flagA_ = v->cur_layer_ + 1;
 }
 
@@ -1325,7 +1789,15 @@ bool Verifier::commit(int n_keep, std::string& err) {
     h_commit_[1] = n_keep - 1;
     for (int t = 0; t < max_t_; ++t) h_commit_[2 + t] = t < n_keep ? (int32_t) (last_pos0_ + t) : -1;
     std::atomic_thread_fence(std::memory_order_seq_cst);
-    const cudaError_t le = cudaGraphLaunch(commit_exec_, cs_);
+    // a one-token window that wrote its GDN state back (n_keep is then necessarily 1): the commit without the
+    // recurrence; it must not run it again over the advanced state
+    const bool gdn_done = last_gdn_written_;
+    last_gdn_written_ = false;
+    if (gdn_done && (last_t_ != 1 || n_keep != 1 || commit_nogdn_exec_ == nullptr)) {
+        err = "verify: a window that wrote its GDN state back has no matching commit";   // never: see run()
+        return false;
+    }
+    const cudaError_t le = cudaGraphLaunch(gdn_done ? commit_nogdn_exec_ : commit_exec_, cs_);
     if (le != cudaSuccess) { err = std::string("verify: commit launch: ") + cudaGetErrorString(le); return false; }
     // set_commit_async: no wait here - the next window runs on the same stream after it, and the drafter (its own
     // stream) reads only this window's final rows and its own K/V. h_commit_ is next written after the next window's

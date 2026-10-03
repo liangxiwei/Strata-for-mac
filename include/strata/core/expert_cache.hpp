@@ -67,6 +67,10 @@ public:
     /// A cache that silently allocates less than it was asked for would report a hit rate for slots it does
     /// not have, which is the shape of error this project keeps paying for.
     bool open(int64_t n_slots, int64_t n_layers, int64_t n_expert, int64_t blob_bytes, std::string& err);
+    /// Immutable, fully resident unified memory. The source owns storage and must outlive this cache.
+    bool open_shared(const uint8_t* base, int64_t n_layers, int64_t n_expert, int64_t blob_bytes,
+                     std::string& err);
+    bool shared() const { return shared_; }
     /// Plan v0.3 P6: slots of the given sizes, back to back (a native pack's blobs differ per layer, and a
     /// profile-filled tier never moves an expert to another layer's slot, so each slot keeps its first size).
     bool open_sized(const std::vector<int64_t>& slot_bytes, int64_t n_layers, int64_t n_expert, std::string& err);
@@ -147,6 +151,7 @@ private:
     std::size_t blocking_staging_bytes_ = 0;
 #endif
     uint8_t* base_ = nullptr;
+    bool shared_ = false;
     std::vector<int32_t> residency_;   ///< [n_layers * n_expert] -> slot or kNotResident
     int64_t slots_ = 0;
     int64_t n_layers_ = 0;

@@ -1,7 +1,9 @@
 #!/bin/sh
-# Strata for Linux: the first run installs everything and starts the model; later runs just start it.
-# Needs only an NVIDIA driver (or, for an AMD Radeon card, the kernel's amdgpu driver: see docs/AMD_HIP.md).
-# Python (with venv) is installed through apt/dnf if it is missing (asks for sudo).
+# Strata for Linux (and the macOS development setup): the first run installs everything and starts the model;
+# later runs just start it.  Needs only an NVIDIA driver (or, for an AMD Radeon card, the kernel's amdgpu
+# driver: see docs/AMD_HIP.md).  On a Mac the engine cannot run (it needs an NVIDIA or AMD card); setup.py
+# says so and points at docs/MAC.md, which has the server-and-tests steps that DO work there.
+# Python (with venv) is installed through apt/dnf/pacman/brew if it is missing (asks for sudo where it needs it).
 cd "$(dirname "$0")" || exit 1
 # Python 3.10+ that can make a venv WITH pip: Debian/Ubuntu ship `venv` without `ensurepip` (that is the separate
 # python3-venv package), and a venv made without it has no pip
@@ -12,7 +14,7 @@ if [ -x .venv/bin/python ] && ! .venv/bin/python -m pip --version >/dev/null 2>&
 fi
 if [ ! -x .venv/bin/python ]; then
   PY=""
-  for c in python3 python; do
+  for c in python3 python python3.13 python3.12 python3.11 python3.10; do
     if command -v $c >/dev/null 2>&1 && ok_py $c; then
       PY=$c; break
     fi
@@ -25,11 +27,14 @@ if [ ! -x .venv/bin/python ]; then
       sudo dnf install -y python3 python3-pip
     elif command -v pacman >/dev/null 2>&1; then
       sudo pacman -S --noconfirm python python-pip
+    elif command -v brew >/dev/null 2>&1; then
+      brew install python
     fi
     PY=python3
     if ! ok_py $PY; then
-      echo "Please install Python 3.10 or newer with venv (Ubuntu/Debian: sudo apt install python3-venv), then run"
-      echo "./setup.sh again."
+      echo "Please install Python 3.10 or newer with venv, then run this again:"
+      echo "  Ubuntu/Debian: sudo apt install python3-venv   Fedora: sudo dnf install python3-pip"
+      echo "  macOS: brew install python                     Arch: sudo pacman -S python-pip"
       exit 1
     fi
   fi

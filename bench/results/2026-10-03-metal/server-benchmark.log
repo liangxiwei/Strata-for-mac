@@ -1,0 +1,14 @@
+server-final-short {'cache_n': 0, 'prompt_n': 25, 'prompt_ms': 3457.7, 'prompt_per_token_ms': 138.308, 'prompt_per_second': 7.2, 'predicted_n': 40, 'predicted_ms': 2576.3, 'predicted_per_token_ms': 64.407, 'predicted_per_second': 15.5, 'draft_n': 30, 'draft_n_accepted': 23} 内存是临时存储，速度快但断电后数据会丢失，主要用于让电脑快速运行当前程序。硬盘则是永久存储，速度慢但断电后数据依然保留，主要用于长期保存文件。
+server-final-long {'cache_n': 0, 'prompt_n': 971, 'prompt_ms': 7801.3, 'prompt_per_token_ms': 8.034, 'prompt_per_second': 124.5, 'predicted_n': 103, 'predicted_ms': 5666.7, 'predicted_per_token_ms': 55.017, 'predicted_per_second': 18.2, 'draft_n': 68, 'draft_n_accepted': 54} 基于提供的文本片段，提取出的关键信息如下：
+
+1. **项目代号与验收日期**：银杏项目的验收日期为10月18日。
+2. **核心目标**：项目旨在降低本地推理的首字延迟，并通过统一内存保存模型权重来优化性能。
+3. **技术实现与验证**：通过分析算子运行时间、处理中文问答及代码片段等测试数据，确认模型在减少等待时间及保持状态一致性方面的效果。
+server-final-followup {'cache_n': 964, 'prompt_n': 136, 'prompt_ms': 2190.6, 'prompt_per_token_ms': 16.107, 'prompt_per_second': 62.1, 'predicted_n': 85, 'predicted_ms': 5057.6, 'predicted_per_token_ms': 59.501, 'predicted_per_second': 16.8, 'draft_n': 66, 'draft_n_accepted': 44} 根据提供的文本片段，虽然存在大量重复和混乱的表述，但关于“主机”的具体职责并未明确列出三件事，文本中仅提到“主机负责读取请求、编码文本和返回结果”。
+
+因此，基于文本中关于“主机负责”的描述，可以提取出以下三件事：
+
+1. **读取请求**
+2. **编码文本**
+3. **返回结果**
+server-final-repeat {'cache_n': 0, 'prompt_n': 25, 'prompt_ms': 958.0, 'prompt_per_token_ms': 38.32, 'prompt_per_second': 26.1, 'predicted_n': 40, 'predicted_ms': 2389.7, 'predicted_per_token_ms': 59.742, 'predicted_per_second': 16.7, 'draft_n': 30, 'draft_n_accepted': 23} 内存是临时存储，速度快但断电后数据会丢失，主要用于让电脑快速运行当前程序。硬盘则是永久存储，速度慢但断电后数据依然保留，主要用于长期保存文件。

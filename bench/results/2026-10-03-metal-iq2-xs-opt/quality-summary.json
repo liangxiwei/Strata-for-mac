@@ -1,0 +1,41 @@
+{
+  "model": "IQ2_XS",
+  "mtp_enabled": false,
+  "kv": "fp16",
+  "context_capacity": 32768,
+  "default_resident_enabled": true,
+  "default_fused_prefill_enabled": true,
+  "logit_positions": 389,
+  "logit_values": 96596480,
+  "logit_bit_differences": 0,
+  "committed_state_comparisons": 6,
+  "committed_state_fingerprints_equal": true,
+  "real_expert_layer_checks": 288,
+  "real_expert_values": 23347200,
+  "real_expert_bit_differences": 0,
+  "real_expert_nonfinite": 0,
+  "original_binary_sha256": "b91c1f4bc38283abba1f2bd39b80d2b573b5ba68462bab083fbf52456b5a0f89",
+  "original_binary_10k_repeat_matches_optimized": true,
+  "original_binary_short_requests_match": {
+    "same_requests": true,
+    "same_output_ids": true,
+    "same_committed_states": true,
+    "requests": 4,
+    "states": 4
+  },
+  "audited_binary_sha256": "a1372b3b4cc94260fd1d5b63356a7285938d8b9a0f450c945a700db8ea41c18f",
+  "final_binary_sha256": "8804ed7c792f8b275b003a77e7dafdd47b9e17393b5fa0fc6939be2fe7278989",
+  "limits": [
+    "Fixed-input numerical equivalence checks, not a general capability benchmark",
+    "Original historical wording difference is unexplained; the unchanged original binary now reproduces the optimized output",
+    "100K and MTP-enabled IQ2_XS were not validated in this round"
+  ],
+  "final_regression": {
+    "ctest_entries": 46,
+    "failures": 0,
+    "seconds": 126.93,
+    "x86_only_checks_skipped": 3,
+    "resident_fixtures": 67,
+    "resident_graph_replays": 201
+  }
+}

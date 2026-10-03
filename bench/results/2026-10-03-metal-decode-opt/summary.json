@@ -1,0 +1,329 @@
+{
+  "baseline": {
+    "sha256": "8804ed7c792f8b275b003a77e7dafdd47b9e17393b5fa0fc6939be2fe7278989",
+    "env": {
+      "STRATA_DECODE_TIMING": "1",
+      "STRATA_TRACE": "1"
+    },
+    "extra_view_mib": 0,
+    "prefill_tok_s": 129.44615169535626,
+    "cold_decode_ms": 13844.3,
+    "cold_decode_tok_s": 18.491364677159552,
+    "warm_decode_ms": [
+      13785.0,
+      13862.0
+    ],
+    "warm_median_ms": 13823.5,
+    "warm_tok_s": [
+      18.570910409865796,
+      18.46775357091329
+    ],
+    "metrics": {},
+    "output_ids_identical": true,
+    "warm_median_tok_s": 18.519188338698594,
+    "warm_speedup_vs_round20_pct": 0.0,
+    "saved_ms_per_token_vs_round20": 0.0
+  },
+  "copy": {
+    "sha256": "1e71e03666cdb39fc2fdce3a20db9b63bc7f0a0b545f67daa34c8016a6113765",
+    "env": {
+      "STRATA_DECODE_TIMING": "1",
+      "STRATA_TRACE": "1",
+      "STRATA_METAL_GRAPH_TIMING": "1"
+    },
+    "extra_view_mib": 0,
+    "prefill_tok_s": 126.81697013967622,
+    "cold_decode_ms": 13613.6,
+    "cold_decode_tok_s": 18.804724687077627,
+    "warm_decode_ms": [
+      13533.8,
+      13512.3
+    ],
+    "warm_median_ms": 13523.05,
+    "warm_tok_s": [
+      18.915603895432177,
+      18.945701323978895
+    ],
+    "metrics": {},
+    "output_ids_identical": true,
+    "warm_median_tok_s": 18.930640646895487,
+    "warm_speedup_vs_round20_pct": 2.2217621024842815,
+    "saved_ms_per_token_vs_round20": 1.1736328125000028
+  },
+  "dense-only": {
+    "sha256": "dd643bfec5ba24e3078245e57cd6a387d0f9c2caa2047ae34ded62bd09b01109",
+    "env": {
+      "STRATA_DECODE_TIMING": "1",
+      "STRATA_TRACE": "1",
+      "STRATA_METAL_IQ4_EXPAND_HEAD": "0"
+    },
+    "extra_view_mib": 2297.4,
+    "prefill_tok_s": 129.32963278144067,
+    "cold_decode_ms": 13112.6,
+    "cold_decode_tok_s": 19.52320668669829,
+    "warm_decode_ms": [
+      13018.8,
+      13125.8,
+      13014.4
+    ],
+    "warm_median_ms": 13018.8,
+    "warm_tok_s": [
+      19.663870710050084,
+      19.503573115543436,
+      19.67051880993361
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2762.75M  free = 1333.25M  (encrypted)",
+      "startup_seconds": 26.708710084000003,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2762.75M  free = 1333.25M  (encrypted)",
+      "child_peak_rss_bytes": 37520572416
+    },
+    "output_ids_identical": true,
+    "warm_median_tok_s": 19.663870710050084,
+    "warm_speedup_vs_round20_pct": 6.181061234522378,
+    "saved_ms_per_token_vs_round20": 3.143359375000003
+  },
+  "expanded": {
+    "sha256": "57fa23043b3c0e058775cbacb5796ffdc1f09568af3efdb5d645912fccf4b993",
+    "env": {
+      "STRATA_DECODE_TIMING": "1",
+      "STRATA_TRACE": "1"
+    },
+    "extra_view_mib": 2922.6000000000004,
+    "prefill_tok_s": 124.25910508592517,
+    "cold_decode_ms": 13849.0,
+    "cold_decode_tok_s": 18.4850891761138,
+    "warm_decode_ms": [
+      13005.2,
+      13038.8
+    ],
+    "warm_median_ms": 13022.0,
+    "warm_tok_s": [
+      19.684433918740194,
+      19.63370862349296
+    ],
+    "metrics": {},
+    "output_ids_identical": true,
+    "warm_median_tok_s": 19.659038550145908,
+    "warm_speedup_vs_round20_pct": 6.154968514821069,
+    "saved_ms_per_token_vs_round20": 3.130859375
+  },
+  "expanded-gate": {
+    "sha256": "f2307b24906f15b4b9f1865d7d08e70e2c71ba1b339e9fecef895a1fc10cdaa1",
+    "env": {
+      "STRATA_DECODE_TIMING": "1",
+      "STRATA_TRACE": "1",
+      "STRATA_METAL_SHARED_GATE": "1"
+    },
+    "extra_view_mib": 2922.6000000000004,
+    "prefill_tok_s": 128.22781466464582,
+    "cold_decode_ms": 14845.7,
+    "cold_decode_tok_s": 17.24405046579144,
+    "warm_decode_ms": [
+      12949.3,
+      13066.7
+    ],
+    "warm_median_ms": 13008.0,
+    "warm_tok_s": [
+      19.76940838500923,
+      19.59178675564603
+    ],
+    "metrics": {},
+    "output_ids_identical": true,
+    "warm_median_tok_s": 19.68019680196802,
+    "warm_speedup_vs_round20_pct": 6.269218942189414,
+    "saved_ms_per_token_vs_round20": 3.185546875
+  },
+  "expanded-gr": {
+    "sha256": "58d2a268b39edd5e2310d63c596718d0783fc4caf499c75387facfef74cf8004",
+    "env": {
+      "STRATA_DECODE_TIMING": "1",
+      "STRATA_TRACE": "1",
+      "STRATA_METAL_GR_SIMD": "1"
+    },
+    "extra_view_mib": 2922.6000000000004,
+    "prefill_tok_s": 123.22722237214869,
+    "cold_decode_ms": 13921.4,
+    "cold_decode_tok_s": 18.388955133822748,
+    "warm_decode_ms": [
+      13509.9,
+      13537.6
+    ],
+    "warm_median_ms": 13523.75,
+    "warm_tok_s": [
+      18.94906698051059,
+      18.91029429145491
+    ],
+    "metrics": {},
+    "output_ids_identical": true,
+    "warm_median_tok_s": 18.92966078195767,
+    "warm_speedup_vs_round20_pct": 2.2164710231999285,
+    "saved_ms_per_token_vs_round20": 1.1708984375
+  },
+  "final": {
+    "sha256": "eb3de0f71968def80e67e00c479b2ff15f285fb1743623b5d56d193b84cf65e0",
+    "env": {
+      "STRATA_DECODE_TIMING": "1",
+      "STRATA_TRACE": "1",
+      "STRATA_METAL_IQ4_EXPAND": "1"
+    },
+    "extra_view_mib": 2297.4,
+    "prefill_tok_s": 127.35803399950075,
+    "cold_decode_ms": 14474.4,
+    "cold_decode_tok_s": 17.686398054496216,
+    "warm_decode_ms": [
+      13068.2,
+      13098.1,
+      13106.9
+    ],
+    "warm_median_ms": 13098.1,
+    "warm_tok_s": [
+      19.589537962381964,
+      19.54481947763416,
+      19.531697045067865
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2754.75M  free = 1341.25M  (encrypted)",
+      "startup_seconds": 26.072158292,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2754.75M  free = 1341.25M  (encrypted)",
+      "child_peak_rss_bytes": 37450989568
+    },
+    "output_ids_identical": true,
+    "warm_median_tok_s": 19.54481947763416,
+    "warm_speedup_vs_round20_pct": 5.53820783167025,
+    "saved_ms_per_token_vs_round20": 2.8335937499999986
+  },
+  "final-control": {
+    "sha256": "eb3de0f71968def80e67e00c479b2ff15f285fb1743623b5d56d193b84cf65e0",
+    "env": {
+      "STRATA_DECODE_TIMING": "1",
+      "STRATA_TRACE": "1",
+      "STRATA_METAL_IQ4_EXPAND": "0",
+      "STRATA_METAL_COMPUTE_COPY": "0"
+    },
+    "extra_view_mib": 0,
+    "prefill_tok_s": 129.17893866583992,
+    "cold_decode_ms": 13843.1,
+    "cold_decode_tok_s": 18.492967615635227,
+    "warm_decode_ms": [
+      13700.4,
+      13732.1,
+      13690.5
+    ],
+    "warm_median_ms": 13700.4,
+    "warm_tok_s": [
+      18.685585822311758,
+      18.64245089971672,
+      18.699097914612324
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2754.75M  free = 1341.25M  (encrypted)",
+      "startup_seconds": 23.642275958,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2754.75M  free = 1341.25M  (encrypted)",
+      "child_peak_rss_bytes": 37573967872
+    },
+    "output_ids_identical": true,
+    "warm_median_tok_s": 18.685585822311758,
+    "warm_speedup_vs_round20_pct": 0.8985139120025742,
+    "saved_ms_per_token_vs_round20": 0.4808593750000014
+  },
+  "final-repeat": {
+    "sha256": "eb3de0f71968def80e67e00c479b2ff15f285fb1743623b5d56d193b84cf65e0",
+    "env": {
+      "STRATA_DECODE_TIMING": "1",
+      "STRATA_TRACE": "1",
+      "STRATA_METAL_IQ4_EXPAND": "1"
+    },
+    "extra_view_mib": 2297.4,
+    "prefill_tok_s": 129.19112146936814,
+    "cold_decode_ms": 13252.7,
+    "cold_decode_tok_s": 19.31681845963464,
+    "warm_decode_ms": [
+      13110.9,
+      13106.4,
+      13220.9
+    ],
+    "warm_median_ms": 13110.9,
+    "warm_tok_s": [
+      19.525738126291866,
+      19.532442165659525,
+      19.363280865901718
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2754.75M  free = 1341.25M  (encrypted)",
+      "startup_seconds": 25.1158425,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2754.75M  free = 1341.25M  (encrypted)",
+      "child_peak_rss_bytes": 37574819840
+    },
+    "output_ids_identical": true,
+    "warm_median_tok_s": 19.525738126291866,
+    "warm_speedup_vs_round20_pct": 5.435172261248278,
+    "saved_ms_per_token_vs_round20": 2.7835937500000014
+  },
+  "no-cache": {
+    "sha256": "dd643bfec5ba24e3078245e57cd6a387d0f9c2caa2047ae34ded62bd09b01109",
+    "env": {
+      "STRATA_DECODE_TIMING": "1",
+      "STRATA_TRACE": "1",
+      "STRATA_METAL_IQ4_EXPAND": "0"
+    },
+    "extra_view_mib": 0,
+    "prefill_tok_s": 128.62232626339278,
+    "cold_decode_ms": 13697.6,
+    "cold_decode_tok_s": 18.689405443289335,
+    "warm_decode_ms": [
+      13662.0,
+      13576.6,
+      13591.5
+    ],
+    "warm_median_ms": 13591.5,
+    "warm_tok_s": [
+      18.738105694627432,
+      18.855972776689303,
+      18.835301475186697
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2762.75M  free = 1333.25M  (encrypted)",
+      "startup_seconds": 23.910390292,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2754.75M  free = 1341.25M  (encrypted)",
+      "child_peak_rss_bytes": 37576736768
+    },
+    "output_ids_identical": true,
+    "warm_median_tok_s": 18.835301475186697,
+    "warm_speedup_vs_round20_pct": 1.7069491961887895,
+    "saved_ms_per_token_vs_round20": 0.90625
+  },
+  "release": {
+    "sha256": "0c65709c5d8dd410578d2f2378a8258b7e2dbdfe2bbef43f719bf2b57ddbb86c",
+    "env": {
+      "STRATA_METAL_IQ4_EXPAND": "1",
+      "STRATA_DECODE_TIMING": "1",
+      "STRATA_TRACE": "1"
+    },
+    "extra_view_mib": 2297.4,
+    "prefill_tok_s": 129.67376673764144,
+    "cold_decode_ms": 13116.2,
+    "cold_decode_tok_s": 19.517848157240664,
+    "warm_decode_ms": [
+      13014.9,
+      13003.5,
+      13031.3
+    ],
+    "warm_median_ms": 13014.9,
+    "warm_tok_s": [
+      19.669763117657453,
+      19.687007344176568,
+      19.645008556322086
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2754.75M  free = 1341.25M  (encrypted)",
+      "startup_seconds": 27.713040042,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2754.75M  free = 1341.25M  (encrypted)",
+      "child_peak_rss_bytes": 37573558272
+    },
+    "output_ids_identical": true,
+    "warm_median_tok_s": 19.669763117657453,
+    "warm_speedup_vs_round20_pct": 6.2128790847413295,
+    "saved_ms_per_token_vs_round20": 3.1585937500000014
+  }
+}

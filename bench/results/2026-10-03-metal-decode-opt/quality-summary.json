@@ -1,0 +1,13 @@
+{
+  "rows": 389,
+  "logits": 96596480,
+  "bit_differences": 0,
+  "state_fingerprints_matching": 6,
+  "ctest_entries": 49,
+  "ctest_failures": 0,
+  "x86_internal_skips": 3,
+  "cache_bytes": 2409031680,
+  "final_executable_sha256": "0c65709c5d8dd410578d2f2378a8258b7e2dbdfe2bbef43f719bf2b57ddbb86c",
+  "release_warm_decode_tok_s": 19.669763117657453,
+  "daily_config_enabled": true
+}

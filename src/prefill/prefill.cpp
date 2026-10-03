@@ -25,6 +25,11 @@
 #include "strata/prefill/gemm.hpp"
 #include "strata/prefill/moe_mmq.hpp"
 #include "strata/prefill/kernels.hpp"
+#if defined(STRATA_METAL_BACKEND)
+#include "strata/platform/metal_launch.hpp"
+#include "strata/kernels/s2_expert_grouped.hpp"
+#include "strata/kernels/quantize_act.hpp"
+#endif
 
 #include <cuda_runtime.h>
 
@@ -323,6 +328,12 @@ struct Prefill::Impl {
           *shared = nullptr, *sg = nullptr;
     int32_t *ids = nullptr, *slot_dev = nullptr, *src_dev = nullptr;
     uint16_t *Xs = nullptr, *Hh = nullptr, *sh_h = nullptr;
+#if defined(STRATA_METAL_BACKEND)
+    uint8_t* metal_xq = nullptr;
+    float* metal_scales = nullptr;
+    void* metal_expert_scratch = nullptr;
+    int32_t* metal_tiles = nullptr;
+#endif
     // step 2b (MMQ): the activations quantized per layer, H in FP32 and its group's quantized rows, the identity
     // row map, the group bounds, the group buffers of gathered experts
     void *Xq = nullptr, *Hq = nullptr;
@@ -506,6 +517,12 @@ uint64_t moe_set_bytes(size_t T, int64_t n_expert) {
         a.take<float>(T * K * 640, ok);
         a.take<uint8_t>(mmq::q8_bytes((int64_t) (T * K), 640), ok);
     }
+#if defined(STRATA_METAL_BACKEND)
+    a.take<uint8_t>(T * (N / 32) * 34, ok);
+    a.take<float>(T * (N / 32), ok);
+    a.take<uint8_t>(strata::kernels::moe_hit_grouped_scratch_bytes(T * K, N, 640), ok);
+    a.take<int32_t>(T * K * 4, ok);
+#endif
     return a.used;
 }
 }
@@ -682,6 +699,12 @@ bool Prefill::carve(size_t T, void* alloc) {
             m.H = c.take<float>(T * K * 640, ok);
             m.Hq = c.take<uint8_t>(mmq::q8_bytes((int64_t) (T * K), 640), ok);
         }
+#if defined(STRATA_METAL_BACKEND)
+        m.metal_xq = c.take<uint8_t>(T * (N / 32) * 34, ok);
+        m.metal_scales = c.take<float>(T * (N / 32), ok);
+        m.metal_expert_scratch = c.take<uint8_t>(strata::kernels::moe_hit_grouped_scratch_bytes(T * K, N, 640), ok);
+        m.metal_tiles = c.take<int32_t>(T * K * 4, ok);
+#endif
         if (base == nullptr) ok = false;
     }
     for (int i = 0; i < DQ; ++i) { m.dq_gu[i] = o.take<uint16_t>(1280 * 2560, ok); m.dq_d[i] = o.take<uint16_t>(2560 * 640, ok); }
@@ -1579,6 +1602,28 @@ bool Prefill::run(const int64_t* tokens, int64_t n, int64_t pos0, std::string& e
                     if (wgi->kind != core::WeightKind::Bf16InF32) { err = "prefill: shared gate is not BF16"; return false; }
                     m.gemm.bf16(m.mixed_bf, (const uint16_t*) wgi->data, m.sg, T, 1, N);
                     if (m.mixed_bf_lo) m.gemm.bf16(m.mixed_bf_lo, (const uint16_t*) wgi->data, m.sg, T, 1, N, 0, 1.0f);
+#if defined(STRATA_METAL_BACKEND)
+                    const bool direct_experts = m.cache && m.cache->shared() &&
+                        !strata::kernels::cpu::expert_layout().native &&
+                        (T < 32 || std::getenv("STRATA_METAL_PREFILL_Q2_GEMV") != nullptr) &&
+                        std::getenv("STRATA_METAL_PREFILL_F16_EXPERTS") == nullptr;
+                    if (direct_experts) {
+                        // Shared memory already contains every expert. Keep routing on the GPU and retain
+                        // decode's Q8 activation contract, with no per-expert widening or host grouping.
+                        const auto& lay = strata::kernels::cpu::expert_layout();
+                        strata::metal::Launch ix("pfl_iota_kernel", (unsigned)((T * K + 255) / 256), 1, 1,
+                                                 256, 1, 1, 0, m.cs);
+                        ix.buf(m.slot_dev).scalar((unsigned)(T * K)); ix.done();
+                        strata::kernels::quantize_q8_0_scaled(m.mixed, m.metal_xq, m.metal_scales, T * N, m.cs);
+                        pt.mark(kPfGemmGU, cs);
+                        strata::kernels::moe_hit_grouped_s2_multi(
+                            m.cache->device_slot((int32_t)(l * m.g->n_expert)), m.ids, m.slot_dev, nullptr,
+                            T * K, lay.blob_bytes(l), m.metal_xq, m.metal_scales, K,
+                            m.metal_expert_scratch, m.Dm, m.cs);
+                        stats_.experts_resident += T * K;
+                    } else
+#endif
+                    {
                     // group the (token, k) pairs by expert on the host
                     pt.mark(kPfHostGroup, cs);
                     // (the sync below also orders this layer's writes of slot/src/bounds after the previous
@@ -1647,6 +1692,65 @@ bool Prefill::run(const int64_t* tokens, int64_t n, int64_t pos0, std::string& e
                     } else {
                         gather_rows16(m.mixed_h, m.src_dev, m.Xs, T * K, N, m.cs);
                     }
+#if defined(STRATA_METAL_BACKEND)
+                    bool native_tiles = lay.native && m.cache && m.host_res && !use_mmq && T >= 32 &&
+                                        std::getenv("STRATA_METAL_PREFILL_F16_EXPERTS") == nullptr;
+                    strata::kernels::NativeExpertLayout native_tile_layout;
+                    if (native_tiles) {
+                        const auto& f = lay.fmt[(size_t) l];
+                        native_tile_layout = strata::kernels::native_expert_layout(f.gu_type, f.d_type, f.n_embd, f.n_ff);
+                        native_tiles = strata::kernels::native_expert_gemm_supported(native_tile_layout);
+                        for (const int32_t e : order)
+                            native_tiles = native_tiles && m.host_res[(size_t) l * m.g->n_expert + e] >= 0;
+                    }
+                    if (native_tiles) {
+                        const uint8_t* base = m.cache->device_slot(0);
+                        // 0: 16-row tiles of 32 columns; 16 / 32: tiles of that many rows and 64 columns (same bits)
+                        const int tile_rows = strata::kernels::native_expert_gemm_rows(
+                            order.empty() ? 0.0 : (double) (T * K) / (double) order.size());
+                        const int step = tile_rows > 0 ? tile_rows : 16;
+                        std::vector<int32_t> tiles;
+                        for (const int32_t e : order) {
+                            const int slot = m.host_res[(size_t) l * m.g->n_expert + e];
+                            const uint64_t offset = (uint64_t) (m.cache->device_slot(slot) - base);
+                            for (int32_t r = 0; r < m.cnt[(size_t) e]; r += step) {
+                                tiles.push_back((int32_t) (uint32_t) offset);
+                                tiles.push_back(m.off[(size_t) e] + r);
+                                tiles.push_back(std::min(step, m.cnt[(size_t) e] - r));
+                                tiles.push_back((int32_t) (uint32_t) (offset >> 32));
+                            }
+                        }
+                        cudaMemcpyAsync(m.metal_tiles, tiles.data(), tiles.size() * sizeof(int32_t),
+                                         cudaMemcpyHostToDevice, m.cs);
+                        pt.mark(kPfGemmGU, cs);
+                        strata::kernels::native_expert_gemm(native_tile_layout, m.Xs, base, m.metal_tiles,
+                                                            m.GU, tiles.size() / 4, false, m.cs, tile_rows);
+                        swiglu_interleaved(m.GU, m.Hh, T * K, m.cs);
+                        pt.mark(kPfGemmD, cs);
+                        strata::kernels::native_expert_gemm(native_tile_layout, m.Hh, base, m.metal_tiles,
+                                                            m.Dm, tiles.size() / 4, true, m.cs, tile_rows);
+                        stats_.experts_resident += order.size();
+                    } else
+                    if (m.cache && m.cache->shared() && !lay.native && !use_mmq &&
+                        std::getenv("STRATA_METAL_PREFILL_F16_EXPERTS") == nullptr) {
+                        std::vector<int32_t> tiles;
+                        for (const int32_t e : order)
+                            for (int32_t r = 0; r < m.cnt[(size_t)e]; r += 16) {
+                                tiles.push_back(e); tiles.push_back(m.off[(size_t)e] + r);
+                                tiles.push_back(std::min(16, m.cnt[(size_t)e] - r)); tiles.push_back(0);
+                            }
+                        cudaMemcpyAsync(m.metal_tiles, tiles.data(), tiles.size() * sizeof(int32_t),
+                                         cudaMemcpyHostToDevice, m.cs);
+                        const auto* base = m.cache->device_slot((int32_t)(l * m.g->n_expert));
+                        pt.mark(kPfGemmGU, cs);
+                        moe_q2_gemm(m.Xs, base, m.metal_tiles, m.GU, tiles.size() / 4, lay.blob_bytes(l), false, m.cs);
+                        swiglu_interleaved(m.GU, m.Hh, T * K, m.cs);
+                        pt.mark(kPfGemmD, cs);
+                        moe_q2_gemm(m.Hh, base, m.metal_tiles, m.Dm, tiles.size() / 4, lay.blob_bytes(l), true, m.cs);
+                        stats_.experts_resident += order.size();
+                    } else
+#endif
+                    {
                     // Stage ahead: the copy stream moves blobs host -> device while the compute stream works.
                     int stage_next = 0;
                     std::vector<int> stage_of(order.size(), -1);
@@ -1809,8 +1913,7 @@ bool Prefill::run(const int64_t* tokens, int64_t n, int64_t pos0, std::string& e
                         }
                         release_to(m.g->n_expert);
                     }
-                    pt.mark(kPfCombine, cs);
-                    moe_combine(m.Dm, m.slot_dev, m.w, m.shared, m.sg, m.bo, T, m.cs);
+                    }
                     // debug: STRATA_DBG_NAN=1 reports the first layer of a chunk whose MoE produced non-finite values
                     if (static const bool dbg = std::getenv("STRATA_DBG_NAN") != nullptr; dbg) {
                         cudaStreamSynchronize(m.cs);
@@ -1821,16 +1924,30 @@ bool Prefill::run(const int64_t* tokens, int64_t n, int64_t pos0, std::string& e
                             for (float v : h) c += !std::isfinite(v);
                             return c;
                         };
-                        const int64_t bgu = bad(m.GU, T * K * 1280), bdm = bad(m.Dm, T * K * N), bbo = bad(m.bo, T * N);
+                        const int64_t bgu = bad(m.GU, T * K * 1280), bdm = bad(m.Dm, T * K * N);
                         const int64_t bh = m.H ? bad(m.H, T * K * 640) : -1;
                         static int64_t reported = -1;
-                        if ((bgu || bdm || bbo || bh > 0) && reported != stats_.chunks) {
+                        if ((bgu || bdm || bh > 0) && reported != stats_.chunks) {
                             reported = stats_.chunks;
                             std::fprintf(stderr, "strata dbg: layer %lld (mmq %d, types %d/%d, %zu experts): non-finite GU %lld "
-                                         "H %lld Dm %lld bo %lld of T %lld\n", (long long) l, (int) use_mmq, mmq_gt, mmq_dt,
-                                         order.size(), (long long) bgu, (long long) bh, (long long) bdm, (long long) bbo,
+                                         "H %lld Dm %lld of T %lld\n", (long long) l, (int) use_mmq, mmq_gt, mmq_dt,
+                                         order.size(), (long long) bgu, (long long) bh, (long long) bdm,
                                          (long long) T);
                         }
+                    }
+                    }
+                    pt.mark(kPfCombine, cs);
+                    moe_combine(m.Dm, m.slot_dev, m.w, m.shared, m.sg, m.bo, T, m.cs);
+                }
+                if (const char* dump = std::getenv("STRATA_PREFILL_DUMP_HALVES"); dump && c0 == 0) {
+                    // First query's block output and injection, before the scratch is reused by the next half.
+                    std::vector<float> row((size_t) N + HC);
+                    cudaMemcpyAsync(row.data(), m.bo, N * sizeof(float), cudaMemcpyDeviceToHost, m.cs);
+                    cudaMemcpyAsync(row.data() + N, m.inj, HC * sizeof(float), cudaMemcpyDeviceToHost, m.cs);
+                    cudaStreamSynchronize(m.cs);
+                    if (std::FILE* f = std::fopen(dump, l == LB && half == 0 ? "wb" : "ab")) {
+                        std::fwrite(row.data(), sizeof(float), row.size(), f);
+                        std::fclose(f);
                     }
                 }
                 // ---- the hyper-connection write of this half; F-2: fused with the next half's norm when nothing else
@@ -1854,6 +1971,16 @@ bool Prefill::run(const int64_t* tokens, int64_t n, int64_t pos0, std::string& e
                 }
                 if (half == 1 && strata::kernels::cvec().covers(l))   // --control-vector-scaled
                     strata::kernels::cvec_apply(m.R, l, T, D, nullptr, 0, nullptr, 0, false, m.cs);
+                if (const char* dump = std::getenv("STRATA_PREFILL_DUMP_LAYERS"); dump && half == 1 && c0 == 0) {
+                    // Diagnostic first-token residual after each layer, for comparison with --dump-layers.
+                    std::vector<float> row((size_t) D);
+                    cudaMemcpyAsync(row.data(), m.R, row.size() * sizeof(float), cudaMemcpyDeviceToHost, m.cs);
+                    cudaStreamSynchronize(m.cs);
+                    if (std::FILE* f = std::fopen(dump, l == LB ? "wb" : "ab")) {
+                        std::fwrite(row.data(), sizeof(float), row.size(), f);
+                        std::fclose(f);
+                    }
+                }
             }
         }
         if (issuer.joinable()) {

@@ -1,0 +1,28 @@
+s2_expert_grouped_parity: new expert kernels vs the previous ones, bitwise
+  moe_hit_grouped_s2 (fp32 scales)             bitwise identical
+  moe_hit_grouped_s2 (fp32 scales)             host reference: 2601 rows, 0 outside tolerance, worst 1.00e-07 of sum|term|
+  moe_hit_grouped_s2 (fp16 d)                  bitwise identical
+  moe_hit_grouped_s2 (fp16 d)                  host reference: 2601 rows, 0 outside tolerance, worst 9.22e-08 of sum|term|
+  moe_hit_grouped_s2_dev (count 7 of 10)       bitwise identical
+  moe_hit_grouped_s2_dev (count 7 of 10)       host reference: 2023 rows, 0 outside tolerance, worst 1.00e-07 of sum|term|
+  moe_hit_grouped_s2_dev (count 7 of 10)       rows past the count written: 0
+  moe_hit_grouped_s2_multi (4 tokens, 29 hits) bitwise identical
+  moe_hit_grouped_s2_multi (4 tokens, 29 hits) host reference: 8381 rows, 0 outside tolerance, worst 1.00e-07 of sum|term|
+  moe_grouped_s2 (20 groups, fp32 scales)      bitwise identical
+  moe_grouped_s2 (20 groups, fp32 scales)      host reference: 23120 rows, 0 outside tolerance, worst 1.27e-07 of sum|term|
+  moe_grouped_s2 (20 groups, fp16 d)           bitwise identical
+  moe_grouped_s2 (20 groups, fp16 d)           host reference: 23120 rows, 0 outside tolerance, worst 1.03e-07 of sum|term|
+  resident graph with changed expert IDs       host reference: 11560 rows, 0 outside tolerance, worst 1.00e-07 of sum|term|
+  resident graph with changed expert IDs       host reference: 11560 rows, 0 outside tolerance, worst 9.44e-08 of sum|term|
+  moe_group_resident + moe_grouped_s2 (fp32)   bitwise identical
+  moe_group_resident + moe_grouped_s2 (fp32)   host reference: 14450 rows, 0 outside tolerance, worst 1.00e-07 of sum|term|
+  moe_group_resident + moe_grouped_s2 (fp16)   bitwise identical
+  moe_group_resident + moe_grouped_s2 (fp16)   host reference: 14450 rows, 0 outside tolerance, worst 9.45e-08 of sum|term|
+  moe_hit_grouped_s2 (2-byte aligned x)        bitwise identical
+  moe_hit_grouped_s2 (2-byte aligned x)        host reference: 867 rows, 0 outside tolerance, worst 9.23e-08 of sum|term|
+  moe_hit_grouped_s2 (slot stride BLOB + 4)    bitwise identical
+  moe_hit_grouped_s2 (slot stride BLOB + 4)    host reference: 1156 rows, 0 outside tolerance, worst 1.00e-07 of sum|term|
+  moe_hit_grouped_s2 (arena 4 mod 8)           bitwise identical
+  moe_hit_grouped_s2 (arena 4 mod 8)           host reference: 1156 rows, 0 outside tolerance, worst 1.00e-07 of sum|term|
+s2_expert_grouped_parity: 0 failures
+PASS

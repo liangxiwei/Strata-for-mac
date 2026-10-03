@@ -1,0 +1,11 @@
+{
+  "name": "Qwen3.8-Flash-Next GSQ-RCO",
+  "architecture": "qwen4exp",
+  "first_shard_tensors": 1223,
+  "expert_tensor_types": {
+    "Q2_0": 48,
+    "IQ2_S": 68,
+    "IQ2_XXS": 22,
+    "IQ1_M": 6
+  }
+}

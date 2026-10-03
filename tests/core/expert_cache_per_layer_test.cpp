@@ -39,6 +39,19 @@ int main() {
             }
         }
     }
-    std::puts("expert cache per-layer admission: uniform and sized caches passed");
+    uint8_t* arena = nullptr;
+    if (cudaMalloc((void**) &arena, 12 * 1024) != cudaSuccess) return 1;
+    {
+        strata::core::ExpertCache shared;
+        if (!shared.open_shared(arena, 3, 4, 1024, err) || shared.resident() != 12 || !shared.shared()) return 1;
+        for (int l = 0; l < 3; ++l) for (int e = 0; e < 4; ++e)
+            if (shared.slot_of(l, e) != l * 4 + e || shared.device_slot(l * 4 + e) != arena + (l * 4 + e) * 1024)
+                return 1;
+        if (!shared.fill_slot_blocking(0, arena, err) || shared.fill_slot_blocking(0, arena + 1024, err)) return 1;
+        shared.close();
+    }
+    // A borrowed arena must remain allocated after closing/destroying the cache.
+    if (cudaMemset(arena, 0x5a, 12 * 1024) != cudaSuccess || cudaFree(arena) != cudaSuccess) return 1;
+    std::puts("expert cache: uniform, sized and immutable shared arenas passed");
     return 0;
 }

@@ -1,6 +1,10 @@
 // src/core/device.cu - P2.S1: the CUDA side of the runtime core.
 #include "strata/core/device.hpp"
 
+#if defined(STRATA_USE_METAL)
+#include "strata/platform/metal_launch.hpp"     // the Metal backend's poison and kernel-library state
+#endif
+
 #include <cuda_runtime.h>
 
 #include <cstdio>
@@ -19,10 +23,15 @@ void check(cudaError_t e, const char* what) {
 // A NaN pattern, not zero.  Zeros read from uninitialised memory are indistinguishable from real zeros in a
 // dequantized weight or a masked attention score, which is exactly the kind of wrong-but-plausible value the
 // Phase 1 harnesses kept catching.
+#if defined(STRATA_USE_METAL)
+// the Metal build compiles this file as C++ (no __global__ here): the kernel lives in
+// src/kernels/metal/poison.metal and strata::metal::poison dispatches it with the same chunking.
+#else
 __global__ void poison_kernel(float* p, uint64_t n_floats) {
     const uint64_t i = (uint64_t) blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n_floats) p[i] = __int_as_float(0x7fc00000);
 }
+#endif
 
 #if defined(STRATA_USE_HIP)
 #if !defined(STRATA_HIP_ARCHS)
@@ -121,7 +130,11 @@ std::string gpu_arch_problem(int ordinal) {
 }
 
 std::string device_code_error() {
-#if defined(STRATA_USE_HIP)
+#if defined(STRATA_USE_METAL)
+    // the equivalent check: the embedded kernel library either loaded or it did not
+    const char* s = strata::metal::code_state();
+    return (s[0] == 'o' && s[1] == 'k') ? std::string{} : std::string(s);
+#elif defined(STRATA_USE_HIP)
     return "";   // gpu_arch_problem() checks the HIP architectures against STRATA_HIP_ARCHS, before this point
 #else
     // every .cu of the engine is compiled for the same CMAKE_CUDA_ARCHITECTURES, so this kernel stands for all
@@ -202,6 +215,9 @@ DeviceArena::DeviceArena(uint64_t bytes, int ordinal, bool poison)
     // happens once, here, before anything depends on it.
     check(cudaMalloc(&base_, (size_t) bytes), "cudaMalloc");
     if (poison_) {
+#if defined(STRATA_USE_METAL)
+        strata::metal::poison((float*) base_, bytes / sizeof(float));
+#else
         const int threads = 256;
         const uint64_t n = bytes / sizeof(float);
         const uint64_t blocks = (n + threads - 1) / threads;
@@ -209,11 +225,12 @@ DeviceArena::DeviceArena(uint64_t bytes, int ordinal, bool poison)
         // blocks, which fits, but the loop keeps it correct for any size rather than for today's sizes.
         const uint64_t max_blocks = 0x7FFFFFFFull;
         for (uint64_t b = 0; b < blocks; b += max_blocks) {
-            const uint64_t chunk = (blocks - b < max_blocks) ? (blocks - b) : max_blocks;
+            const uint64_t chunk = (blocks - b < max_blocks) ? blocks - b : max_blocks;
             poison_kernel<<<(unsigned) chunk, threads>>>((float*) base_ + b * threads, n - b * threads);
             check(cudaGetLastError(), "poison_kernel");
         }
         check(cudaDeviceSynchronize(), "poison sync");
+#endif
     }
 }
 

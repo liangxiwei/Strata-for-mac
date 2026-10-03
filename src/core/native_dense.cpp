@@ -2,10 +2,15 @@
 #include "strata/core/weights.hpp"
 #include "strata/artifact/gguf_reader.hpp"
 #include "strata/kernels/native_mmvq.hpp"
+#if defined(STRATA_METAL_BACKEND)
+#include "strata/kernels/metal_mmvq.hpp"
+#endif
 
 #include <cuda_runtime.h>
 #include <algorithm>
 #include <climits>
+#include <chrono>
+#include <cstdio>
 #include <exception>
 #include <limits>
 #include <memory>
@@ -65,7 +70,12 @@ bool NativeDense::keep_unquantized_ple_key(const std::string& pack_dir, std::set
 
 NativeDense::~NativeDense() {
     if (scratch_) cudaFree(scratch_);
-    for (void* p : weights_) cudaFree(p);
+    for (void* p : weights_) {
+#if defined(STRATA_METAL_BACKEND)
+        strata::kernels::metal_iq4_release(p);
+#endif
+        cudaFree(p);
+    }
 }
 
 bool NativeDense::load(const std::vector<std::string>& shards, WeightTable& table, std::string& err,
@@ -186,6 +196,22 @@ bool NativeDense::load(const std::vector<std::string>& shards, WeightTable& tabl
         }
         scratch_ = scratch.release();
         bytes_ = total;
+#if defined(STRATA_METAL_BACKEND)
+        const auto start = std::chrono::steady_clock::now();
+        size_t expanded = 0;
+        size_t views = 0;
+        const WeightRef* ple_key = table.find("blk.1.ple_key.weight");
+        for (const auto& item : pending) {
+            // PLE keys use their own kernel; preparing an MMVQ view for them would waste memory.
+            if (item.ref == ple_key) continue;
+            const size_t bytes = strata::kernels::metal_iq4_prepare(item.type, item.ref->native_data,
+                                                                  (int) item.ref->ne0, (int) item.ref->ne1);
+            expanded += bytes;
+            views += bytes != 0;
+        }
+        if (expanded) std::fprintf(stderr, "strata Metal: lossless IQ4 dense views %.1f MiB in %.3f s (%zu matrices)\n",
+            expanded / 1048576.0, std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count(), views);
+#endif
         return true;
     } catch (const std::exception& error) {
         err = std::string("native dense: ") + error.what();

@@ -1,0 +1,18 @@
+Internal ctest changing into directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+Test project /Users/liangxw/src/xproject/petproject/Strata/build-metal
+    Start  3: metal_smoke
+1/6 Test  #3: metal_smoke ......................   Passed    1.28 sec
+    Start  4: metal_copy_test
+2/6 Test  #4: metal_copy_test ..................   Passed    0.81 sec
+    Start  5: metal_copy_blit_test
+3/6 Test  #5: metal_copy_blit_test .............   Passed    0.22 sec
+    Start 17: sampler_parity
+4/6 Test #17: sampler_parity ...................   Passed    2.74 sec
+    Start 22: qsa_parity
+5/6 Test #22: qsa_parity .......................   Passed    3.72 sec
+    Start 28: ple_parity
+6/6 Test #28: ple_parity .......................   Passed    0.81 sec
+
+100% tests passed, 0 tests failed out of 6
+
+Total Test time (real) =   9.60 sec

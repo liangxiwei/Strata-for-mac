@@ -28,9 +28,15 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#if defined(__APPLE__)
+// macOS has no hugetlbfs (and its superpages are a mach_vm call, not mmap flags): the Metal backend maps the
+// arena with normal pages and the hugepage attempt below is compiled out.
+#define STRATA_NO_HUGETLB 1
+#else
 #include <linux/mman.h>
 #ifndef MAP_HUGE_2MB
 #define MAP_HUGE_2MB (21 << 26)
+#endif
 #endif
 #endif
 
@@ -199,6 +205,12 @@ void* reserve(uint64_t bytes, PageBacking& got, std::string& note, const std::st
         return (uint8_t*) map + kSharedArenaHeaderBytes;
     }
 
+#if defined(STRATA_NO_HUGETLB)
+    note = "normal pages (no hugetlb on macOS)";
+    void* p = mmap(nullptr, bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    got = PageBacking::NormalPages;
+    return p == MAP_FAILED ? nullptr : p;
+#else
     void* p = mmap(nullptr, bytes, PROT_READ | PROT_WRITE,
                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_HUGE_2MB, -1, 0);
     if (p != MAP_FAILED) {
@@ -210,6 +222,7 @@ void* reserve(uint64_t bytes, PageBacking& got, std::string& note, const std::st
     p = mmap(nullptr, bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     got = PageBacking::NormalPages;
     return p == MAP_FAILED ? nullptr : p;
+#endif
 #endif
 }
 

@@ -1,0 +1,43 @@
+{
+  "wall_s": 112.90847745800001,
+  "first_text_s": 94.89072300000001,
+  "timings": {
+    "cache_n": 0,
+    "prompt_n": 10000,
+    "prompt_ms": 94792.3,
+    "prompt_per_token_ms": 9.479,
+    "prompt_per_second": 105.5,
+    "predicted_n": 256,
+    "predicted_ms": 18063.4,
+    "predicted_per_token_ms": 70.56,
+    "predicted_per_second": 14.2,
+    "draft_n": 201,
+    "draft_n_accepted": 128
+  },
+  "usage": {
+    "prompt_tokens": 10000,
+    "completion_tokens": 256,
+    "total_tokens": 10256,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "finish_reason": "length",
+  "content": "基于提供的资料片段，这是一份关于使用特定工具（如 `llama.cpp`、`vLLM` 或类似推理引擎）进行模型部署、性能测试和故障排查的混合文档。由于原文存在严重的乱码、拼写错误和上下文断裂（例如将不同年份、不同硬件型号和不同软件版本混在一起），我将提取其中的核心逻辑和技术要点，整理为一份清晰的技术指南。\n\n以下是整理后的**长上下文性能测试与部署指南**：\n\n### 1. 核心概念与术语澄清\n\n文档中提到的“Strata”、“Engine”、“Experts”等术语，实际上是指现代大语言模型（LLM）推理中的关键组件：\n\n*   **KV Cache (键值缓存)**：这是推理过程中最关键的内存结构。文档中反复提及 `KV Cache`、`KV Streaming` 和 `KV Resident`。\n    *   **重要性**：KV Cache 的大小直接决定了模型能处理多长的上下文（Context Window）。\n    *   **优化策略**：文档提到使用 `8-bit` 或 `4-bit` 量化（如 `Q4_K_M`, `Q2_K`）来压缩 KV Cache，从而节省显存（",
+  "reasoning_content": "",
+  "needle_matches": {
+    "银杏": false,
+    "10月18日": false,
+    "AX-7319": false
+  },
+  "health": {
+    "status": "ok",
+    "max_context": 32768,
+    "model": "qwen3.8-flash-next",
+    "images": false,
+    "api_key": false,
+    "loaded": true,
+    "service": "strata"
+  },
+  "sampled_peak_engine_rss_gib": 13.356704711914062
+}

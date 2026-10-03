@@ -69,6 +69,23 @@ bool read_expert_profile(const std::string& path, int64_t n_layers, int64_t n_ex
 
 ExpertCache::~ExpertCache() { close(); }
 
+bool ExpertCache::open_shared(const uint8_t* base, int64_t n_layers, int64_t n_expert,
+                              int64_t blob_bytes, std::string& err) {
+    close();
+    if (!base || n_layers <= 0 || n_expert <= 0 || blob_bytes <= 0 ||
+        n_layers > INT32_MAX / n_expert) {
+        err = "ExpertCache: invalid shared arena geometry";
+        return false;
+    }
+    base_ = const_cast<uint8_t*>(base);
+    shared_ = true;
+    n_layers_ = n_layers; n_expert_ = n_expert; blob_ = blob_bytes;
+    slots_ = next_free_ = admitted_ = n_layers * n_expert;
+    residency_.resize((size_t) slots_);
+    for (int64_t i = 0; i < slots_; ++i) residency_[(size_t) i] = (int32_t) i;
+    return true;
+}
+
 #if defined(STRATA_USE_HIP)
 bool ExpertCache::ensure_blocking_staging(std::size_t bytes, std::string& err) {
     if (bytes <= blocking_staging_bytes_) return true;
@@ -201,9 +218,10 @@ void ExpertCache::close() {
 #endif
     off_.clear();
     if (base_ != nullptr) {
-        cudaFree(base_);
+        if (!shared_) cudaFree(base_);
         base_ = nullptr;
     }
+    shared_ = false;
     residency_.clear();
     slots_ = 0;
     n_layers_ = 0;
@@ -264,6 +282,11 @@ const uint8_t* ExpertCache::device_slot(int32_t slot) const {
 }
 
 bool ExpertCache::fill_slot(int32_t slot, const uint8_t* host_blob, void* stream, std::string& err, int64_t bytes) {
+    if (shared_) {
+        if (host_blob && host_blob == device_slot(slot)) return true;
+        err = "ExpertCache: shared expert weights are immutable";
+        return false;
+    }
     const size_t n = (size_t) (bytes > 0 && bytes <= blob_ ? bytes : blob_);
     uint8_t* dst = device_slot(slot);
     if (dst == nullptr) {
@@ -286,6 +309,7 @@ bool ExpertCache::fill_slot(int32_t slot, const uint8_t* host_blob, void* stream
 }
 
 bool ExpertCache::fill_slot_blocking(int32_t slot, const uint8_t* host_blob, std::string& err, int64_t bytes) {
+    if (shared_) return fill_slot(slot, host_blob, nullptr, err, bytes);
     const size_t n = (size_t) (bytes > 0 && bytes <= blob_ ? bytes : blob_);
     uint8_t* dst = device_slot(slot);
     if (dst == nullptr) {
@@ -317,6 +341,7 @@ bool ExpertCache::fill_slot_blocking(int32_t slot, const uint8_t* host_blob, std
 }
 
 bool ExpertCache::fill_slot_queued(int32_t slot, const uint8_t* host_blob, std::string& err, int64_t bytes) {
+    if (shared_) return fill_slot(slot, host_blob, nullptr, err, bytes);
     const size_t n = (size_t) (bytes > 0 && bytes <= blob_ ? bytes : blob_);
     uint8_t* dst = device_slot(slot);
     if (dst == nullptr || host_blob == nullptr) {

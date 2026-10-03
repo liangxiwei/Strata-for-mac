@@ -8,12 +8,17 @@
 #if defined(_MSC_VER)
 #include <intrin.h>
 #include <immintrin.h>
-#else
+#elif defined(__x86_64__)
 #include <cpuid.h>
+#endif
+#if defined(__APPLE__)
+#include <sys/sysctl.h>
 #endif
 #include <fstream>
 #include <sstream>
 
+// The probes below are x86 CPUID reads.  On another CPU (an Apple-Silicon Mac, an ARM server) there is no
+// CPUID and no AVX-512/AVX-2, so both checks report false and the dispatchers pick the portable entry points.
 namespace strata::kernels::cpu {
 namespace {
 ExpertLayout g_layout;
@@ -21,6 +26,7 @@ ExpertLayout g_layout;
 
 const ExpertLayout& expert_layout() { return g_layout; }
 
+#if defined(__x86_64__) || defined(_M_X64)
 bool cpu_avx512_ok() {
     static const bool ok = [] {
         if (const char* f = std::getenv("STRATA_FORCE_AVX2"); f != nullptr && f[0] == '1') return false;
@@ -89,10 +95,10 @@ std::string cpu_name() {
     unsigned r[12] = {};
 #if defined(_MSC_VER)
     int x[4];
-    __cpuid(x, (int) 0x80000000u);
+    __cpuid((int) 0x80000000u, x[0], x[1], x[2], x[3]);
     if ((unsigned) x[0] < 0x80000004u) return "unknown";
     for (unsigned i = 0; i < 3; ++i) {
-        __cpuid(x, (int) (0x80000002u + i));
+        __cpuid((int) (0x80000002u + i), x[0], x[1], x[2], x[3]);
         for (int j = 0; j < 4; ++j) r[i * 4 + j] = (unsigned) x[j];
     }
 #else
@@ -107,16 +113,47 @@ std::string cpu_name() {
     const size_t b0 = name.find_first_not_of(' '), b1 = name.find_last_not_of(' ');
     return b0 == std::string::npos ? std::string("unknown") : name.substr(b0, b1 - b0 + 1);
 }
+#else
+bool cpu_avx512_ok() {
+    // STRATA_FORCE_AVX2 stays honoured so a caller that pins the slower path behaves the same everywhere.
+    return false;
+}
+
+bool cpu_avx2_ok() { return false; }
+
+std::string cpu_name() {
+#if defined(__APPLE__)
+    char brand[64] = {};
+    size_t len = sizeof brand - 1;
+    if (sysctlbyname("machdep.cpu.brand_string", brand, &len, nullptr, 0) == 0 && brand[0] != '\0')
+        return std::string(brand);
+#endif
+#if defined(__aarch64__)
+    return "aarch64";
+#else
+    return "unknown";
+#endif
+}
+#endif
 
 void q2_rows_any(const uint8_t* w, size_t row_bytes, int nblocks, const ActQ* const* a, int nt, float* const* out,
                  int r0, int r1) {
+#if defined(__x86_64__) || defined(_M_X64)
     if (cpu_avx512_ok()) q2_0_gguf_rows_multi(w, row_bytes, nblocks, a, nt, out, r0, r1);
     else q2_0_gguf_rows_multi_avx2(w, row_bytes, nblocks, a, nt, out, r0, r1);
+#else
+    // expert.cpp selects NEON on AArch64 and the scalar reference on other non-x86 CPUs.
+    q2_0_gguf_rows_multi(w, row_bytes, nblocks, a, nt, out, r0, r1);
+#endif
 }
 
 void act_quant_any(const float* x, int n, ActQ& a) {
+#if defined(__x86_64__) || defined(_M_X64)
     if (cpu_avx512_ok()) act_quant_q8_1(x, n, a);
     else act_quant_q8_1_avx2(x, n, a);
+#else
+    act_quant_q8_1(x, n, a);
+#endif
 }
 
 #if !defined(STRATA_NATIVE_EXPERTS)

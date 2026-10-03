@@ -1,0 +1,17 @@
+strata generate: 1879 MiB of weights loaded from /Users/liangxw/src/xproject/petproject/Q2_0/pack-full (301 canonical tensors skipped: served natively)
+strata generate: 301 native projection matrices, 1376.20 MiB of weights
+strata generate: the SSD is kept awake while rows are read: one page of the table after 100 ms without a read, until 60 s after the last request (STRATA_SSD_KEEPALIVE=0 turns it off)
+strata generate: PLE on, table 320001536 rows of /Users/liangxw/src/xproject/petproject/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00002-of-00002.gguf
+strata generate: GPU 0: Apple M2 Max, compute capability 10.0
+strata generate: expert arena: cudaHostRegister PORTABLE ok; normal pages (no hugetlb on macOS)
+strata generate: loaded 31.64 GiB at 3.24 GiB/s
+strata generate: experimental native Q5_K head, 437043200 bytes
+strata generate: 11 expert-pool workers + the host thread
+strata generate: session is up (engine 0.1.34)
+strata generate: sampling greedy
+strata generate: token graph captured (48 layers, one launch per token)
+strata generate: prompt path allocates its own buffers (no cache slots to borrow)
+Context leak detected, CoreAnalytics returned false
+strata generate: prefill 23 tokens in 1 chunks, 4356.3 ms (5.3 tok/s); experts streamed 1956 (1956 by DMA, host 2258.4 ms), resident 0; PLE 3.9 ms
+strata generate: position 23, token 13 (prompt)
+strata generate: 248320 of 248320 logits are not finite at position 23

@@ -1660,12 +1660,16 @@ int main(int argc, char** argv) {
     // ... and nothing runs on a CPU without AVX2: every CPU expert kernel is AVX2 at least (the AVX-512 ones are
     // chosen above it), and so is ggml-cpu in the release build, which the native pack's layout load initializes
     // next.  Refused here, by name, rather than an illegal instruction in the first expert.
+    // Metal port (Apple Silicon): the x86 kernels are compiled out of this build and the scalar transcriptions
+    // ARE the implementation (docs/MAC.md's own rule), so the gate does not apply on this backend.
+#if !defined(STRATA_METAL_BACKEND)
     if (!strata::kernels::cpu::cpu_avx2_ok()) {
         std::fprintf(stderr, "strata generate: this CPU (%s) does not support AVX2 with FMA and F16C, which every CPU "
                              "expert kernel needs; Strata runs on Intel Haswell (2013), AMD Zen (2017) or newer\n",
                      strata::kernels::cpu::cpu_name().c_str());
         return 2;
     }
+#endif
 
     std::string err;
     if (!o.native_head_gguf.empty() && !o.stream_token) {
@@ -2277,7 +2281,7 @@ int main(int argc, char** argv) {
     // a cache from, or --no-prefill-borrow - do the buffers take a reserve, and then this estimate stands in
     // for buffers that cannot be priced exactly yet because the sessions do not exist.  `plan_lend` uses the
     // exact `Prefill::bytes_needed` as soon as it can.
-    const bool pf_borrow = !o.no_prefill_borrow && !o.expert_profile.empty();
+    bool pf_borrow = !o.no_prefill_borrow && !o.expert_profile.empty();
     // (#340: the estimate predates the streamed ring: from 1024-token chunks the prompt path also holds a ring of
     // whole expert blobs, which a split without borrowing sizes at 96 (Prefill::set_ring_override below) and books
     // here - without it a `--no-prefill-borrow` split filled the cards and the draft head no longer fit)
@@ -2662,6 +2666,27 @@ int main(int argc, char** argv) {
         return 1;
     }
     const bool auto_cache = o.expert_cache < 0;
+#if defined(STRATA_METAL_BACKEND)
+    // The resident arena is already GPU-addressable on Apple Silicon. Avoid a second 32 GiB copy.
+    if (auto_cache && !native_pack && !multi_gpu && srcp == &arena_src &&
+        std::getenv("STRATA_METAL_NO_SHARED_EXPERTS") == nullptr) {
+        const uint8_t* base = arena_src.device_alias(0, 0);
+        bool contiguous = base != nullptr;
+        const int64_t blob = (int64_t) strata::kernels::cpu::expert_layout().max_blob;
+        for (int64_t l = 0; contiguous && l < g.n_layers; ++l)
+            for (int64_t e = 0; contiguous && e < g.n_expert; ++e)
+                contiguous = arena_src.device_alias(l, e) == base + (l * g.n_expert + e) * blob;
+        if (contiguous && xcache.open_shared(base, g.n_layers, g.n_expert, blob, err)) {
+            o.expert_cache = (int) xcache.slots();
+            // Prompt scratch must NEVER overwrite a shared weight arena.
+            o.no_prefill_borrow = true;
+            pf_borrow = false;
+            if (o.prefill_auto) o.prefill_chunk = std::min<int64_t>(1024, o.max_context);
+            std::fprintf(stderr, "strata generate: Metal unified expert arena: %lld experts, %.2f GiB, no extra copy\n",
+                         (long long) xcache.slots(), xcache.gib());
+        }
+    }
+#endif
     if (o.expert_cache < 0) {
         size_t free_b = 0, total_b = 0;
         cudaMemGetInfo(&free_b, &total_b);
@@ -2723,7 +2748,7 @@ int main(int argc, char** argv) {
         }
         o.expert_cache = (int) sized_slots.size();
     }
-    if (o.expert_cache > 0) {
+    if (o.expert_cache > 0 && !xcache.shared()) {
         // keep the first `keep_bytes` of the cache (the profile's hottest experts first); false when nothing is left
         auto shrink_to = [&](int64_t keep_bytes) -> bool {
             if (keep_bytes <= 0) { o.expert_cache = 0; sized_slots.clear(); return false; }
@@ -2815,29 +2840,33 @@ int main(int argc, char** argv) {
                          o.expert_cache, (double) xcache.bytes() / 1073741824.0, failed);
     }
     if (o.expert_cache > 0) {
-        std::fprintf(stderr, "strata generate: expert cache %lld slots, %.2f GiB of VRAM; policy is\n",
-                     (long long) xcache.slots(), xcache.gib());
+        std::fprintf(stderr, "strata generate: expert cache %lld slots, %.2f GiB of %s; policy is\n",
+                     (long long) xcache.slots(), xcache.gib(), xcache.shared() ? "shared weights" : "VRAM");
         mem_mark("opening the expert cache");
         xcache.set_per_layer_admission(o.expert_cache_per_layer);
-        // Round 328 warned here that the GPU hit path was wrong (tokens diverged from a cache-off run from
-        // token 0). That fault was fixed long since (native_expert_parity, expert_parity, the grouped kernels'
-        // tests), and the warning outlived it (issue #23). What remains is rounding: a GPU expert and the CPU's
-        // compute the same quantized expert with different float order, so a near-tie can flip. Measured teacher-
-        // forced on 2,557 tokens (bench/results/2026-09-27-cache-parity): 95-98% same top-1, and perplexity equal
-        // (on - off = -0.005 +- 0.005 nats). Neither output is more correct than the other.
-        std::fprintf(stderr,
-                     "strata generate: the GPU computes the experts in the cache; it rounds differently from the CPU,\n"
-                     "                 so a reply can differ slightly from a run without the cache (same quality:\n"
-                     "                 bench/results/2026-09-27-cache-parity).\n");
-        if (o.expert_cache_per_layer) {
-            int64_t lo = 0, hi = 0;
-            xcache.layer_slot_range(0, lo, hi);
-            std::fprintf(stderr, "                 R4.2g PER-LAYER: each layer owns %lld slots (%lld..%lld).\n",
-                         (long long) (hi - lo), (long long) lo, (long long) (hi - 1));
-        } else if (profile.empty()) {
-            std::fprintf(stderr, "                 compulsory-miss (fills with whatever the run routes first).\n");
+        if (xcache.shared()) {
+            std::fprintf(stderr, "                 all experts resident in unified memory, immutable, no eviction.\n");
         } else {
-            std::fprintf(stderr, "                 PROFILE, ranked by routing frequency, no eviction.\n");
+            // Round 328 warned here that the GPU hit path was wrong (tokens diverged from a cache-off run from
+            // token 0). That fault was fixed long since (native_expert_parity, expert_parity, the grouped kernels'
+            // tests), and the warning outlived it (issue #23). What remains is rounding: a GPU expert and the CPU's
+            // compute the same quantized expert with different float order, so a near-tie can flip. Measured teacher-
+            // forced on 2,557 tokens (bench/results/2026-09-27-cache-parity): 95-98% same top-1, and perplexity equal
+            // (on - off = -0.005 +- 0.005 nats). Neither output is more correct than the other.
+            std::fprintf(stderr,
+                         "strata generate: the GPU computes the experts in the cache; it rounds differently from the CPU,\n"
+                         "                 so a reply can differ slightly from a run without the cache (same quality:\n"
+                         "                 bench/results/2026-09-27-cache-parity).\n");
+            if (o.expert_cache_per_layer) {
+                int64_t lo = 0, hi = 0;
+                xcache.layer_slot_range(0, lo, hi);
+                std::fprintf(stderr, "                 R4.2g PER-LAYER: each layer owns %lld slots (%lld..%lld).\n",
+                             (long long) (hi - lo), (long long) lo, (long long) (hi - 1));
+            } else if (profile.empty()) {
+                std::fprintf(stderr, "                 compulsory-miss (fills with whatever the run routes first).\n");
+            } else {
+                std::fprintf(stderr, "                 PROFILE, ranked by routing frequency, no eviction.\n");
+            }
         }
     }
     // ---- R4.2e: fill the tier from the profile.  This is the only place the plan is applied, and it runs
@@ -2845,7 +2874,7 @@ int main(int argc, char** argv) {
     // admission finds no room and every non-profiled expert stays a CPU miss.  That is what makes the profile
     // the policy rather than a hint.
     int64_t prefilled = 0;
-    if (!profile.empty() && srcp != nullptr) {
+    if (!profile.empty() && srcp != nullptr && !xcache.shared()) {
         // #369 (dag08): per layer, a full layer skips only its own pairs - each layer takes its hottest experts until
         // its range is full (one full layer used to end the whole fill, leaving most layers empty)
         const bool per_layer = xcache.per_layer_admission();
@@ -3613,7 +3642,7 @@ int main(int argc, char** argv) {
     int32_t* d_res = nullptr;
     int32_t* d_hit_count = nullptr;
     strata::core::TokenHits thits;
-    const bool graph_hits = hit_fn != nullptr && !profile.empty() && !o.no_pool;
+    const bool graph_hits = hit_fn != nullptr && (!profile.empty() || xcache.shared()) && !o.no_pool;
     if (graph_hits && !o.no_capture && !o.no_token_graph && layer_dump == nullptr && half_dump == nullptr) {
         host_res.assign((size_t) (g.n_layers * g.n_expert), strata::core::kNotResident);
         int64_t resident = 0;
@@ -3650,6 +3679,17 @@ int main(int argc, char** argv) {
         thits.x_scale = drive.d.x_q8_0_hit_scale;
         thits.scratch = drive.d.hit_scratch;
         thits.hit_out = drive.d.hit_out;
+        thits.all_resident = xcache.shared() && resident == g.n_layers * g.n_expert &&
+                            o.dump_routing.empty() && std::getenv("STRATA_METAL_LAYER_SYNC") == nullptr;
+#if defined(STRATA_METAL_BACKEND)
+        // Real-model logits and committed-state parity are audited against the segmented/F16 path.
+        // Borrowing prefill scratch would overwrite slots, so it always needs the segmented path.
+        const char* iq_resident = std::getenv("STRATA_METAL_IQ_RESIDENT");
+        if (native_pack && !multi_gpu && o.no_prefill_borrow && resident == g.n_layers * g.n_expert &&
+            o.dump_routing.empty() && std::getenv("STRATA_METAL_LAYER_SYNC") == nullptr &&
+            (iq_resident == nullptr || std::atoi(iq_resident) != 0))
+            thits.all_resident = true;
+#endif
         drive.d.host_res = host_res.data();
         std::fprintf(stderr, "strata generate: token graph hit path: %lld resident experts, decided on the device\n",
                      (long long) resident);
@@ -4140,6 +4180,7 @@ int main(int argc, char** argv) {
         vh.blob = thits.blob;
         vh.slot_off = xcache.slot_offsets();   // E-6: the device plan's pointers
         vh.n_slots = xcache.slots();
+        vh.all_resident = thits.all_resident;
         // Layer split: `ver` runs layers [0, K1) and hands its residual to the next stage's verifier, and so on; the
         // last runs the head.  The hand-offs are mapped pinned memory, portable: a stage on another GPU reads it.
         // (--split-device 0: the second stage on this GPU, sharing its weights, session and cache - the A/B.)
@@ -4421,7 +4462,8 @@ int main(int argc, char** argv) {
         }
         drive.d.plan = ver.plan_sink();
         drive.d.pcie_num = std::max(0, std::min(256, (int) (o.pcie_frac * 256.0 + 0.5)));
-        if (o.adapt_every > 0 && o.adapt_swaps > 0) drive.d.usage.assign((size_t) (g.n_layers * g.n_expert), 0.0f);
+        if (o.adapt_every > 0 && o.adapt_swaps > 0 && !xcache.shared() && !thits.all_resident)
+            drive.d.usage.assign((size_t) (g.n_layers * g.n_expert), 0.0f);
         cudaStream_t adapt_stream = nullptr;
         if (cudaStreamCreateWithFlags(&adapt_stream, cudaStreamNonBlocking) != cudaSuccess) {
             std::fprintf(stderr, "strata serve: cannot create the refill stream\n");
@@ -4661,6 +4703,7 @@ int main(int argc, char** argv) {
         int64_t rounds = 0;
         const int S = o.spec;
         const int S_mtp = o.mtp_max_t > 0 ? std::min(o.mtp_max_t, S) : S;   // the MTP's windows; suffixes go up to S
+        const bool need_draft = S_mtp > 1 || o.suffix_draft > 0;
         if (S_mtp < S) mtp.set_max_drafts(S_mtp - 1);
         strata::spec::SuffixDrafter sfx(std::max(1, o.suffix_draft), 64, (size_t) o.max_context + 4096);
         strata::spec::DraftPolicy policy(S);   // MTP or lookup window, learned over the whole process
@@ -5399,7 +5442,7 @@ int main(int argc, char** argv) {
                 // commit, outv[a] is its row 0) - the drafts extend it on the device as the verify rows will
                 if (hist_n > 0 && mtp.coupled() && !eos && produced_n < max_new)
                     mtp.set_draft_history(consumed.data(), (int64_t) consumed.size(), outv[(size_t) a]);
-                const bool drafted = eos || produced_n >= max_new ||
+                const bool drafted = !need_draft || eos || produced_n >= max_new ||
                                      mtp.draft(T, outv.data(), p, a, drafts.data(), err, dprob.data(), (float) req_spec_min_p);
                 {
                     const Clock::time_point tw3 = Clock::now();
@@ -5562,8 +5605,9 @@ int main(int argc, char** argv) {
                              (unsigned long long) h_stale, (unsigned long long) h_dead,
                              (unsigned long long) h_pool_full, ss.ple_prev[0], ss.ple_prev[1]);
             }
-            const int64_t req_hits = drive.d.cache_hits - decode_hits0;
-            const int64_t req_look = (drive.d.cache_hits + drive.d.cache_admitted + drive.d.cache_refused) - decode_look0;
+            const int64_t req_look = vh.all_resident ? dec_T * g.n_layers * ss.k :
+                (drive.d.cache_hits + drive.d.cache_admitted + drive.d.cache_refused) - decode_look0;
+            const int64_t req_hits = vh.all_resident ? req_look : drive.d.cache_hits - decode_hits0;
             // DONE <generated> <prompt> <prompt ms> <decode ms> <finish> <drafts accepted> <drafts offered> <reused> [hits] [lookups]
             //      [RAM blobs] [file blobs] [file MB]   (CS-T tiers; appended, so an older server reads the rest)
             std::printf("DONE %lld %lld %.1f %.1f %s %lld %lld %lld %lld %lld %lld %lld %.1f\n", (long long) produced_n,
@@ -5995,6 +6039,7 @@ int main(int argc, char** argv) {
         vh.blob = thits.blob;
         vh.slot_off = xcache.slot_offsets();   // E-6: the device plan's pointers
         vh.n_slots = xcache.slots();
+        vh.all_resident = thits.all_resident;
         if (!ver.init(wt, g, ss, vh, native_head.loaded() ? &native_head : nullptr, o.spec, err)) {
             std::fprintf(stderr, "strata generate: %s\n", err.c_str());
             return 1;
@@ -6022,7 +6067,8 @@ int main(int argc, char** argv) {
         const int64_t files0 = src.file_reads(), ram0 = src.ram_reads();
         const uint64_t fbytes0 = src.file_blob_bytes(), fall0 = src.file_read_bytes();
         const double fms0 = src.file_ms();
-        if (o.adapt_every > 0 && o.adapt_swaps > 0) drive.d.usage.assign((size_t) (g.n_layers * g.n_expert), 0.0f);
+        if (o.adapt_every > 0 && o.adapt_swaps > 0 && !xcache.shared() && !thits.all_resident)
+            drive.d.usage.assign((size_t) (g.n_layers * g.n_expert), 0.0f);
         int64_t swaps_total = 0;
         double ms_adapt = 0;
         cudaStream_t adapt_stream = nullptr;
@@ -6106,7 +6152,9 @@ int main(int argc, char** argv) {
         // plan v0.3 P6: with a native pack the first window is the last prompt token alone (it produces the first
         // generated token and the MTP's first cell); otherwise the token loop already did that.
         bool first_window = native_pack;
-        if (use_mtp && !first_window &&
+        const int S_mtp = o.mtp_max_t > 0 ? std::min(o.mtp_max_t, o.spec) : o.spec;
+        const bool need_draft = S_mtp > 1 || o.suffix_draft > 0;
+        if (use_mtp && need_draft && !first_window &&
             !mtp.draft_first(o.spec, ss.R, x, p - 1, drafts.data(), err, dprob.data(), (float) o.spec_min_p)) {
             std::fprintf(stderr, "strata generate: %s\n", err.c_str());
             return 1;
@@ -6114,7 +6162,6 @@ int main(int argc, char** argv) {
         std::vector<int32_t> window((size_t) o.spec), outv((size_t) o.spec);
         std::vector<int64_t> accepted_hist((size_t) o.spec, 0);
         int64_t rounds = 0, drafts_total = 0, drafts_ok = 0, corrupt_counter = 0;
-        const int S_mtp = o.mtp_max_t > 0 ? std::min(o.mtp_max_t, o.spec) : o.spec;
         if (use_mtp && S_mtp < o.spec) mtp.set_max_drafts(S_mtp - 1);
         strata::spec::SuffixDrafter sfx(std::max(1, o.suffix_draft), 64, (size_t) o.max_context + 4096);
         strata::spec::DraftPolicy policy(o.spec);   // MTP or lookup window (see draft_policy.hpp)
@@ -6215,7 +6262,7 @@ int main(int argc, char** argv) {
                 total_ms += std::chrono::duration<double, std::milli>(Clock::now() - t0).count();
                 break;
             }
-            const bool drafted = !use_mtp || (int64_t) produced.size() >= o.max_new ||
+            const bool drafted = !use_mtp || !need_draft || (int64_t) produced.size() >= o.max_new ||
                                  mtp.draft(T, outv.data(), p, a, drafts.data(), err, dprob.data(), (float) o.spec_min_p);
             if (adapt_thr.joinable()) adapt_thr.join();
             if (!adapt_ok) return 1;
@@ -6429,7 +6476,10 @@ int main(int argc, char** argv) {
         // question, no k-fold - these are the ids the router actually produced on this run.  Reported as
         // hits/lookups so it can be read directly as the h the cache would deliver, and alongside `refused`
         // so a full cache is visible rather than silently capping the rate.
-        if (o.expert_cache > 0) {
+        if (xcache.shared()) {
+            std::printf("%-24s %lld/%lld experts resident in unified memory; all routing stays on the GPU\n",
+                        "  GPU experts", (long long) xcache.resident(), (long long) xcache.slots());
+        } else if (o.expert_cache > 0) {
             const int64_t look = drive.d.cache_hits + drive.d.cache_admitted + drive.d.cache_refused;
             const int64_t hl = drive.d.hit_ready + drive.d.hit_late;
             std::printf("%-24s %lld of %lld layers the hit work was DONE when the pool returned\n",

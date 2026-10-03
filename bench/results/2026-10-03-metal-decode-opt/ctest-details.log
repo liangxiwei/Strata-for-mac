@@ -1,0 +1,1820 @@
+Start testing: Oct 03 14:58 CST
+----------------------------------------------------------
+1/49 Testing: gguf_reader_test
+1/49 Test: gguf_reader_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/gguf_reader_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"gguf_reader_test" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+gguf_reader_test
+  distinct names: the file opens and find() sees both tensors        ok
+  the same name twice: refused at open                               ok
+    the error names the tensor                                       ok
+    the error names the file                                         ok
+  (GGUF: duplicate tensor name 'blk.0.attn_q.weight' in /var/folders/7n/v71j76s15tzgy35n5c2xpxyr0000gp/T/strata_gguf_reader_test.gguf)
+gguf_reader_test: all passed
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"gguf_reader_test" end time: Oct 03 14:58 CST
+"gguf_reader_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/49 Testing: gguf_split_test
+2/49 Test: gguf_split_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/gguf_split_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"gguf_split_test" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+gguf_split_test
+  gguf_split_paths from shard 3: the 4 shards in order                           ok
+  gguf_split_paths from shard 1: the same 4 shards                               ok
+  a name without -NNNNN-of-MMMMM is a model of one file                          ok
+  shard 1: the metadata, no tensor                                               ok
+  output.weight found in shard 2, in bounds                                      ok
+  layer 11 per role: gate/up in shard 3, down in shard 2                         ok
+  an absent tensor is nullptr                                                    ok
+  the architecture guard reads the metadata shard (and wants its keys)           ok
+  the 4-shard model opens                                                        ok
+  a missing shard is an error that names it                                      ok
+  a tensor in two shards is refused, naming both                                 ok
+  a shard whose split.no disagrees with its place is refused                     ok
+  a shard of another model (split.tensors.count differs) is refused              ok
+  shards that do not add up to split.tensors.count are refused                   ok
+  a split model whose first shard has no metadata is refused                     ok
+  shard 1 of 4 opened as a whole model is refused                                ok
+  a truncated shard: its last tensor is out of bounds, the others are not        ok
+gguf_split_test: all passed
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"gguf_split_test" end time: Oct 03 14:58 CST
+"gguf_split_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/49 Testing: metal_smoke
+3/49 Test: metal_smoke
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/metal_smoke" "100"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"metal_smoke" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+strata metal smoke (M1, docs/PORT_METAL/)
+  direct Launch spelling ran                 ok
+  launch round-trip on an explicit stream    ok
+    direct CPU read after default-stream scale (want 4..64): 12, 12
+  compute-write after blit-write (same buffer) ok (back[0]=12 back[15]=12 want 12
+  legacy copy observes blocking-stream work  ok
+  legacy copy leaves nonblocking work queued ok
+  explicit wait observes nonblocking work    ok
+  gdn_gate (parity's call shape)             ok (bad=0@-1 got[0]=-2.07432e-14 want=-2.07432e-14
+  doorbell ring: GPU -> CPU                  ok (ring visible to a spinning CPU after 0.501 ms (no sync)
+  doorbell wait: CPU -> GPU ordering         ok
+  graph replay reads live buffers            ok
+  graph replay compounds                     ok (100 replays compound, 0.377 ms each (measured)
+  sync waits for previously committed work   ok
+  event re-record follows submitted work     ok
+  sync waits for previously committed work   ok
+  event re-record follows submitted work     ok
+  sync waits for previously committed work   ok
+  event re-record follows submitted work     ok
+  sync waits for previously committed work   ok
+  event re-record follows submitted work     ok
+  sync waits for previously committed work   ok
+  event re-record follows submitted work     ok
+  sync waits for previously committed work   ok
+  event re-record follows submitted work     ok
+  sync waits for previously committed work   ok
+  event re-record follows submitted work     ok
+  sync waits for previously committed work   ok
+  event re-record follows submitted work     ok
+  device sync waits after event destruction  ok
+smoke ok: 0 failures
+<end of output>
+Test time =   1.21 sec
+----------------------------------------------------------
+Test Passed.
+"metal_smoke" end time: Oct 03 14:58 CST
+"metal_smoke" time elapsed: 00:00:01
+----------------------------------------------------------
+
+4/49 Testing: metal_copy_test
+4/49 Test: metal_copy_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/metal_copy_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"metal_copy_test" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+Metal copy: 471 cases, 0 failures (compute)
+<end of output>
+Test time =   0.79 sec
+----------------------------------------------------------
+Test Passed.
+"metal_copy_test" end time: Oct 03 14:58 CST
+"metal_copy_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/49 Testing: metal_copy_blit_test
+5/49 Test: metal_copy_blit_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/metal_copy_test" "--blit"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"metal_copy_blit_test" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+Metal copy: 471 cases, 0 failures (blit)
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Passed.
+"metal_copy_blit_test" end time: Oct 03 14:58 CST
+"metal_copy_blit_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/49 Testing: metal_mmvq_decode_test
+6/49 Test: metal_mmvq_decode_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/metal_mmvq_decode_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"metal_mmvq_decode_test" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+K,N,layout,us
+IQ4 decode: 27702 outputs, 0 bit differences, 0 nonfinite, 0 representation/lifetime errors
+<end of output>
+Test time =   0.64 sec
+----------------------------------------------------------
+Test Passed.
+"metal_mmvq_decode_test" end time: Oct 03 14:58 CST
+"metal_mmvq_decode_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/49 Testing: elementwise_parity
+7/49 Test: elementwise_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/elementwise_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"elementwise_parity" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+  the fixture crosses the branch               yes (16 above 20, 5 above 88)
+  the fixture's ssm_a is negative              yes (0 of 48 non-negative)
+  gdn_gate vs the reference                    rel 2.880e-08
+  the softplus large-x branch is observable    yes (inf% apart, 5 non-finite, 5 heads differ, first at x = 88.8)
+  exp(gate) < 1 for every head                 yes (0 of 48 not < 1)
+
+  silu (double) vs the reference               rel 2.900e-08
+  scale_inplace is exact                       0 of 1024 differ
+  f32_to_f16_bulk uses the shared conversion   0 of 1024 differ
+  sum-vs-mean is observable                    89.36% apart
+  with-w-vs-without-w is observable            70.20% apart
+  rms_norm_weighted vs f64 oracle              rel 3.640e-08  worst 1.777e-07  nonfinite 0
+  a null weight is legal                       0 of 6144 differ
+  embedding gather: 108 row cases, 0 bit mismatches, 0 guard failures, 8141 FMA differences
+  f32 -> bf16 (NaN kept): bulk 0 of 4096 differ from ggml, dequant_bf16 0 of 64 wrong
+
+elementwise: 0 failures
+elementwise_parity OK
+<end of output>
+Test time =   0.58 sec
+----------------------------------------------------------
+Test Passed.
+"elementwise_parity" end time: Oct 03 14:58 CST
+"elementwise_parity" time elapsed: 00:00:00
+----------------------------------------------------------
+
+8/49 Testing: dequant_s2_parity
+8/49 Test: dequant_s2_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/dequant_s2_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"dequant_s2_parity" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+  non-vacuity: 4 of 4 codes present, 8 distinct values in the first elements
+dequant_s2: 200000 blocks, 12800000 elements, 0 mismatched
+  bit-exact against the scalar dequantizer that dequant_xcheck proved equal to ggml
+dequant_s2_parity OK
+<end of output>
+Test time =   0.59 sec
+----------------------------------------------------------
+Test Passed.
+"dequant_s2_parity" end time: Oct 03 14:58 CST
+"dequant_s2_parity" time elapsed: 00:00:00
+----------------------------------------------------------
+
+9/49 Testing: s2_gemv_parity
+9/49 Test: s2_gemv_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/s2_gemv_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"s2_gemv_parity" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+s2_gemv: n_in 2560, n_out 640, 0 rows over tolerance, worst rel 0.000e+00 (tol 1.0e-05)
+  reference spread [-1155, 5062]
+  agrees with the scalar decode that dequant_xcheck proved equal to ggml
+s2_gemv_parity OK
+<end of output>
+Test time =   0.54 sec
+----------------------------------------------------------
+Test Passed.
+"s2_gemv_parity" end time: Oct 03 14:58 CST
+"s2_gemv_parity" time elapsed: 00:00:00
+----------------------------------------------------------
+
+10/49 Testing: quantize_act_parity
+10/49 Test: quantize_act_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/quantize_act_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"quantize_act_parity" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+  random normal              blocks byte-exact (0 bad bytes)   round trip bit-exact (0 differ)
+  small magnitude (1e-6)     blocks byte-exact (0 bad bytes)   round trip bit-exact (0 differ)
+  all zero                   blocks byte-exact (0 bad bytes)   round trip bit-exact (0 differ)
+  exact .5 boundaries        blocks byte-exact (0 bad bytes)   round trip bit-exact (0 differ)
+  one extreme per block      blocks byte-exact (0 bad bytes)   round trip bit-exact (0 differ)
+
+quantize_q8_0: 0 failures over 5 distributions x 131072 elements
+  f32->f16 overflow saturates, not NaN         yes (0 of 11 wrong)
+  f16->f32 keeps subnormals                    yes (0x0001 -> 5.96046448e-08, want 2^-24)
+
+Q8_K  (ggml block_q8_K: 292 bytes / 256 elements, {f32 d; i8 qs[256]; i16 bsums[16]})
+  random normal              blocks byte-exact (0 bad bytes)   round trip bit-exact (0 differ)
+  small magnitude (1e-7)     blocks byte-exact (0 bad bytes)   round trip bit-exact (0 differ)
+  all zero                   blocks byte-exact (0 bad bytes)   round trip bit-exact (0 differ)
+  exact .5 ties (half-to-even) blocks byte-exact (0 bad bytes)   round trip bit-exact (0 differ)
+    tie fixture discriminates 522240 ties, 260096 where half-to-even != half-away (49.8%)
+  -127 vs -128 scale observable yes  (0.915% of magnitude, 172014 bytes differ)
+
+quantize_act: 0 failures over 5 Q8_0 + 4 Q8_K distributions
+quantize_act_parity OK
+<end of output>
+Test time =   0.60 sec
+----------------------------------------------------------
+Test Passed.
+"quantize_act_parity" end time: Oct 03 14:58 CST
+"quantize_act_parity" time elapsed: 00:00:00
+----------------------------------------------------------
+
+11/49 Testing: router_top10_parity
+11/49 Test: router_top10_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/router_top10_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"router_top10_parity" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+  random normal              ids exact (0 bad)   weights worst rel 2.156e-07 (0 over tol)   |sum-1| 6.0e-08
+  all equal (ties)           ids exact (0 bad)   weights worst rel 0.000e+00 (0 over tol)   |sum-1| 1.5e-08
+  12-way exact tie           ids exact (0 bad)   weights worst rel 2.083e-07 (0 over tol)   |sum-1| 6.0e-08
+  dominant expert            ids exact (0 bad)   weights worst rel 1.077e-07 (0 over tol)   |sum-1| 1.9e-08
+  clamp reachability         top-10 sum >= k/n = 0.01953, clamp is 6.104e-05 -> margin 320x  (CLAMP IS UNREACHABLE, asserted)
+
+router_top10: 0 failures over 4 distributions x 64 tokens x 512 experts, top-10
+router_top10_parity OK
+<end of output>
+Test time =   0.54 sec
+----------------------------------------------------------
+Test Passed.
+"router_top10_parity" end time: Oct 03 14:58 CST
+"router_top10_parity" time elapsed: 00:00:00
+----------------------------------------------------------
+
+12/49 Testing: rope_parity
+12/49 Test: rope_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/rope_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"rope_parity" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+  rope table vs float64 reference   bit-exact (0 of 2048 entries differ, worst 0.0e+00)
+  rope rotation vs host reference   agrees (0 of 49152 over 1e-6, worst rel 9.454e-08)
+  pairing: dim 0 set -> NEOX moves dim 32 (o[half]=0.656987), adjacent would move dim 1 (o[1]=0.000000)   NEOX confirmed
+  scaled table, None vs unscaled builder  bit-identical
+  scaled table, linear factor 4          bit-exact (0 of 2048 entries differ)
+  linear(4) @ p == none @ p/4            bit-identical (0 of 32 rows differ)
+  scaled table, yarn factor 4            bit-exact (0 of 2048 entries differ)
+  yarn structure: cos_tab[0]==mscale 1.1386, first pair extrapolates, last interpolates   confirmed
+  observability: none vs linear(2) at position 100   visible (|0.8623 - 0.9650|)
+  rope rotation over the yarn table      agrees (0 of 49152 over 1e-6, worst rel 1.031e-07)
+  native path vs table path, yarn factor 2   agrees (0 of 98304 over 3e-3, worst rel 5.999e-05)
+  native path vs table path, none            agrees (0 of 98304 over 3e-3, worst rel 5.610e-05)
+
+rope: 0 failures
+rope_parity OK
+<end of output>
+Test time =   0.55 sec
+----------------------------------------------------------
+Test Passed.
+"rope_parity" end time: Oct 03 14:58 CST
+"rope_parity" time elapsed: 00:00:00
+----------------------------------------------------------
+
+13/49 Testing: kv_q8_parity
+13/49 Test: kv_q8_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/kv_q8_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"kv_q8_parity" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+kv_q8_parity: OK (worst INT8-vs-FP16 error 0.587 quantization steps)
+<end of output>
+Test time =   1.04 sec
+----------------------------------------------------------
+Test Passed.
+"kv_q8_parity" end time: Oct 03 14:58 CST
+"kv_q8_parity" time elapsed: 00:00:01
+----------------------------------------------------------
+
+14/49 Testing: bf16_gemv_parity
+14/49 Test: bf16_gemv_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/bf16_gemv_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"bf16_gemv_parity" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+  ssm_alpha.weight  [2560, 48]       naive 3.88e-07  warp 9.76e-08  split256 6.46e-08
+      bf16 vs fp16 activation        yes (0.1447% apart)
+  indexer.k_proj   [2560, 128]       naive 8.50e-08  warp 8.50e-08  split256 6.81e-08
+      bf16 vs fp16 activation        yes (0.1561% apart)
+  indexer.q_proj   [2560, 512]       naive 7.96e-08  warp 7.96e-08  split256 7.15e-08
+      bf16 vs fp16 activation        yes (0.1456% apart)
+  ple_value        [2560, 2560]      naive 8.03e-08  warp 8.03e-08  split256 6.81e-08
+      bf16 vs fp16 activation        yes (0.1411% apart)
+
+bf16_gemv: 0 failures
+bf16_gemv_parity OK
+<end of output>
+Test time =   0.65 sec
+----------------------------------------------------------
+Test Passed.
+"bf16_gemv_parity" end time: Oct 03 14:58 CST
+"bf16_gemv_parity" time elapsed: 00:00:00
+----------------------------------------------------------
+
+15/49 Testing: cvec_parity
+15/49 Test: cvec_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/cvec_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"cvec_parity" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+  covers(): steered layers only                                      ok
+project
+    max |err| 4.88e-07, max |h'.v + h.v| 1.19e-06
+  project matches h - s (h.v) v (s = 2)                              ok
+  the component along v is reflected (s = 2)                         ok
+    max |h'.v| 6.05e-07
+  s = 1 projects the direction out                                   ok
+  a layer without a direction is untouched                           ok
+switched off
+  cvec_enabled() follows the switch                                  ok
+  off, no pending write: R unchanged                                 ok
+  off, pending write: bitwise the fused read's folded write          ok
+    write + project: max |err| 4.82e-07
+  on, pending write: the write, then the projection                  ok
+add
+  add is h + d in every stream (bitwise)                             ok
+cvec_parity: all passed
+<end of output>
+Test time =   0.64 sec
+----------------------------------------------------------
+Test Passed.
+"cvec_parity" end time: Oct 03 14:58 CST
+"cvec_parity" time elapsed: 00:00:00
+----------------------------------------------------------
+
+16/49 Testing: gr_parity
+16/49 Test: gr_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/gr_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"gr_parity" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+  per-stream RMSNorm vs whole-stack        yes  (86.1097% apart, floor 5.000%)
+  /hc inside the silu vs outside           yes  (7.1852% apart, floor 5.000%)
+  SiLU on lo / sigmoid on gate, swapped    yes  (87.2055% apart, floor 5.000%)
+  mean over streams vs sum                 yes  (300.0000% apart, floor 50.000%)
+  BF16 vs FP32 activation contracts        yes  (0.0975% apart, floor 0.010%)
+
+  mixed vs reference                       worst 6.006e-08 (mean |ref| 0.2165)
+  inject vs reference                      rel 2.845e-08
+  FP32 activations vs reference: pass (mixed 8.420e-08, inject 4.266e-08)
+  restoring default activation contract: byte-identical
+  weight orientation is observable         yes (59.5% apart)
+  null w_inject writes nothing             yes
+  zero injection -> plain residual add     yes (worst rel 5.955e-08)
+  1*sigmoid vs 2*sigmoid is observable     yes (readings 50% apart, kernel within 4.35e-07)
+  every stream adds the same block output  yes (worst rel 1.365e-07)
+
+  real dims 2560/4/320 BF16 pass (mixed 7.487e-08, inject 1.986e-07)
+
+  real dims 2560/4/320 FP32 pass (mixed 1.673e-07, inject 3.811e-07)
+
+  real dims 2560/4/320 native pinned GR pass (mixed 1.716e-07, inject 6.297e-08)
+  fused GR multi max-T=8 LDS launch and changing graph replay pass
+  scalar gamma 1.00000000 BF16 activation/capture pass (mixed 0.614394009, ref 0.614394009)
+  scalar final mixer BF16 pass
+  scalar gamma 1.00000000 FP32 activation/capture pass (mixed 0.614636600, ref 0.614636600)
+  scalar final mixer FP32 pass
+  scalar gamma 1.00000000 native pinned GR activation/capture pass (mixed 0.614636600, ref 0.614636600)
+  scalar final mixer native pinned GR pass
+  scalar gamma 1.00390625 BF16 activation/capture pass (mixed 0.616793990, ref 0.616793990)
+  scalar final mixer BF16 pass
+  scalar gamma 1.00390625 FP32 activation/capture pass (mixed 0.617553174, ref 0.617553174)
+  scalar final mixer FP32 pass
+  scalar gamma 1.00390625 native pinned GR activation/capture pass (mixed 0.617553174, ref 0.617553174)
+  scalar final mixer native pinned GR pass
+
+gr_read/gr_write: 0 failures
+gr_parity OK
+<end of output>
+Test time =   0.69 sec
+----------------------------------------------------------
+Test Passed.
+"gr_parity" end time: Oct 03 14:58 CST
+"gr_parity" time elapsed: 00:00:00
+----------------------------------------------------------
+
+17/49 Testing: gdn_parity
+17/49 Test: gdn_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/gdn_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"gdn_parity" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+  modulo vs interleave head pairing          yes  (142.04% apart)
+  decay before vs after the update           yes  (76.93% apart)
+
+  o vs reference                             rel 2.035e-07
+  state (read via (S,h_v,S)) vs reference    rel 4.262e-08
+  gate=beta=0 from a zero state is a no-op   yes
+
+  conv weight layout is observable           yes  (132.6% apart)
+  conv out vs reference                      rel 1.119e-08
+  conv state slide (mapped) vs reference     rel 0.000e+00
+
+  eps on sum vs on mean is observable        yes  (1031.4% apart)
+  l2_norm vs reference                       rel 1.207e-08
+
+  out norm (rms * ssm_norm * sigmoid z)      rel 6.519e-09
+  sigmoid vs SiLU on the gate is observable  yes  (86.78% apart)
+
+gdn: 0 failures
+gdn_parity OK
+<end of output>
+Test time =   0.60 sec
+----------------------------------------------------------
+Test Passed.
+"gdn_parity" end time: Oct 03 14:58 CST
+"gdn_parity" time elapsed: 00:00:00
+----------------------------------------------------------
+
+18/49 Testing: sampler_parity
+18/49 Test: sampler_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/sampler_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"sampler_parity" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+  sampled path: split top_k (default)
+  greedy argmax                      matches (0 of 4 differ)
+  order is observable on this fixture yes (survivors: spec 16, temp-first 12)
+  greedy over this fixture           matches (0 of 4 differ)
+  greedy ignores the seed            matches (seed-independent: 0 differ; vs reference: 0 wrong)
+  multiply-or-divide is observable   yes (multiply-rule 1, divide-always 0)
+  penalties: repeat on negatives     matches (0 of 2 differ)
+  presence penalty is a boolean      want token 1 (with present=1.5, token 0 goes 5.0/2 - 1.5 = 1.0 vs token 1 at 3.4)
+  penalties: presence is boolean     matches (0 of 2 differ)
+  T=0 greedy=false is the argmax     matches (0 of 4 differ)
+  T=0 greedy=true  is the argmax     matches (0 of 4 differ)
+  T=1 greedy=true  is the argmax     matches (0 of 4 differ)
+  sampled penalties are observable   yes (penalised picks 3/2, clean 0/0)
+  sampled chain: penalties + top_k/p matches (0 of 2 differ)
+  min_p cut is observable            yes (survivors: min_p 0 -> 12, 0.5 -> 4, 0.9 -> 2)
+  sampled chain: min_p=0.0           matches (0 of 2 differ)
+  sampled chain: min_p=0.5           matches (0 of 2 differ)
+  sampled chain: min_p=0.9           matches (0 of 2 differ)
+  penalty window clamp is observable yes (clamped pick 0, full-history pick 3)
+  penalty window: tail only          matches (0 of 1 differ)
+  one penalties stage (#53)          yes (token 0 drawn 0.1040 of 8000, expected 0.1050; twice-penalised would be 0.0255)
+  sampled chain: #53's example       matches (0 of 8000 differ)
+  top_p before min_p is observable   yes (token 2 drawn 58 of 256 times)
+  sampled chain: top_p then min_p    matches (0 of 256 differ)
+  stale history, last_n=0 (sampled)  matches (0 of 4 differ)
+  stale history, last_n=0 (greedy)   matches (0 of 4 differ)
+  per-row history T=1 H=1 greedy     matches (0 of 1 differ)
+  per-row history T=1 H=1 sampled    matches (0 of 1 differ)
+  per-row history T=1 H=64 greedy    matches (0 of 1 differ)
+  per-row history T=1 H=64 sampled   matches (0 of 1 differ)
+  per-row history T=1 H=1024 greedy  matches (0 of 1 differ)
+  per-row history T=1 H=1024 sampled matches (0 of 1 differ)
+  per-row history T=1 H=4096 greedy  matches (0 of 1 differ)
+  per-row history T=1 H=4096 sampled matches (0 of 1 differ)
+  per-row history T=2 H=1 greedy     matches (0 of 2 differ)
+  per-row history T=2 H=1 sampled    matches (0 of 2 differ)
+  per-row history T=2 H=64 greedy    matches (0 of 2 differ)
+  per-row history T=2 H=64 sampled   matches (0 of 2 differ)
+  per-row history T=2 H=1024 greedy  matches (0 of 2 differ)
+  per-row history T=2 H=1024 sampled matches (0 of 2 differ)
+  per-row history T=2 H=4096 greedy  matches (0 of 2 differ)
+  per-row history T=2 H=4096 sampled matches (0 of 2 differ)
+  per-row history T=4 H=1 greedy     matches (0 of 4 differ)
+  per-row history T=4 H=1 sampled    matches (0 of 4 differ)
+  per-row history T=4 H=64 greedy    matches (0 of 4 differ)
+  per-row history T=4 H=64 sampled   matches (0 of 4 differ)
+  per-row history T=4 H=1024 greedy  matches (0 of 4 differ)
+  per-row history T=4 H=1024 sampled matches (0 of 4 differ)
+  per-row history T=4 H=4096 greedy  matches (0 of 4 differ)
+  per-row history T=4 H=4096 sampled matches (0 of 4 differ)
+  per-row history T=8 H=1 greedy     matches (0 of 8 differ)
+  per-row history T=8 H=1 sampled    matches (0 of 8 differ)
+  per-row history T=8 H=64 greedy    matches (0 of 8 differ)
+  per-row history T=8 H=64 sampled   matches (0 of 8 differ)
+  per-row history T=8 H=1024 greedy  matches (0 of 8 differ)
+  per-row history T=8 H=1024 sampled matches (0 of 8 differ)
+  per-row history T=8 H=4096 greedy  matches (0 of 8 differ)
+  per-row history T=8 H=4096 sampled matches (0 of 8 differ)
+  per-row histories are observable   yes (21 drafted rows pick differently with row 0's history, of 60 rows)
+  out-of-vocab history ids (greedy)  matches (0 of 4 differ)
+  out-of-vocab history ids (sampled) matches (0 of 4 differ)
+  sampled top_k=64                   matches (0 of 4 differ)
+  sampled top_k=0 means 64           matches (0 of 4 differ)
+  sampled top_k=100 means 64         matches (0 of 4 differ)
+  sampled top_k=-3 means 64          matches (0 of 4 differ)
+  penalty_rows layout                matches (0 of 420 rows differ)
+  sampler draw counter segmentation/repeat: PASS
+  top_k list under ties              matches (0 of 1340 positions differ; 280 sentinel positions)
+  sampled draws under ties           matches (0 of 1632 draws differ; 1052 picks tie with another kept token)
+  fallbacks: graph capture, row cap  matches (0 of 143 draws differ)
+
+sampler: 0 failures
+sampler_parity OK
+<end of output>
+Test time =   2.75 sec
+----------------------------------------------------------
+Test Passed.
+"sampler_parity" end time: Oct 03 14:58 CST
+"sampler_parity" time elapsed: 00:00:02
+----------------------------------------------------------
+
+19/49 Testing: s_gemv_parity
+19/49 Test: s_gemv_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/s_gemv_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"s_gemv_parity" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+  S2/Q2_0    128 rows, 0 over tol, worst rel 0.000e+00   ref spread [494.9, 9440]
+  S4/Q4_0    128 rows, 0 over tol, worst rel 6.634e-07   ref spread [-1.524e+04, 1.491e+04]
+  S4/IQ4_NL  128 rows, 0 over tol, worst rel 9.278e-06   ref spread [-2.514e+05, 1.171e+05]
+  S8/Q8_0    128 rows, 0 over tol, worst rel 9.649e-06   ref spread [-1.885e+05, 1.493e+05]
+s_gemv: 4 type cases, 0 rows over tolerance (tol 1.0e-04)
+  S4/Q4_K    128 rows, 0 over tol, worst rel-to-terms 0.000e+00 (rel-to-result 0.000e+00)
+             ref spread [-6.365e+06, 1.949e+07], condition (sum|term|) up to 2.775e+07
+             CPU planes vs CPU raw block: max |diff| = 0.000e+00 -> the test is SELF-CONSISTENT
+s_gemv total: 0 rows over tolerance
+s_gemv_parity OK
+<end of output>
+Test time =   0.62 sec
+----------------------------------------------------------
+Test Passed.
+"s_gemv_parity" end time: Oct 03 14:58 CST
+"s_gemv_parity" time elapsed: 00:00:00
+----------------------------------------------------------
+
+20/49 Testing: shared_expert_parity
+20/49 Test: shared_expert_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/shared_expert_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"shared_expert_parity" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+  silu-on-gate vs silu-on-up is observable yes (100.00% apart)
+  structure vs reference                   worst rel 3.464e-04 over 256 outputs (mean |ref| 4716.8802)
+  the fixture's SwiGLU stays in fp16 range yes (max |h| 677.2, fp16 max 65504)
+  native shared scalar gate: pass (ref rel 0.000e+00, BF16 separation 1.048e-03, missing input refused)
+  native shared captured selection: byte-identical
+  restored shared default: byte-identical
+  routed sum left UNWEIGHTED is observable   yes  (90.68% apart)
+  shared output router-WEIGHTED is observable yes  (93.32% apart)
+  moe_combine vs reference                   rel 3.946e-09
+  a null `shared` is observable              yes (98.49% apart - null shared really omits it)
+
+shared_expert: 0 failures
+shared_expert_parity OK
+<end of output>
+Test time =   0.59 sec
+----------------------------------------------------------
+Test Passed.
+"shared_expert_parity" end time: Oct 03 14:58 CST
+"shared_expert_parity" time elapsed: 00:00:00
+----------------------------------------------------------
+
+21/49 Testing: iq_parity
+21/49 Test: iq_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/iq_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"iq_parity" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+IQ2_XXS  prefill row slice: 0 differences
+IQ2_XXS  type 16   32 x   256  dequant rel 0.00e+00  mmvq rel 5.40e-03 (ncols 1..8)  ok
+IQ2_XS   prefill row slice: 0 differences
+IQ2_XS   type 17   32 x   256  dequant rel 0.00e+00  mmvq rel 5.93e-03 (ncols 1..8)  ok
+IQ2_S    prefill row slice: 0 differences
+IQ2_S    type 22   32 x   256  dequant rel 0.00e+00  mmvq rel 5.52e-03 (ncols 1..8)  ok
+IQ3_XXS  prefill row slice: 0 differences
+IQ3_XXS  type 18   32 x   256  dequant rel 0.00e+00  mmvq rel 5.00e-03 (ncols 1..8)  ok
+IQ3_S    prefill row slice: 0 differences
+IQ3_S    type 21   32 x   256  dequant rel 0.00e+00  mmvq rel 5.11e-03 (ncols 1..8)  ok
+IQ1_M    prefill row slice: 0 differences
+IQ1_M    type 29   32 x   256  dequant rel 0.00e+00  mmvq rel 5.00e-03 (ncols 1..8)  ok
+IQ4_NL   prefill row slice: 0 differences
+IQ4_NL   type 20   32 x   256  dequant rel 0.00e+00  mmvq rel 5.01e-03 (ncols 1..8)  ok
+IQ4_XS   prefill row slice: 0 differences
+IQ4_XS   type 23   32 x   256  dequant rel 0.00e+00  mmvq rel 5.98e-03 (ncols 1..8)  ok
+Q2_0     prefill row slice: 0 differences
+Q2_0     type 42   32 x   256  dequant rel 0.00e+00  mmvq rel 5.37e-03 (ncols 1..8)  ok
+Q3_K     prefill row slice: 0 differences
+Q3_K     type 11   32 x   256  dequant rel 0.00e+00  mmvq rel 4.75e-03 (ncols 1..8)  ok
+iq_parity: 0 failures
+<end of output>
+Test time =   0.59 sec
+----------------------------------------------------------
+Test Passed.
+"iq_parity" end time: Oct 03 14:58 CST
+"iq_parity" time elapsed: 00:00:00
+----------------------------------------------------------
+
+22/49 Testing: iq_multi_parity
+22/49 Test: iq_multi_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/iq_multi_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"iq_multi_parity" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+IQ2_XXS  type 16     67 x  2560  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 3.12e-05)
+IQ2_XXS  type 16      5 x  1024  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 9.51e-05)
+IQ2_XS   type 17     67 x  2560  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 3.31e-05)
+IQ2_XS   type 17      5 x  1024  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 2.76e-05)
+IQ3_XXS  type 18     67 x  2560  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 8.42e-06)
+IQ3_XXS  type 18      5 x  1024  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 1.00e-05)
+IQ4_NL   type 20     67 x  2560  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 8.26e-08)
+IQ4_NL   type 20      5 x  1024  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 7.23e-08)
+IQ3_S    type 21     67 x  2560  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 7.42e-08)
+IQ3_S    type 21      5 x  1024  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 4.09e-08)
+IQ2_S    type 22     67 x  2560  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 3.43e-05)
+IQ2_S    type 22      5 x  1024  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 3.98e-05)
+IQ4_XS   type 23     67 x  2560  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 7.80e-08)
+IQ4_XS   type 23      5 x  1024  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 6.92e-08)
+IQ1_M    type 29     67 x  2560  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 8.97e-08)
+IQ1_M    type 29      5 x  1024  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 1.05e-07)
+Q2_0     type 42     67 x  2560  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 7.36e-08)
+Q2_0     type 42      5 x  1024  iq_mmvq ncols 1..8, 11: bitwise equal to the old kernel (ref rel <= 7.83e-08)
+IQ2_XXS /IQ4_NL   2560 x  640  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ2_XXS /Q2_0     2560 x  640  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ2_XXS /IQ4_XS   1024 x  512  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ2_XS  /IQ4_NL   2560 x  640  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ2_XS  /Q2_0     2560 x  640  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ2_XS  /IQ4_XS   1024 x  512  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ3_XXS /IQ4_NL   2560 x  640  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ3_XXS /Q2_0     2560 x  640  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ3_XXS /IQ4_XS   1024 x  512  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ3_S   /IQ4_NL   2560 x  640  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ3_S   /Q2_0     2560 x  640  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ3_S   /IQ4_XS   1024 x  512  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ2_S   /IQ4_NL   2560 x  640  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ2_S   /Q2_0     2560 x  640  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ2_S   /IQ4_XS   1024 x  512  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ4_XS  /IQ4_NL   2560 x  640  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ4_XS  /Q2_0     2560 x  640  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ4_XS  /IQ4_XS   1024 x  512  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ1_M   /IQ4_NL   2560 x  640  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ1_M   /Q2_0     2560 x  640  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+IQ1_M   /IQ4_XS   1024 x  512  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+Q2_0    /IQ4_NL   2560 x  640  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+Q2_0    /Q2_0     2560 x  640  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+Q2_0    /IQ4_XS   1024 x  512  native_expert_grouped, 9 groups, 35 entries: bitwise equal to the old kernels
+resident 16/20 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 16/23 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 16/42 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 16/7 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 16/8 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 17/20 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 17/23 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 17/42 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 17/7 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 17/8 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 18/20 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 18/23 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 18/42 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 18/7 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 18/8 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 21/20 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 21/23 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 21/42 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 21/7 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 21/8 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 22/20 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 22/23 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 22/42 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 22/7 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 22/8 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 23/20 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 23/23 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 23/42 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 23/7 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 23/8 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 29/20 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 29/23 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 29/42 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 29/7 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 29/8 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 42/20 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 42/23 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 42/42 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 42/7 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 42/8 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 12/20 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 12/23 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 12/42 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 12/7 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 12/8 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 13/20 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 13/23 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 13/42 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 13/7 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 13/8 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 8/20 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 8/23 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 8/42 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 8/7 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 8/8 512x256 T=4 sized slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 16/42 2560x640 T=1 uniform slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 16/42 2560x640 T=2 uniform slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 16/42 2560x640 T=8 uniform slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 17/42 2560x640 T=1 uniform slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 17/42 2560x640 T=2 uniform slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 17/42 2560x640 T=8 uniform slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 22/42 2560x640 T=1 uniform slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 22/42 2560x640 T=2 uniform slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 22/42 2560x640 T=8 uniform slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 29/42 2560x640 T=1 uniform slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 29/42 2560x640 T=2 uniform slots, three changing graph replays: 0 differences, 0 nonfinite
+resident 29/42 2560x640 T=8 uniform slots, three changing graph replays: 0 differences, 0 nonfinite
+iq_multi_parity: 0 failures
+<end of output>
+Test time =   7.31 sec
+----------------------------------------------------------
+Test Passed.
+"iq_multi_parity" end time: Oct 03 14:58 CST
+"iq_multi_parity" time elapsed: 00:00:07
+----------------------------------------------------------
+
+23/49 Testing: qsa_parity
+23/49 Test: qsa_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/qsa_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"qsa_parity" start time: Oct 03 14:58 CST
+Output:
+----------------------------------------------------------
+qsa_parity: n_head 24  n_head_kv 2  head_dim 256  indexer 4x128 r=4 top_k 2048  page (from the shapes) 4   [sparse]
+
+  the fixture's r is the artifact's IDX_BLOCK      ok     r = 4
+  f32->f16 matches numpy's float16 on every vector ok     395 vectors, 125 subnormal
+  f16->f32 is exact on all 65,536 bit patterns     ok     0 wrong
+  kv_append at page_size 1: the pool is BIT-EXACT  ok     0 of 563200 bits wrong
+    the page table is observable at page_size 1    yes    99.99% apart (linear vs declared)
+    kv_gather is BIT-EXACT at page_size 1          ok     0 wrong bits
+  kv_append at page_size 4: the pool is BIT-EXACT  ok     0 of 563200 bits wrong
+    the page table is observable at page_size 4    yes    100.00% apart (linear vs declared)
+    head-major-in-page is observable at page_size 4 yes    74.99% apart (cell-major vs head-major)
+    kv_gather is BIT-EXACT at page_size 4          ok     0 wrong bits
+  kv_append at page_size 512: the pool is BIT-EXACT ok     0 of 563200 bits wrong
+    the page table is observable at page_size 512  yes    99.91% apart (linear vs declared)
+    head-major-in-page is observable at page_size 512 yes    99.76% apart (cell-major vs head-major)
+    kv_gather is BIT-EXACT at page_size 512        ok     0 wrong bits
+  the spare slot's key (rms_norm of cell 0) is BIT-EXACT ok     0 of 128 wrong
+  the spare slot is at row n_bid and nowhere else  ok     10 cells / r=4 -> 2 complete blocks
+  pooled block keys vs the reference               rel/|rope terms| 1.079e-07
+  the incomplete tail is NOT pooled into the spare slot yes    132.46% apart
+  rotating at the block's LAST cell is observable  yes    10.08% apart
+  norm-then-pool vs pool-then-norm is observable   yes    50.39% apart
+  the spare key from the LAST raw key is observable yes    45.66% apart
+  rotating the RAW indexer keys is observable      yes    26.38% apart
+  the rotation's POSITION BASE (pos_base) is observable yes    18.08% apart
+  the 1/r divisor IS observable in the RAW pooled value yes    300.00% apart (sum vs mean, before any norm)
+  the same divisor AFTER the norm                       1.569e-09  <-- below EVERY score tolerance; the divisor cannot be
+                                                        checked downstream at all, which is why the raw value is the
+                                                        only place the mean/sum question is answerable.
+  indexer cell scores vs the reference             rel/Sum|terms| 1.234e-08
+  cells of one block share its score (0..3)        ok     
+  cells 8,9 (the tail) take the SPARE slot's score, not block 1's ok     got[8] == got[9] != got[7]
+  relu PER HEAD vs relu(sum of heads) is observable yes    72.27% apart
+  dropping the relu is observable                  yes    72.27% apart
+  dropping the per-block bias is observable        yes    124.91% apart
+  tail static n=1                                  ok     
+  tail captured n=1                                ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=2                                  ok     
+  tail captured n=2                                ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=3                                  ok     
+  tail captured n=3                                ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=4                                  ok     
+  tail captured n=4                                ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=511                                ok     
+  tail captured n=511                              ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=512                                ok     
+  tail captured n=512                              ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=513                                ok     
+  tail captured n=513                              ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=2046                               ok     
+  tail captured n=2046                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=2047                               ok     
+  tail captured n=2047                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=2048                               ok     
+  tail captured n=2048                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=2049                               ok     
+  tail captured n=2049                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=2050                               ok     
+  tail captured n=2050                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=2051                               ok     
+  tail captured n=2051                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=2052                               ok     
+  tail captured n=2052                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=2053                               ok     
+  tail captured n=2053                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=2054                               ok     
+  tail captured n=2054                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=2055                               ok     
+  tail captured n=2055                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=2056                               ok     
+  tail captured n=2056                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=2057                               ok     
+  tail captured n=2057                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=2058                               ok     
+  tail captured n=2058                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=2059                               ok     
+  tail captured n=2059                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=2060                               ok     
+  tail captured n=2060                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=4095                               ok     
+  tail captured n=4095                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=4096                               ok     
+  tail captured n=4096                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=4097                               ok     
+  tail captured n=4097                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=8191                               ok     
+  tail captured n=8191                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=8192                               ok     
+  tail captured n=8192                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=8193                               ok     
+  tail captured n=8193                             ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=20477                              ok     
+  tail captured n=20477                            ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=20478                              ok     
+  tail captured n=20478                            ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=20479                              ok     
+  tail captured n=20479                            ok     
+    only incomplete cells receive the bias         ok     
+  tail static n=20480                              ok     
+  tail captured n=20480                            ok     
+    only incomplete cells receive the bias         ok     
+  topk_512 n_kv = 1                                ok     1 ids, width = min(n_kv, top_k + r - 1)
+    ...ascending and unique                        ok     
+  topk_512 n_kv = 7 (random)                       ok     7 ids, width = min(n_kv, top_k + r - 1)
+    ...ascending and unique                        ok     
+  topk_512 n_kv = 2048 (the plan's threshold)      ok     2048 ids, width = min(n_kv, top_k + r - 1)
+    ...ascending and unique                        ok     
+  topk_512 n_kv = 2051 (the reference's own bound) ok     2051 ids, width = min(n_kv, top_k + r - 1)
+    ...ascending and unique                        ok     
+  topk_512 n_kv = 2052 (two past the plan's number) ok     2051 ids, width = min(n_kv, top_k + r - 1)
+    ...ascending and unique                        ok     
+  topk_512 n_kv = 5000 (random)                    ok     2051 ids, width = min(n_kv, top_k + r - 1)
+    ...ascending and unique                        ok     
+  topk_512 n_kv = 32768 (= kTopkMaxCells)          ok     2051 ids, width = min(n_kv, top_k + r - 1)
+    ...ascending and unique                        ok     
+  topk_512 with 2052 EQUAL scores (every cell ties) ok     2051 ids, width = min(n_kv, top_k + r - 1)
+    ...ascending and unique                        ok     
+  topk_512 with a 100-cell tie straddling the cut  ok     2051 ids, width = min(n_kv, top_k + r - 1)
+    ...ascending and unique                        ok     
+  topk_512 n_kv = 2048 selects every cell (identity) ok     2048 ids, width = min(n_kv, top_k + r - 1)
+    ...ascending and unique                        ok     
+    ...and it really is 0,1,2,...                  ok     
+  topk_512 n_kv = 2051 selects every cell (identity) ok     2051 ids, width = min(n_kv, top_k + r - 1)
+    ...ascending and unique                        ok     
+    ...and it really is 0,1,2,...                  ok     
+  topk_512 n_kv = 2052 is NOT the identity         ok     2051 ids, width = min(n_kv, top_k + r - 1)
+    ...ascending and unique                        ok     
+    ...exactly one cell is dropped, and it is the smallest score ok     1 dropped
+  with every cell selected the loud cell dominates its head 0 yes    out[0][0] = 9.8800
+  with the loud cell unselected it contributes EXACTLY nothing ok     out[0][0] = 1.000000
+  the returned weights sum to 1 per head           max |1 - sum| 1.537e-08
+  q % 2 vs q / 12 for the kv head is observable    yes    81.62% apart
+    (the scale trap is measured on the random fixture) --     this fixture's softmax is saturated
+  attending to the unselected cell is observable   yes    81.62% apart
+  the selected set matches the reference (2100 cells, width 2051) ok     2051 ids
+  the cut                                               THE CUT IS A TIE at 0.000000: 51 selected, 49 rejected
+    ...and the kernel picks the same ones as the reference ok     
+  qsa_attend vs the reference on the SAME fp16 cache rel 9.024e-07
+  omitting 1/sqrt(head_dim) is observable (random fixture) yes    2348.15% apart
+  the fp16 KV cache's OWN cost (f32 keys vs fp16 keys) rel 2.908e-04
+  the returned weights vs the reference (head 0)   rel 2.888e-07
+  qsa_gate_apply vs the double reference           rel (f16 out quant ~2.4e-4) 1.714e-04
+  fp16 gate bits differing from the reference           0 of 6144 (CUDA's double exp vs libm's, in the last bits)
+  the gate from the FIRST half is observable       yes    70.66% apart
+  silu instead of sigmoid on the QSA gate is observable yes    125.90% apart
+  below the bound, dense and sparse are the SAME selection ok     
+  dense differs from sparse at n_kv = 2100 (> 2051) yes    14.45% apart
+  an EMPTY selection gives a zero attention, not a NaN ok     all 6144 elements zero
+
+-- indexer_key_append under graph capture
+  the pooled kernel is capturable              1 nodes for one call
+  the first block's row survives replay B      128 of 128 unchanged
+  the SECOND block's row arrives through the same graph 128 of 128 non-zero
+  the two pooled rows are different keys       128 of 128 differ
+
+-- the native indexer's batched append vs the sequential one
+  batch vs sequential, none                    bit-identical (0 of 33409 state words differ)
+  batch vs sequential, linear 2                bit-identical (0 of 33409 state words differ)
+  the scaling is visible, linear 2             128 of 32896 pooled words differ from the none baseline
+  batch vs sequential, yarn 2                  bit-identical (0 of 33409 state words differ)
+  the scaling is visible, yarn 2               192 of 32896 pooled words differ from the none baseline
+
+-- the spare key (position 0) under rope scaling: table indexer vs native indexer
+    none: row 0 of the table is (c, 0)             ok     0 nonzero sines
+    none: the table spare is the unscaled spare times row 0, BIT-EXACT ok     0 of 128 wrong
+    none: the table's pooled[0] is its spare       ok     0 wrong
+    none: the native spare carries the same row-0 factor ok     worst relative 0.000000
+    linear 2: row 0 of the table is (c, 0)         ok     0 nonzero sines
+    linear 2: the table spare is the unscaled spare times row 0, BIT-EXACT ok     0 of 128 wrong
+    linear 2: the table's pooled[0] is its spare   ok     0 wrong
+    linear 2: the native spare carries the same row-0 factor ok     worst relative 0.000000
+    yarn 2: row 0 of the table is (c, 0)           ok     0 nonzero sines
+    yarn 2: the table spare is the unscaled spare times row 0, BIT-EXACT ok     0 of 128 wrong
+    yarn 2: the table's pooled[0] is its spare     ok     0 wrong
+    yarn 2: the native spare carries the same row-0 factor ok     worst relative 0.000000
+    yarn 2: the magnitude correction is observable on the table spare ok     row0 cos 1.069315, 64 dims moved
+
+qsa: 0 failures
+qsa_parity OK
+<end of output>
+Test time =   4.38 sec
+----------------------------------------------------------
+Test Passed.
+"qsa_parity" end time: Oct 03 14:59 CST
+"qsa_parity" time elapsed: 00:00:04
+----------------------------------------------------------
+
+24/49 Testing: qsa_prompt_attn_parity
+24/49 Test: qsa_prompt_attn_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/qsa_prompt_attn_parity" "32768" "2048" "5"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"qsa_prompt_attn_parity" start time: Oct 03 14:59 CST
+Output:
+----------------------------------------------------------
+PASS int8 ctx 32768, 2048 queries: vs FP64 old 2.26e-06 new 6.85e-06 (output scale 3.45); new vs old 1.22e-05 (3.2e-06 of scale); 409.243 -> 243.280 ms per chunk (1.68x)
+PASS fp16 ctx 32768, 2048 queries: vs FP64 old 1.63e-06 new 5.88e-06 (output scale 3.02); new vs old 8.82e-06 (2.2e-06 of scale); 416.388 -> 257.458 ms per chunk (1.62x)
+PASS int8 ctx 1500, 1500 queries: vs FP64 old 1.67e-06 new 4.95e-06 (output scale 3.65); new vs old 1e-05 (2.6e-06 of scale); 132.984 -> 63.452 ms per chunk (2.10x)
+PASS int8 ctx 2100, 256 queries: vs FP64 old 2.04e-06 new 7.09e-06 (output scale 3.41); new vs old 8.34e-06 (2.2e-06 of scale); 257.886 -> 31.299 ms per chunk (8.24x)
+FAILURES: 0
+<end of output>
+Test time =  11.79 sec
+----------------------------------------------------------
+Test Passed.
+"qsa_prompt_attn_parity" end time: Oct 03 14:59 CST
+"qsa_prompt_attn_parity" time elapsed: 00:00:11
+----------------------------------------------------------
+
+25/49 Testing: kv_q4_parity
+25/49 Test: kv_q4_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/kv_q4_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"kv_q4_parity" start time: Oct 03 14:59 CST
+Output:
+----------------------------------------------------------
+=== Running kv_q4_parity test ===
+[1/4] Verifying FWHT-256 CUDA kernel vs exact mathematical reference...
+  -> FWHT-256 bitwise match with host reference (max diff = 0.000000e+00, OK)
+  -> FWHT-256 self-inverse property verified H*H*x == x (max diff = 4.768372e-07, OK)
+[2/4] Verifying Attention Score Invariance: <H*q, H*k> == <q, k>...
+  -> Dot product invariant under rotation: |<Hq,Hk> - <q,k>| = 4.084292e-06 (OK)
+[3/4] Verifying Q4_0 KV append and gather against host reference...
+  -> All Q4_0 pool blocks bitwise equal to host quantizer (OK)
+[4/4] Verifying Q4_0 gather unpacking and dequantization...
+  -> Max reconstruction error after 4-bit quant + dequant: 0.6794 (OK)
+=== kv_q4_parity: ALL TESTS PASSED SUCCESSFULLY! ===
+<end of output>
+Test time =   1.00 sec
+----------------------------------------------------------
+Test Passed.
+"kv_q4_parity" end time: Oct 03 14:59 CST
+"kv_q4_parity" time elapsed: 00:00:00
+----------------------------------------------------------
+
+26/49 Testing: kv_hybrid_parity
+26/49 Test: kv_hybrid_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/kv_hybrid_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"kv_hybrid_parity" start time: Oct 03 14:59 CST
+Output:
+----------------------------------------------------------
+=== Running kv_hybrid_parity test ===
+[1/3] composed appends: PASS (0 bad values of 786432 K / 24576 V)
+[2/3] composed gathers: PASS (0 bad of 786432)
+       (per-query max: q0 8.20e-08, q1 1.15e-07)
+[4/4] mode-3 BATCHED attention (verify's form): PASS (vs dequant ref 1.15e-07)
+[5/5] qsa_prompt_attn mode 3 (tensor cores): PASS (vs dequant ref 7.63e-06)
+[3/3] mode-3 attention + output fwht: PASS (vs dequant ref 1.08e-07, vs true fp32 4.46e-03)
+=== kv_hybrid_parity: ALL PASS ===
+<end of output>
+Test time =   1.87 sec
+----------------------------------------------------------
+Test Passed.
+"kv_hybrid_parity" end time: Oct 03 14:59 CST
+"kv_hybrid_parity" time elapsed: 00:00:01
+----------------------------------------------------------
+
+27/49 Testing: kv_stream_parity
+27/49 Test: kv_stream_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/kv_stream_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"kv_stream_parity" start time: Oct 03 14:59 CST
+Output:
+----------------------------------------------------------
+kv_stream_parity: streamed vs resident KV, bitwise
+  int8: 306 batches, 728342 block lookups, 71904 misses (90.1% hit), overflow 0, 0 failures
+  int8 ring restore: identical
+  fp16: 306 batches, 687170 block lookups, 70218 misses (89.8% hit), overflow 0, 0 failures
+  fp16 ring restore: identical
+  q4_0: 306 batches, 681198 block lookups, 70775 misses (89.6% hit), overflow 0, 0 failures
+  q4_0 ring restore: identical
+PASS
+<end of output>
+Test time =  91.63 sec
+----------------------------------------------------------
+Test Passed.
+"kv_stream_parity" end time: Oct 03 15:00 CST
+"kv_stream_parity" time elapsed: 00:01:31
+----------------------------------------------------------
+
+28/49 Testing: s2_expert_grouped_parity
+28/49 Test: s2_expert_grouped_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/s2_expert_grouped_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"s2_expert_grouped_parity" start time: Oct 03 15:00 CST
+Output:
+----------------------------------------------------------
+s2_expert_grouped_parity: new expert kernels vs the previous ones, bitwise
+  moe_hit_grouped_s2 (fp32 scales)             bitwise identical
+  moe_hit_grouped_s2 (fp32 scales)             host reference: 2601 rows, 0 outside tolerance, worst 1.00e-07 of sum|term|
+  moe_hit_grouped_s2 (fp16 d)                  bitwise identical
+  moe_hit_grouped_s2 (fp16 d)                  host reference: 2601 rows, 0 outside tolerance, worst 9.22e-08 of sum|term|
+  moe_hit_grouped_s2_dev (count 7 of 10)       bitwise identical
+  moe_hit_grouped_s2_dev (count 7 of 10)       host reference: 2023 rows, 0 outside tolerance, worst 1.00e-07 of sum|term|
+  moe_hit_grouped_s2_dev (count 7 of 10)       rows past the count written: 0
+  moe_hit_grouped_s2_multi (4 tokens, 29 hits) bitwise identical
+  moe_hit_grouped_s2_multi (4 tokens, 29 hits) host reference: 8381 rows, 0 outside tolerance, worst 1.00e-07 of sum|term|
+  moe_grouped_s2 (20 groups, fp32 scales)      bitwise identical
+  moe_grouped_s2 (20 groups, fp32 scales)      host reference: 23120 rows, 0 outside tolerance, worst 1.27e-07 of sum|term|
+  moe_grouped_s2 (20 groups, fp16 d)           bitwise identical
+  moe_grouped_s2 (20 groups, fp16 d)           host reference: 23120 rows, 0 outside tolerance, worst 1.03e-07 of sum|term|
+  resident graph with changed expert IDs       host reference: 11560 rows, 0 outside tolerance, worst 1.00e-07 of sum|term|
+  resident graph with changed expert IDs       host reference: 11560 rows, 0 outside tolerance, worst 9.44e-08 of sum|term|
+  moe_group_resident + moe_grouped_s2 (fp32)   bitwise identical
+  moe_group_resident + moe_grouped_s2 (fp32)   host reference: 14450 rows, 0 outside tolerance, worst 1.00e-07 of sum|term|
+  moe_group_resident + moe_grouped_s2 (fp16)   bitwise identical
+  moe_group_resident + moe_grouped_s2 (fp16)   host reference: 14450 rows, 0 outside tolerance, worst 9.45e-08 of sum|term|
+  moe_hit_grouped_s2 (2-byte aligned x)        bitwise identical
+  moe_hit_grouped_s2 (2-byte aligned x)        host reference: 867 rows, 0 outside tolerance, worst 9.23e-08 of sum|term|
+  moe_hit_grouped_s2 (slot stride BLOB + 4)    bitwise identical
+  moe_hit_grouped_s2 (slot stride BLOB + 4)    host reference: 1156 rows, 0 outside tolerance, worst 1.00e-07 of sum|term|
+  moe_hit_grouped_s2 (arena 4 mod 8)           bitwise identical
+  moe_hit_grouped_s2 (arena 4 mod 8)           host reference: 1156 rows, 0 outside tolerance, worst 1.00e-07 of sum|term|
+s2_expert_grouped_parity: 0 failures
+PASS
+<end of output>
+Test time =   1.45 sec
+----------------------------------------------------------
+Test Passed.
+"s2_expert_grouped_parity" end time: Oct 03 15:00 CST
+"s2_expert_grouped_parity" time elapsed: 00:00:01
+----------------------------------------------------------
+
+29/49 Testing: ple_parity
+29/49 Test: ple_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/ple_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"ple_parity" start time: Oct 03 15:00 CST
+Output:
+----------------------------------------------------------
+  PLE history 12 captured steps, row-fastest state and guards: pass
+A. the n-gram hash, against ref/ngram.py with the artifact's own constants
+  head_offsets == the running sum of vocab_sizes yes (sum 320001446 <= 320001536 rows; 90 spare)
+  window direction                               matches (0 of 64 differ)
+  EOS one back cuts both                         matches (0 of 48 differ)
+  NULL reads as EOS                              matches (0 of 32 differ)
+  token id 0 is NOT missing                      matches (0 of 32 differ)
+  own EOS does not cut itself                    matches (0 of 48 differ)
+  real vocabulary ids                            matches (0 of 80 differ)
+  XOR vs SUM                                     yes (64 of 64 rows differ from the oracle)
+  % vs & (vocab sizes are not powers of two)     yes (64 of 64 rows differ from the oracle)
+  window read newest-first, not oldest-first     yes (64 of 64 rows differ from the oracle)
+  token id 0 treated as the NULL sentinel        yes (8 of 64 rows differ from the oracle)
+  cut propagates FORWARD vs only at the EOS position yes (8 of 48 rows differ)
+
+B. the IQ4_NL table, against numpy reading the original GGUF
+  rows                                           320001536 (expected 320001536)
+  data_start + rows*90 == file size              yes (28800138432 vs 28800138432; data_start 192)
+  row matches numpy's decode of the same bytes   yes (row 0: head 0.000e+00 tail 0.000e+00 sum d 2.351e-10, non-finite 0)
+    (same, another row)                          yes (row 12345: head 0.000e+00 tail 0.000e+00 sum d 1.843e-11, non-finite 0)
+    (same, another row)                          yes (row 320001535: head 0.000e+00 tail 0.000e+00 sum d 0.000e+00, non-finite 0)
+  split-half vs INTERLEAVED nibbles observable   yes (32.69% apart; generator says 1.2538)
+  data_start 192 vs file offset 0 observable     yes (625062031.75% apart)
+  gather is head-slowest                         yes (head h occupies [h*160,(h+1)*160))
+  head-fastest would differ                      yes (309 of 2560 elements differ)
+
+C. the PLE block, against ggml's own graph (ple_in.bin / ple_out.bin)
+  capture: n_embd 2560, hc 4, nt 2, kern 4, dil 3, eps 1e-06
+  pack ple_key row 0 == the capture's w_key row 0 yes (worst |d| 0.000e+00, non-finite 0)
+  PLE old caller output offsets rejected before launch: pass (7/7, scratch unchanged)
+  token 0 key        (grouped_norm of ple_key @ emb)     rel 3.074e-03   (mean |ref| 0.8513, non-finite 0)
+  token 0 value      (ple_value @ emb, BF16)             rel 1.700e-03   (mean |ref| 12.8758, non-finite 0)
+  token 0 gate       (signed sqrt, sigmoid)              rel 4.931e-04   (mean |ref| 0.6599, non-finite 0)
+  token 0 gated      (value broadcast * gate)            rel 1.796e-03   (mean |ref| 8.4966, non-finite 0)
+  token 0 normalized (grouped_norm(gated, ple_norm_conv)) rel 1.701e-03   (mean |ref| 0.7941, non-finite 0)
+  token 0 conv_out   (dilated conv, then SiLU)           rel 9.158e-04   (mean |ref| 0.0292, non-finite 0)
+  token 0 result     (hidden + gated + conv)             rel 1.787e-03   (mean |ref| 8.5395, non-finite 0)
+  native PLE value: pass (ref rel 7.743e-08, BF16 separation 3.891e-03)
+  native PLE captured selection: byte-identical
+  restored PLE default: byte-identical
+  native PLE key prelaunch guards: pass (9/9, workspace unchanged)
+  native PLE key projection->existing norm input 0: pass (rel 2.425e-08)
+  native PLE key projection->existing norm input 1: pass (rel 1.604e-08)
+  native PLE key graph/repeat/buffer guards checked; restored default: byte-identical
+  PLE separate exports and in-place hidden result: byte-identical
+  token 1 key        (grouped_norm of ple_key @ emb)     rel 5.859e-03   (mean |ref| 0.7979, non-finite 0)
+  token 1 value      (ple_value @ emb, BF16)             rel 1.623e-03   (mean |ref| 13.0336, non-finite 0)
+  token 1 gate       (signed sqrt, sigmoid)              rel 2.393e-03   (mean |ref| 0.5146, non-finite 0)
+  token 1 gated      (value broadcast * gate)            rel 3.003e-03   (mean |ref| 6.7075, non-finite 0)
+  token 1 normalized (grouped_norm(gated, ple_norm_conv)) rel 1.629e-03   (mean |ref| 0.7970, non-finite 0)
+  token 1 conv_out   (dilated conv, then SiLU)           rel 8.792e-04   (mean |ref| 0.0299, non-finite 0)
+  token 1 result     (hidden + gated + conv)             rel 2.978e-03   (mean |ref| 6.7644, non-finite 0)
+  normalized vs gated as the conv input is observable  yes (90.65% apart)
+  reversed conv tap order is observable                yes (134.91% apart)
+  host f32 reference, token 0 key          rel 0.000e+00 (non-finite 0)
+  host f32 reference, token 0 value        rel 0.000e+00 (non-finite 0)
+  host f32 reference, token 0 gate         rel 0.000e+00 (non-finite 0)
+  host f32 reference, token 0 gated        rel 0.000e+00 (non-finite 0)
+  host f32 reference, token 0 normalized   rel 0.000e+00 (non-finite 0)
+  host f32 reference, token 0 conv_out     rel 2.883e-08 (non-finite 0)
+  host f32 reference, token 0 result       rel 1.478e-10 (non-finite 0)
+  host f32 reference, token 1 key          rel 0.000e+00 (non-finite 0)
+  host f32 reference, token 1 value        rel 0.000e+00 (non-finite 0)
+  host f32 reference, token 1 gate         rel 0.000e+00 (non-finite 0)
+  host f32 reference, token 1 gated        rel 0.000e+00 (non-finite 0)
+  host f32 reference, token 1 normalized   rel 0.000e+00 (non-finite 0)
+  host f32 reference, token 1 conv_out     rel 2.852e-08 (non-finite 0)
+  host f32 reference, token 1 result       rel 8.724e-11 (non-finite 0)
+
+  conv_out (token 1) against the TERM magnitude, not the result: rel 2.664e-04   (|result|/|terms| = 0.3030)
+
+ple_parity: 0 failures (worst stage rel 5.859e-03)
+ple_parity OK
+<end of output>
+Test time =   0.81 sec
+----------------------------------------------------------
+Test Passed.
+"ple_parity" end time: Oct 03 15:00 CST
+"ple_parity" time elapsed: 00:00:00
+----------------------------------------------------------
+
+30/49 Testing: s2_gemv_q8_parity
+30/49 Test: s2_gemv_q8_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/s2_gemv_q8_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"s2_gemv_q8_parity" start time: Oct 03 15:00 CST
+Output:
+----------------------------------------------------------
+  q8-activation GEMV vs host reference   matches (0 of 64 over 1e-4, worst rel 1.545e-05, mean |ref| 0.282)
+  fp16-activation vs q8-activation       0.6173% of the reference magnitude
+
+s2_gemv_q8: 0 failures
+s2_gemv_q8_parity OK
+<end of output>
+Test time =   0.54 sec
+----------------------------------------------------------
+Test Passed.
+"s2_gemv_q8_parity" end time: Oct 03 15:00 CST
+"s2_gemv_q8_parity" time elapsed: 00:00:00
+----------------------------------------------------------
+
+31/49 Testing: mmvq_multi_parity
+31/49 Test: mmvq_multi_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/mmvq_multi_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"mmvq_multi_parity" start time: Oct 03 15:00 CST
+Output:
+----------------------------------------------------------
+
+=== multi_exact ON (the default) ===
+type           T    outputs  bits diff    finite diff  nonfinite
+Q4_0           1        512          0              0          0  ok
+Q4_0           2       1024          0              0          0  ok
+Q4_0           3       1536          0              0          0  ok
+Q4_0           4       2048          0              0          0  ok
+Q4_0           5       2560          0              0          0  ok
+Q4_0           6       3072          0              0          0  ok
+Q4_0           8       4096          0              0          0  ok
+Q8_0           1        512          0              0          0  ok
+Q8_0           2       1024          0              0          0  ok
+Q8_0           3       1536          0              0          0  ok
+Q8_0           4       2048          0              0          0  ok
+Q8_0           5       2560          0              0          0  ok
+Q8_0           6       3072          0              0          0  ok
+Q8_0           8       4096          0              0          0  ok
+Q4_K           1        512          0              0          0  ok
+Q4_K           2       1024          0              0          0  ok
+Q4_K           3       1536          0              0          0  ok
+Q4_K           4       2048          0              0          0  ok
+Q4_K           5       2560          0              0          0  ok
+Q4_K           6       3072          0              0          0  ok
+Q4_K           8       4096          0              0          0  ok
+Q5_K           1        512          0              0          0  ok
+Q5_K           2       1024          0              0          0  ok
+Q5_K           3       1536          0              0          0  ok
+Q5_K           4       2048          0              0          0  ok
+Q5_K           5       2560          0              0          0  ok
+Q5_K           6       3072          0              0          0  ok
+Q5_K           8       4096          0              0          0  ok
+Q6_K           1        512          0              0          0  ok
+Q6_K           2       1024          0              0          0  ok
+Q6_K           3       1536          0              0          0  ok
+Q6_K           4       2048          0              0          0  ok
+Q6_K           5       2560          0              0          0  ok
+Q6_K           6       3072          0              0          0  ok
+Q6_K           8       4096          0              0          0  ok
+IQ4_XS         1        512          0              0          0  ok
+IQ4_XS         2       1024          0              0          0  ok
+IQ4_XS         3       1536          0              0          0  ok
+IQ4_XS         4       2048          0              0          0  ok
+IQ4_XS         5       2560          0              0          0  ok
+IQ4_XS         6       3072          0              0          0  ok
+IQ4_XS         8       4096          0              0          0  ok
+Q5_K wide      1       2048          0              0          0  ok
+Q5_K wide      2       4096          0              0          0  ok
+Q5_K wide      3       6144          0              0          0  ok
+Q5_K wide      4       8192          0              0          0  ok
+Q5_K wide      5      10240          0              0          0  ok
+Q5_K wide      6      12288          0              0          0  ok
+Q5_K wide      8      16384          0              0          0  ok
+
+=== multi_exact off (negative control) ===
+type           T    outputs  bits diff    finite diff  nonfinite
+Q4_0           1        512          0              0          0  layouts coincide here (NW = 4)
+Q4_0           2       1024          0              0          0  layouts coincide here (NW = 4)
+Q4_0           3       1536          0              0          0  layouts coincide here (NW = 4)
+Q4_0           4       2048          0              0          0  layouts coincide here (NW = 4)
+Q4_0           5       2560       1676           1676          0  control sees it
+Q4_0           6       3072       2018           2018          0  control sees it
+Q4_0           8       4096       2740           2740          0  control sees it
+Q8_0           1        512          0              0          0  layouts coincide here (NW = 4)
+Q8_0           2       1024          0              0          0  layouts coincide here (NW = 4)
+Q8_0           3       1536          0              0          0  layouts coincide here (NW = 4)
+Q8_0           4       2048          0              0          0  layouts coincide here (NW = 4)
+Q8_0           5       2560       1769           1769          0  control sees it
+Q8_0           6       3072       2091           2091          0  control sees it
+Q8_0           8       4096       2811           2811          0  control sees it
+Q4_K           1        512          0              0          0  layouts coincide here (NW = 4)
+Q4_K           2       1024          0              0          0  layouts coincide here (NW = 4)
+Q4_K           3       1536          0              0          0  layouts coincide here (NW = 4)
+Q4_K           4       2048          0              0          0  layouts coincide here (NW = 4)
+Q4_K           5       2560       1486           1486          0  control sees it
+Q4_K           6       3072       1768           1768          0  control sees it
+Q4_K           8       4096       2520           2520          0  control sees it
+Q5_K           1        512          0              0          0  layouts coincide here (NW = 4)
+Q5_K           2       1024          0              0          0  layouts coincide here (NW = 4)
+Q5_K           3       1536          0              0          0  layouts coincide here (NW = 4)
+Q5_K           4       2048          0              0          0  layouts coincide here (NW = 4)
+Q5_K           5       2560       1501           1501          0  control sees it
+Q5_K           6       3072       1800           1800          0  control sees it
+Q5_K           8       4096       2519           2519          0  control sees it
+Q6_K           1        512          0              0          0  layouts coincide here (NW = 4)
+Q6_K           2       1024          0              0          0  layouts coincide here (NW = 4)
+Q6_K           3       1536          0              0          0  layouts coincide here (NW = 4)
+Q6_K           4       2048          0              0          0  layouts coincide here (NW = 4)
+Q6_K           5       2560       1724           1724          0  control sees it
+Q6_K           6       3072       2057           2057          0  control sees it
+Q6_K           8       4096       2831           2831          0  control sees it
+IQ4_XS         1        512          0              0          0  layouts coincide here (NW = 4)
+IQ4_XS         2       1024          0              0          0  layouts coincide here (NW = 4)
+IQ4_XS         3       1536          0              0          0  layouts coincide here (NW = 4)
+IQ4_XS         4       2048          0              0          0  layouts coincide here (NW = 4)
+IQ4_XS         5       2560       1547           1547          0  control sees it
+IQ4_XS         6       3072       1817           1817          0  control sees it
+IQ4_XS         8       4096       2401           2401          0  control sees it
+Q5_K wide      1       2048          0              0          0  layouts coincide here (NW = 4)
+Q5_K wide      2       4096          0              0          0  layouts coincide here (NW = 4)
+Q5_K wide      3       6144          0              0          0  layouts coincide here (NW = 4)
+Q5_K wide      4       8192          0              0          0  layouts coincide here (NW = 4)
+Q5_K wide      5      10240       6909           6909          0  control sees it
+Q5_K wide      6      12288       8156           8156          0  control sees it
+Q5_K wide      8      16384      11301          11301          0  control sees it
+
+multi_exact on:   148480 outputs compared, 0 differ bitwise, 0 non-finite
+multi_exact off:  148480 outputs compared, 63442 differ bitwise (63442 on finite outputs, 63442 at T > 4)
+
+mmvq_multi_parity: ok. With multi_exact on every column is bitwise equal to a single-column call; with it off the control finds differences at T > 4 in every case, so the comparison has power.
+<end of output>
+Test time =   1.07 sec
+----------------------------------------------------------
+Test Passed.
+"mmvq_multi_parity" end time: Oct 03 15:00 CST
+"mmvq_multi_parity" time elapsed: 00:00:01
+----------------------------------------------------------
+
+32/49 Testing: platform_memory_test
+32/49 Test: platform_memory_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/platform_memory_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"platform_memory_test" start time: Oct 03 15:00 CST
+Output:
+----------------------------------------------------------
+lock_resident: ok=1 locked=256 MiB (mlock)
+platform_memory_test: OK
+<end of output>
+Test time =   0.50 sec
+----------------------------------------------------------
+Test Passed.
+"platform_memory_test" end time: Oct 03 15:00 CST
+"platform_memory_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+33/49 Testing: metal_gemm_test
+33/49 Test: metal_gemm_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/metal_gemm_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"metal_gemm_test" start time: Oct 03 15:00 CST
+Output:
+----------------------------------------------------------
+Native tiled 16/20 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 16/20 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 16/23 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 16/23 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 16/42 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 16/42 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 17/20 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 17/20 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 17/23 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 17/23 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 17/42 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 17/42 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 18/20 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 18/20 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 18/23 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 18/23 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 18/42 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 18/42 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 21/20 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 21/20 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 21/23 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 21/23 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 21/42 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 21/42 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 22/20 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 22/20 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 22/23 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 22/23 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 22/42 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 22/42 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 23/20 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 23/20 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 23/23 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 23/23 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 23/42 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 23/42 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 29/20 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 29/20 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 29/23 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 29/23 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 29/42 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 29/42 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 42/20 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 42/20 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 42/23 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 42/23 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 42/42 512x256 gate/up, offsets/tails/guards: 0 differences
+Native tiled 42/42 512x256 down, offsets/tails/guards: 0 differences
+Native tiled 16/42 2560x640 gate/up, offsets/tails/guards: 0 differences
+Native tiled 16/42 2560x640 down, offsets/tails/guards: 0 differences
+Native tiled 22/42 2560x640 gate/up, offsets/tails/guards: 0 differences
+Native tiled 22/42 2560x640 down, offsets/tails/guards: 0 differences
+Native tiled 29/42 2560x640 gate/up, offsets/tails/guards: 0 differences
+Native tiled 29/42 2560x640 down, offsets/tails/guards: 0 differences
+Canonical expert dequant: 0 differences
+Q2 tiled gate/up: relative L2 0
+Q2 tiled down: relative L2 0
+Metal GEMM: 0 failures (60 FP16/BF16 cases, tails, strided outputs, beta=0/1)
+<end of output>
+Test time =   1.47 sec
+----------------------------------------------------------
+Test Passed.
+"metal_gemm_test" end time: Oct 03 15:00 CST
+"metal_gemm_test" time elapsed: 00:00:01
+----------------------------------------------------------
+
+34/49 Testing: metal_fused_gr_test
+34/49 Test: metal_fused_gr_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/metal_fused_gr_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"metal_fused_gr_test" start time: Oct 03 15:00 CST
+Output:
+----------------------------------------------------------
+fused GR apply=0 inject=0 multi=0: relative L2 8.26e-08
+fused GR apply=0 inject=0 multi=1: relative L2 8.26e-08
+fused GR apply=0 inject=1 multi=0: relative L2 8.26e-08
+fused GR apply=0 inject=1 multi=1: relative L2 8.26e-08
+fused GR apply=1 inject=0 multi=0: relative L2 6.05e-08
+fused GR apply=1 inject=0 multi=1: relative L2 6.05e-08
+fused GR apply=1 inject=1 multi=0: relative L2 6.05e-08
+fused GR apply=1 inject=1 multi=1: relative L2 6.05e-08
+Metal fused GR: 0 failures
+<end of output>
+Test time =   0.63 sec
+----------------------------------------------------------
+Test Passed.
+"metal_fused_gr_test" end time: Oct 03 15:00 CST
+"metal_fused_gr_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+35/49 Testing: file_expert_source_test
+35/49 Test: file_expert_source_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/file_expert_source_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"file_expert_source_test" start time: Oct 03 15:00 CST
+Output:
+----------------------------------------------------------
+file_expert_source_test: PASS
+<end of output>
+Test time =   0.50 sec
+----------------------------------------------------------
+Test Passed.
+"file_expert_source_test" end time: Oct 03 15:00 CST
+"file_expert_source_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+36/49 Testing: expert_layout_test
+36/49 Test: expert_layout_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/expert_layout_test" "/Users/liangxw/src/xproject/petproject/Strata/tests/data/native_experts"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"expert_layout_test" start time: Oct 03 15:00 CST
+Output:
+----------------------------------------------------------
+expert_layout_test
+  q2_0: loads                                                                          ok
+  q2_0: every field as the pre-v4 reader, totals as the header (v2, n_expert 512)      ok
+  iq2_xs: loads                                                                        ok
+  iq2_xs: every field as the pre-v4 reader, totals as the header (v2, n_expert 512)    ok
+  iq3_xxs: loads                                                                       ok
+  iq3_xxs: every field as the pre-v4 reader, totals as the header (v2, n_expert 512)   ok
+  iq3_s: loads                                                                         ok
+  iq3_s: every field as the pre-v4 reader, totals as the header (v3, n_expert 512)     ok
+  coder-iq1_m: loads                                                                   ok
+  coder-iq1_m: every field as the pre-v4 reader, totals as the header (v3, n_expert 256) ok
+  swift-iq2_xs: loads                                                                  ok
+  swift-iq2_xs: every field as the pre-v4 reader, totals as the header (v3, n_expert 512) ok
+  v4: `B.gguf,B.gguf,` = gate and up in B.gguf, down in the --native shard             ok
+  v3: one name covers the three roles                                                  ok
+  v5 is refused ("native_experts.txt is v5; this engine re...")                        ok
+  four names are refused                                                               ok
+  two names are refused                                                                ok
+  a column after the shard column is refused                                           ok
+  the v4 manifest of the split layer loads                                             ok
+  check_experts_gguf: every span is its tensor                                         ok
+  load_experts_gguf reads the whole arena (14131200 B)                                 ok
+  every blob is [gate | up | down] of its expert, layer 1 from both files              ok
+  FileExpertSource opens the GGUF in place                                             ok
+  blob() and copy_blob() equal the loaded arena byte for byte (transient)              ok
+  an assembled blob stays put while it is in use                                       ok
+  the file tier counts its bytes (28262400)                                            ok
+  prefetch on 2 threads, then blob(): the same bytes                                   ok
+  with experts.bin the mapped file is used (unchanged behaviour)                       ok
+  an offset that is not the tensor's is refused ("...starts at byte...")               ok
+  layer 1's gate named in the file that does not hold it is refused ("...is not in it...") ok
+  a malformed column is refused at load                                                ok
+  a shard that is not there is refused ("...cannot open...")                           ok
+  a truncated shard is refused before anything is read ("...past the end...")          ok
+  a gate of another type than the pack's is refused                                    ok
+  a down tensor of another shape is refused                                            ok
+expert_layout_test: all passed
+<end of output>
+Test time =   0.66 sec
+----------------------------------------------------------
+Test Passed.
+"expert_layout_test" end time: Oct 03 15:00 CST
+"expert_layout_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+37/49 Testing: native_dense_ple_key_test
+37/49 Test: native_dense_ple_key_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/native_dense_ple_key_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"native_dense_ple_key_test" start time: Oct 03 15:00 CST
+Output:
+----------------------------------------------------------
+1. BF16 key row (--compat-bf16), IQ3_XXS GGUF key
+  index_code_bits: key row is 0                                                        ok
+  index_code_bits: qkv row is 8                                                        ok
+  the pack loads (was: incompatible matrix)                                            ok
+  the key is not skipped, qkv is                                                       ok
+  the key is resident and BF16                                                         ok
+  no native key attached                                                               ok
+  the arena holds the pack's BF16 bytes                                                ok
+  qkv still served natively (Q8_0)                                                     ok
+  one native matrix                                                                    ok
+2. quantized key row (Q2_0 / UD-Q4_K_XL packs), Q8_0 GGUF key: unchanged
+  the pack loads                                                                       ok
+  the key stays skipped                                                                ok
+  the key is served natively                                                           ok
+  two native matrices                                                                  ok
+3. index_code_bits edge cases
+  a missing row is -1                                                                  ok
+  a missing index is an error                                                          ok
+  no key in the skip set: the index is not read                                        ok
+native_dense_ple_key_test: all passed
+<end of output>
+Test time =   0.54 sec
+----------------------------------------------------------
+Test Passed.
+"native_dense_ple_key_test" end time: Oct 03 15:00 CST
+"native_dense_ple_key_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+38/49 Testing: expert_cache_per_layer_test
+38/49 Test: expert_cache_per_layer_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/expert_cache_per_layer_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"expert_cache_per_layer_test" start time: Oct 03 15:00 CST
+Output:
+----------------------------------------------------------
+expert cache: uniform, sized and immutable shared arenas passed
+<end of output>
+Test time =   0.52 sec
+----------------------------------------------------------
+Test Passed.
+"expert_cache_per_layer_test" end time: Oct 03 15:00 CST
+"expert_cache_per_layer_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+39/49 Testing: suffix_drafter_test
+39/49 Test: suffix_drafter_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/suffix_drafter_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"suffix_drafter_test" start time: Oct 03 15:00 CST
+Output:
+----------------------------------------------------------
+suffix_drafter unit tests: OK
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"suffix_drafter_test" end time: Oct 03 15:00 CST
+"suffix_drafter_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+40/49 Testing: controller_test
+40/49 Test: controller_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/controller_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"controller_test" start time: Oct 03 15:00 CST
+Output:
+----------------------------------------------------------
+prior: mtp k=3 expected 3.24 tokens, 72.8 tok/s (plain 48.8)
+after rejections: none, p0 0.42
+long lookup match, measured costs: lookup k=3 expected 3.55, 86.8 tok/s
+long lookup match, cheap wide verify: lookup k=8 expected 6.60, 328.3 tok/s
+after full acceptance: mtp k=8 (was 3), p0 1.000
+
+MTP acceptance -> choice (default cost model):
+  p=0.50: none k=0, 48.8 tok/s
+  p=0.60: mtp k=1, 56.1 tok/s
+  p=0.70: mtp k=1, 58.7 tok/s
+  p=0.80: mtp k=1, 63.9 tok/s
+  p=0.86: mtp k=3, 70.8 tok/s
+  p=0.90: mtp k=3, 76.3 tok/s
+  p=0.95: mtp k=5, 84.6 tok/s
+controller tests: OK
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"controller_test" end time: Oct 03 15:00 CST
+"controller_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+41/49 Testing: draft_policy_test
+41/49 Test: draft_policy_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/draft_policy_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"draft_policy_test" start time: Oct 03 15:00 CST
+Output:
+----------------------------------------------------------
+draft_policy_test
+  no proposal: the MTP window                                        ok
+  rejected short-match drafts: their rate falls below 0.15           ok
+  rejected short-match drafts: no longer taken                       ok
+  accepted long-match drafts: their rate rises above 0.9             ok
+  accepted long matches: the full lookup window is taken             ok
+  buckets are separate: short matches still not taken                ok
+  never beyond the window cap                                        ok
+  a mediocre lookup does not replace a strong MTP window             ok
+  an unmeasured size is probed for a confident lookup                ok
+  after the probes, the measured cost decides                        ok
+PASS
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"draft_policy_test" end time: Oct 03 15:00 CST
+"draft_policy_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+42/49 Testing: conv_cache_test
+42/49 Test: conv_cache_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/conv_cache_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"conv_cache_test" start time: Oct 03 15:00 CST
+Output:
+----------------------------------------------------------
+conv_cache_test
+  over budget with fresh stamps: the oldest leaf leaves (the FIFO it was) ok
+  the root's stale stamp never makes it the victim                   ok
+  the root - the shared prefix - is never the victim                 ok
+  after a mount, the rotation takes the next least recently used leaf ok
+  a two-slot budget keeps root + newest and drops the leaf in between ok
+  a one-slot budget has no pin: the oldest leaves, the newest point stays ok
+  ties among equally stale leaves: the earlier index, deterministically ok
+PASS
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"conv_cache_test" end time: Oct 03 15:00 CST
+"conv_cache_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+43/49 Testing: coupled_draft_test
+43/49 Test: coupled_draft_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/coupled_draft_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"coupled_draft_test" start time: Oct 03 15:00 CST
+Output:
+----------------------------------------------------------
+coupled_draft_test
+  907257 checks, 0 failed
+PASS
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"coupled_draft_test" end time: Oct 03 15:00 CST
+"coupled_draft_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+44/49 Testing: bf16_bits_test
+44/49 Test: bf16_bits_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/bf16_bits_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"bf16_bits_test" start time: Oct 03 15:00 CST
+Output:
+----------------------------------------------------------
+  f32 -> bf16 over 2^32 inputs: 0 differ from ggml, 0 non-NaN differ from the previous rule
+  NaN inputs: 16777214, not a quiet same-sign NaN now: 0 (the previous rule masked 131072 of them)
+  bf16 -> f32 -> bf16 over 65536 patterns: 0 wrong
+
+bf16_bits_test OK
+<end of output>
+Test time =   6.94 sec
+----------------------------------------------------------
+Test Passed.
+"bf16_bits_test" end time: Oct 03 15:01 CST
+"bf16_bits_test" time elapsed: 00:00:06
+----------------------------------------------------------
+
+45/49 Testing: expert_multi_test
+45/49 Test: expert_multi_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/expert_multi_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"expert_multi_test" start time: Oct 03 15:01 CST
+Output:
+----------------------------------------------------------
+expert_multi_test: OK (every token bitwise equal to the single-token kernel)
+<end of output>
+Test time =   0.08 sec
+----------------------------------------------------------
+Test Passed.
+"expert_multi_test" end time: Oct 03 15:01 CST
+"expert_multi_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+46/49 Testing: expert_q2_neon_test
+46/49 Test: expert_q2_neon_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/expert_q2_neon_test"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"expert_q2_neon_test" start time: Oct 03 15:01 CST
+Output:
+----------------------------------------------------------
+Q2 NEON vs scalar: 0 failures (unaligned rows, subnormal scales, 1..8 tokens)
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"expert_q2_neon_test" end time: Oct 03 15:01 CST
+"expert_q2_neon_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+47/49 Testing: expert_parity
+47/49 Test: expert_parity
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/expert_parity" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata
+"expert_parity" start time: Oct 03 15:01 CST
+Output:
+----------------------------------------------------------
+  AVX512 F/BW/VL/VNNI/VBMI                     not an x86 CPU (the AVX-512 kernels are compiled out; the scalar path is the implementation)
+      the VNNI path cannot run here; only the scalar oracle can be exercised.
+      P2.S3's kernel check is SKIPPED, not passed.
+
+expert_parity: 0 failures, 1 SKIPPED
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"expert_parity" end time: Oct 03 15:01 CST
+"expert_parity" time elapsed: 00:00:00
+----------------------------------------------------------
+
+48/49 Testing: pool_test
+48/49 Test: pool_test
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/pool_test" "--selftest"
+Directory: /Users/liangxw/src/xproject/petproject/Strata
+"pool_test" start time: Oct 03 15:01 CST
+Output:
+----------------------------------------------------------
+  CPU lacks not an x86 CPU (the AVX-512 kernels are compiled out; the scalar path is the implementation) - the VNNI path cannot run here; pool test SKIPPED, not passed.
+
+pool: 0 failures, 1 SKIPPED
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"pool_test" end time: Oct 03 15:01 CST
+"pool_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+49/49 Testing: pool_stress
+49/49 Test: pool_stress
+Command: "/Users/liangxw/src/xproject/petproject/Strata/build-metal/pool_stress" "20"
+Directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+"pool_stress" start time: Oct 03 15:01 CST
+Output:
+----------------------------------------------------------
+CPU lacks not an x86 CPU (the AVX-512 kernels are compiled out; the scalar path is the implementation): pool_stress SKIPPED
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"pool_stress" end time: Oct 03 15:01 CST
+"pool_stress" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Oct 03 15:01 CST

@@ -1,0 +1,6 @@
+32 experts x 1.38 MB, one thread
+tokens per expert 1:   307.9 us per expert (1.00x one token; extra token = 0.00 of one read), 4.5 GB/s
+tokens per expert 2:   363.6 us per expert (1.18x one token; extra token = 0.18 of one read), 3.8 GB/s
+tokens per expert 3:   454.1 us per expert (1.47x one token; extra token = 0.24 of one read), 3.0 GB/s
+tokens per expert 4:   569.5 us per expert (1.85x one token; extra token = 0.28 of one read), 2.4 GB/s
+tokens per expert 5:   680.6 us per expert (2.21x one token; extra token = 0.30 of one read), 2.0 GB/s

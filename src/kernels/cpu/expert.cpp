@@ -5,11 +5,22 @@
 // include/strata/kernels/cpu/expert.hpp.  Read that header first; it says why each piece is shaped this way.
 #include "strata/kernels/cpu/expert.hpp"
 
+// The AVX-512 / AVX-2 kernels in this file are x86 intrinsics, and CMakeLists.txt applies the matching -mavx*
+// per-file flags only on x86. AArch64 uses NEON Q2 unpacking and integer dot products, preserving the
+// scalar floating-point accumulation order. STRATA_CPU_SCALAR=1 selects the scalar reference on ARM.
+// Other architectures retain the scalar implementation behind the same entry points.
+#if defined(__x86_64__) || defined(_M_X64)
+#define STRATA_CPU_X86 1
 #include <immintrin.h>
 #if defined(_MSC_VER)
 #include <intrin.h>
 #else
 #include <cpuid.h>
+#endif
+#endif
+
+#if defined(__aarch64__)
+#include <arm_neon.h>
 #endif
 
 #include <cmath>
@@ -74,6 +85,7 @@ inline float h2f(const uint8_t* p) {
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+#if defined(STRATA_CPU_X86)
 void quantize_oracle_q8_0(const float* x, int n, ActQ& a) {
     a.nchunks = n / QKA;
     for (int chunk = 0; chunk < a.nchunks; ++chunk) {
@@ -111,7 +123,9 @@ void quantize_oracle_q8_0(const float* x, int n, ActQ& a) {
         a.hx[chunk] = a.scale[chunk] * float(sum);
     }
 }
+#endif    // STRATA_CPU_X86
 
+#if defined(STRATA_CPU_X86)
 /// 2-bit unpack via VPMULTISHIFTQB.
 ///
 /// ARGUMENT ORDER IS (control, data) AND WAS DETERMINED EMPIRICALLY (`bench/micro/probe_multishift.cpp`).
@@ -298,6 +312,94 @@ inline void row_dot_multi(const uint8_t* codes, const uint8_t* scales, const Act
     }
     for (int t = 0; t < NT; ++t) res[t] = hsum_ps(acc[t]) - corr[t];
 }
+#else
+// The scalar transcription, for CPUs that are not x86 (an Apple-Silicon Mac, an ARM server).  Same contract as
+// `row_dot`: one fp16 weight scale per 64-weight block, one activation scale per 32-element chunk, an exact
+// integer dot per chunk (VNNI's partial sums are exact; a plain int32 accumulator is too), the weight-
+// independent correction `d * hx` folded in per chunk.  The FP32 accumulation ORDER differs from the vector
+// kernels, so cross-arch bitwise equality is not claimed - the x86 paths above are untouched.
+#if defined(__aarch64__)
+// Unpack eight bytes into 32 consecutive 2-bit codes. Both layouts use this same ordering.
+// Only the integer dot is vectorized: preserve the scalar FP32 accumulation order exactly.
+struct Q2Neon { int8x16_t lo, hi; };
+inline Q2Neon unpack_q2_neon(const uint8_t* codes) {
+    const uint8x16_t packed = vcombine_u8(vld1_u8(codes), vdup_n_u8(0));
+    const uint8x16_t i0 = {0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3};
+    const uint8x16_t i1 = {4,4,4,4,5,5,5,5,6,6,6,6,7,7,7,7};
+    const int8x16_t shift = {0,-2,-4,-6,0,-2,-4,-6,0,-2,-4,-6,0,-2,-4,-6};
+    const uint8x16_t mask = vdupq_n_u8(3);
+    return {vreinterpretq_s8_u8(vandq_u8(vshlq_u8(vqtbl1q_u8(packed, i0), shift), mask)),
+            vreinterpretq_s8_u8(vandq_u8(vshlq_u8(vqtbl1q_u8(packed, i1), shift), mask))};
+}
+inline int dot_q2_neon(Q2Neon w, const int8_t* x) {
+    const int8x16_t a = vld1q_s8(x), b = vld1q_s8(x + 16);
+#if defined(__ARM_FEATURE_DOTPROD)
+    return vaddvq_s32(vdotq_s32(vdotq_s32(vdupq_n_s32(0), w.lo, a), w.hi, b));
+#else
+    int16x8_t s = vmull_s8(vget_low_s8(w.lo), vget_low_s8(a));
+    s = vmlal_s8(s, vget_high_s8(w.lo), vget_high_s8(a));
+    s = vmlal_s8(s, vget_low_s8(w.hi), vget_low_s8(b));
+    s = vmlal_s8(s, vget_high_s8(w.hi), vget_high_s8(b));
+    return vaddlvq_s16(s);  // at most 4 * 3 * 128 per lane: no int16 overflow
+#endif
+}
+static const bool kNeon = std::getenv("STRATA_CPU_SCALAR") == nullptr;
+
+template<int NT>
+inline void row_dot_neon(const uint8_t* codes, const uint8_t* scales, const ActQ* const* a,
+                          int nblocks, float* out, bool gguf = false) {
+    float acc[NT] = {};
+    for (int b = 0; b < nblocks; ++b) {
+        const float d = h2f(scales + (gguf ? 18 : 2) * b);
+        for (int half = 0; half < 2; ++half) {
+            const int chunk = 2 * b + half;
+            const Q2Neon w = unpack_q2_neon(codes + (gguf ? 18 : 16) * b + half * 8);
+            for (int t = 0; t < NT; ++t) {
+                const int dot = dot_q2_neon(w, a[t]->q + chunk * QKA);
+                acc[t] += d * (a[t]->scale[chunk] * (float) dot - a[t]->hx[chunk]);
+            }
+        }
+    }
+    for (int t = 0; t < NT; ++t) out[t] = acc[t];
+}
+#endif
+
+inline float row_dot(const uint8_t* codes, const uint8_t* scales, const ActQ& a, int nblocks) {
+#if defined(__aarch64__)
+    if (kNeon) {
+        const ActQ* acts[] = {&a};
+        float out;
+        row_dot_neon<1>(codes, scales, acts, nblocks, &out);
+        return out;
+    }
+#endif
+    float acc = 0.f;
+    for (int b = 0; b < nblocks; ++b) {
+        const float d = h2f(scales + 2 * b);
+        for (int half = 0; half < 2; ++half) {
+            const int chunk = 2 * b + half;
+            const uint8_t* c = codes + b * 16 + half * 8;
+            const int8_t* q = a.q + chunk * QKA;
+            int dot = 0;
+            for (int j = 0; j < QKA; ++j) dot += ((c[j >> 2] >> (2 * (j & 3))) & 3) * q[j];
+            acc += d * (a.scale[chunk] * (float) dot - a.hx[chunk]);
+        }
+    }
+    return acc;
+}
+
+/// `row_dot` per token: on a non-x86 CPU the multi-token trick has nothing to share (no unpack to amortise), so
+/// each token simply sees exactly `row_dot` - which is the contract the vector `row_dot_multi` promises bitwise
+/// and this one meets by construction.
+template<int NT>
+inline void row_dot_multi(const uint8_t* codes, const uint8_t* scales, const ActQ* const* a, int nblocks,
+                          float* res) {
+#if defined(__aarch64__)
+    if (kNeon) { row_dot_neon<NT>(codes, scales, a, nblocks, res); return; }
+#endif
+    for (int t = 0; t < NT; ++t) res[t] = row_dot(codes, scales, *a[t], nblocks);
+}
+#endif    // STRATA_CPU_X86
 
 template<int NT>
 void expert_multi(const uint8_t* blob, const ActQ* const* a1, float* const* out, ExpertScratchMulti& ws) {
@@ -322,6 +424,7 @@ void expert_multi(const uint8_t* blob, const ActQ* const* a1, float* const* out,
     }
 }
 
+#if defined(STRATA_CPU_X86)
 void expert_oracle_q8_0(const uint8_t* blob, const ActQ& a1, float* out, ExpertScratch& ws) {
     for (int r = 0; r < FF; ++r) {
         const float g = row_dot_oracle(blob + O_GU_CODES + size_t(2 * r) * ROW_GU,
@@ -335,11 +438,17 @@ void expert_oracle_q8_0(const uint8_t* blob, const ActQ& a1, float* out, ExpertS
         out[r] = row_dot_oracle(blob + O_D_CODES + size_t(r) * ROW_D,
                                blob + O_D_SCALES + size_t(r) * SC_D * 2, ws.a2, SC_D);
 }
+#endif    // STRATA_CPU_X86
 
 }  // namespace
 
 const char* CpuFeatures::reason() const {
     if (usable()) return "ok";
+#if !defined(STRATA_CPU_X86)
+    // A non-x86 CPU has none of these features and none of the kernels that need them; naming them would send
+    // the reader looking for an AVX-512 flag that cannot exist on this machine.
+    return "not an x86 CPU (the AVX-512 kernels are compiled out; the scalar path is the implementation)";
+#else
     // Named individually: "AVX-512 not supported" sends a user looking for a new CPU when the machine may have
     // AVX-512F and be missing only VNNI, which is a much narrower and more explicable gap.
     static char buf[160];
@@ -347,8 +456,10 @@ const char* CpuFeatures::reason() const {
                   avx512bw ? "" : "AVX512BW ", avx512vl ? "" : "AVX512VL ",
                   avx512_vnni ? "" : "AVX512-VNNI ", avx512_vbmi ? "" : "AVX512-VBMI");
     return buf;
+#endif
 }
 
+#if defined(STRATA_CPU_X86)
 CpuFeatures cpu_features() {
     CpuFeatures f;
     int reg[4] = {0, 0, 0, 0};
@@ -371,8 +482,16 @@ CpuFeatures cpu_features() {
     f.avx512_vbmi = (ecx >> 1) & 1u;
     return f;
 }
+#else
+CpuFeatures cpu_features() {
+    // No x86 feature bits to read on another CPU; `usable()` is false because the VNNI kernel does not exist
+    // here, and callers that only need the expert path itself (tests, the scalar entry points) do not ask.
+    return {};
+}
+#endif
 
 void cpu_require_expert_support() {
+#if defined(STRATA_CPU_X86)
     const CpuFeatures f = cpu_features();
     if (f.usable()) return;
     std::fprintf(stderr,
@@ -381,17 +500,25 @@ void cpu_require_expert_support() {
                  "        The scalar fallback exists for tests only and is far too slow to decode with.\n",
                  f.reason());
     std::exit(1);
+#else
+    // The VNNI kernel this check guards is compiled out; the scalar transcription is this build's expert path,
+    // and it runs anywhere, so there is nothing to refuse.  (The engine itself needs an NVIDIA or AMD GPU and
+    // never reaches this point off x86; the callers here are the CPU-side tests.)
+#endif
 }
 
 void act_quant_q8_1(const float* x, int n, ActQ& a) {
+#if defined(STRATA_CPU_X86)
     if (oracle_q8_0.load(std::memory_order_relaxed)) {
         quantize_oracle_q8_0(x, n, a);
         return;
     }
+#endif
     a.nchunks = n / QKA;
     // Plan v0.3 P6: AVX-512, the same operations per element as the scalar loop below (max of |x|, one multiply,
     // +-0.5 away from zero, truncation, clamp), so the result is bitwise the scalar one.  The scalar loop took
     // ~22 us per 2560 values - 3.2 ms of every speculative round.
+#if defined(STRATA_CPU_X86)
     {
         const __m512 half = _mm512_set1_ps(0.5f), mhalf = _mm512_set1_ps(-0.5f), zero = _mm512_setzero_ps();
         const __m512i lo = _mm512_set1_epi32(-127), hi = _mm512_set1_epi32(127);
@@ -418,6 +545,7 @@ void act_quant_q8_1(const float* x, int n, ActQ& a) {
         }
         return;
     }
+#endif    // STRATA_CPU_X86
     for (int k = 0; k < a.nchunks; ++k) {
         const float* xb = x + k * QKA;
         float amax = 0.f;
@@ -451,7 +579,13 @@ void act_quant_q8_1(const float* x, int n, ActQ& a) {
 }
 
 void expert_set_oracle_q8_0(bool enabled) {
+#if defined(STRATA_CPU_X86)
     oracle_q8_0.store(enabled, std::memory_order_relaxed);
+#else
+    // The pinned x86 ggml Q8_0 contract has no kernels to select here; the flag is accepted and ignored so
+    // callers need not know the architecture.
+    (void) enabled;
+#endif
 }
 
 void s2_expert_vnni(const uint8_t* blob, const float* x, float* out, ExpertScratch& ws) {
@@ -460,10 +594,12 @@ void s2_expert_vnni(const uint8_t* blob, const float* x, float* out, ExpertScrat
 }
 
 void s2_expert_vnni_q(const uint8_t* blob, const ActQ& a1, float* out, ExpertScratch& ws) {
+#if defined(STRATA_CPU_X86)
     if (oracle_q8_0.load(std::memory_order_relaxed)) {
         expert_oracle_q8_0(blob, a1, out, ws);
         return;
     }
+#endif
     for (int r = 0; r < FF; ++r) {
         const float g = row_dot(blob + O_GU_CODES + (size_t) (2 * r) * ROW_GU,
                                 blob + O_GU_SCALES + (size_t) (2 * r) * SC_GU * 2, a1, SC_GU);
@@ -479,7 +615,13 @@ void s2_expert_vnni_q(const uint8_t* blob, const ActQ& a1, float* out, ExpertScr
                          blob + O_D_SCALES + (size_t) r * SC_D * 2, ws.a2, SC_D);
 }
 
-bool expert_oracle_q8_0_enabled() { return oracle_q8_0.load(std::memory_order_relaxed); }
+bool expert_oracle_q8_0_enabled() {
+#if defined(STRATA_CPU_X86)
+    return oracle_q8_0.load(std::memory_order_relaxed);
+#else
+    return false;
+#endif
+}
 
 void s2_expert_gu_rows(const uint8_t* blob, const ActQ& a1, float* ff, int r0, int r1) {
     for (int r = r0; r < r1; ++r) {
@@ -553,6 +695,7 @@ void s2_expert_down_rows_multi(const uint8_t* blob, const ActQ* const* a2, int n
 // 64 weights, interleaved), which ggml-cpu computes with a scalar loop on x86.  This is `row_dot_multi_z` with
 // the block stride of the GGUF layout: the same unpack, the same VNNI dot, the same correction.
 namespace {
+#if defined(STRATA_CPU_X86)
 template<int NT>
 inline void q2g_row_multi(const uint8_t* row, const ActQ* const* a, int nblocks, float* res) {
     __m512 acc[NT], corr[NT];
@@ -592,6 +735,41 @@ void q2g_rows(const uint8_t* w, size_t row_bytes, int nblocks, const ActQ* const
         for (int t = 0; t < NT; ++t) out[t][r] = res[t];
     }
 }
+#else
+// The same rows in the GGUF block layout, transcribed for a non-x86 CPU: 18 bytes per 64-weight block - an
+// fp16 scale then 16 code bytes - at `row + b * 18`, the same two-chunk integer dot and correction as the
+// scalar `row_dot` above.
+template<int NT>
+inline void q2g_row_multi(const uint8_t* row, const ActQ* const* a, int nblocks, float* res) {
+#if defined(__aarch64__)
+    if (kNeon) { row_dot_neon<NT>(row + 2, row, a, nblocks, res, true); return; }
+#endif
+    for (int t = 0; t < NT; ++t) {
+        float acc = 0.f;
+        for (int b = 0; b < nblocks; ++b) {
+            const float d = h2f(row + (size_t) b * 18);
+            const uint8_t* codes = row + (size_t) b * 18 + 2;
+            for (int half = 0; half < 2; ++half) {
+                const int chunk = 2 * b + half;
+                const uint8_t* c = codes + half * 8;
+                const int8_t* q = a[t]->q + chunk * QKA;
+                int dot = 0;
+                for (int j = 0; j < QKA; ++j) dot += ((c[j >> 2] >> (2 * (j & 3))) & 3) * q[j];
+                acc += d * (a[t]->scale[chunk] * (float) dot - a[t]->hx[chunk]);
+            }
+        }
+        res[t] = acc;
+    }
+}
+template<int NT>
+void q2g_rows(const uint8_t* w, size_t row_bytes, int nblocks, const ActQ* const* a, float* const* out, int r0, int r1) {
+    float res[NT];
+    for (int r = r0; r < r1; ++r) {
+        q2g_row_multi<NT>(w + (size_t) r * row_bytes, a, nblocks, res);
+        for (int t = 0; t < NT; ++t) out[t][r] = res[t];
+    }
+}
+#endif    // STRATA_CPU_X86
 }  // namespace
 
 void q2_0_gguf_rows_multi(const uint8_t* w, size_t row_bytes, int nblocks, const ActQ* const* a, int nt,
@@ -610,10 +788,17 @@ void q2_0_gguf_rows_multi(const uint8_t* w, size_t row_bytes, int nblocks, const
 
 void s2_expert_vnni_multi(const uint8_t* blob, const ActQ* const* a1, int n_tokens, float* const* out,
                           ExpertScratchMulti& ws) {
+#if defined(STRATA_CPU_X86)
     if (oracle_q8_0.load(std::memory_order_relaxed) || n_tokens < 1 || n_tokens > MAXT) {
         for (int t = 0; t < n_tokens; ++t) s2_expert_vnni_q(blob, *a1[t], out[t], ws.single);
         return;
     }
+#else
+    if (n_tokens < 1 || n_tokens > MAXT) {
+        for (int t = 0; t < n_tokens; ++t) s2_expert_vnni_q(blob, *a1[t], out[t], ws.single);
+        return;
+    }
+#endif
     switch (n_tokens) {
         case 1: expert_multi<1>(blob, a1, out, ws); break;
         case 2: expert_multi<2>(blob, a1, out, ws); break;

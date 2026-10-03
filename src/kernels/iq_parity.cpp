@@ -14,6 +14,8 @@
 // equal to a one-column call on it.
 #include "strata/kernels/iq_kernels.hpp"
 #include "strata/kernels/native_mmvq.hpp"
+#include "strata/kernels/dequant_bf16.hpp"
+#include "strata/kernels/f16_bits.hpp"
 
 #include <cuda_runtime.h>
 
@@ -65,6 +67,39 @@ int main(int argc, char** argv) {
             double num = 0, den = 0;
             for (size_t i = 0; i < ref.size(); ++i) { num += std::fabs(got[i] - ref[i]); den += std::fabs(ref[i]); }
             dq_err = num / (den + 1e-30);
+        }
+        // Exercise the public prefill entry points too. The standalone IQ kernels passed while Metal's
+        // wrapper still refused IQ3_S in a real IQ2_XS prompt. Check sliced rows against gguf-py's
+        // independent reference, including output guards and FP16 rounding.
+        if (rows >= 3) {
+            const int row0 = 1, count = rows - 2;
+            const size_t n = (size_t) count * cols, guard = 16;
+            std::vector<float> got32(n + guard, -987.0f);
+            std::vector<uint16_t> got16(n + guard, 0x3555);
+            float* df = nullptr;
+            uint16_t* dh = nullptr;
+            cudaMalloc(&df, got32.size() * sizeof(float));
+            cudaMalloc(&dh, got16.size() * sizeof(uint16_t));
+            cudaMemcpyAsync(df, got32.data(), got32.size() * sizeof(float), cudaMemcpyHostToDevice, s);
+            cudaMemcpyAsync(dh, got16.data(), got16.size() * sizeof(uint16_t), cudaMemcpyHostToDevice, s);
+            strata::kernels::dequant_f32(type, dw, row0, count, cols, df, s);
+            strata::kernels::dequant_f16(type, dw, row0, count, cols, dh, s);
+            cudaStreamSynchronize(s);
+            cudaMemcpy(got32.data(), df, got32.size() * sizeof(float), cudaMemcpyDeviceToHost);
+            cudaMemcpy(got16.data(), dh, got16.size() * sizeof(uint16_t), cudaMemcpyDeviceToHost);
+            size_t bad = 0;
+            for (size_t i = 0; i < n; ++i) {
+                const float expected = ref[(size_t) row0 * cols + i];
+                bad += got32[i] != expected;
+                bad += got16[i] != strata::kernels::f16_from_f32(expected);
+            }
+            for (size_t i = n; i < n + guard; ++i) {
+                bad += got32[i] != -987.0f;
+                bad += got16[i] != 0x3555;
+            }
+            std::printf("%-8s prefill row slice: %zu differences\n", nm, bad);
+            failures += bad != 0;
+            cudaFree(df); cudaFree(dh);
         }
         // the dot, ncols 1..8: each column of an ncols call bitwise equal to a one-column call on it (the
         // exact multi-column layout, the default), all of them within the activation rounding of the float product

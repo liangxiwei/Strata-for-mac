@@ -1,0 +1,26 @@
+{
+  "input_tokens_identical": true,
+  "engine_binary_sha256": "b91c1f4bc38283abba1f2bd39b80d2b573b5ba68462bab083fbf52456b5a0f89",
+  "rows": [
+    {
+      "model": "IQ2_XS",
+      "prefill_tokens_per_s": 44.7,
+      "decode_tokens_per_s": 7.6,
+      "first_text_s": 223.931552958,
+      "wall_s": 257.507786,
+      "retrieved_fields": 3,
+      "draft_n": 0
+    },
+    {
+      "model": "Q2_0 corrected control",
+      "prefill_tokens_per_s": 111.9,
+      "decode_tokens_per_s": 19.2,
+      "first_text_s": 89.448236125,
+      "wall_s": 102.710312917,
+      "retrieved_fields": 3,
+      "draft_n": 0
+    }
+  ],
+  "old_model_deleted": true,
+  "iq2xs_decode_throughput_change_percent": -60.4731224955964
+}

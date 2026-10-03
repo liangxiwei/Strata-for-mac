@@ -55,7 +55,9 @@ def normalize(v, t: Path):
     if isinstance(v, list):
         return [normalize(x, t) for x in v]
     if isinstance(v, str):
-        return v.replace(str(t), "<T>").replace("\\", "/").replace(setup.EXE, "<EXE>")
+        # only the exe PATH is taken out: a bare replace of setup.EXE would also hit the log name
+        # "strata-<model>.log" off Windows (there EXE is "strata.exe", which the log never contains).
+        return v.replace(str(t), "<T>").replace("\\", "/").replace(f"/engine/{setup.EXE}", "/engine/<EXE>")
     return v
 
 
@@ -92,6 +94,7 @@ def install(ram, found, argv, answers=None, extra=(), avx512=False, configs=()):
 
         patches = [
             mock.patch.object(setup, "ROOT", t),
+            mock.patch.object(setup, "MAC", False),     # the simulated PCs are Windows/Linux (the gate is real macOS)
             mock.patch.object(setup, "GPU_PICK", None),
             mock.patch.object(setup, "data_folder", lambda d: (t / "data", [])),
             mock.patch.object(setup, "load_settings", lambda: {}),

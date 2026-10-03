@@ -1,0 +1,11 @@
+strata metal smoke (M1, docs/PORT_METAL/)
+  direct Launch spelling ran                 ok
+  launch round-trip on an explicit stream    ok
+    direct CPU read after default-stream scale (want 4..64): 12, 12
+  compute-write after blit-write (same buffer) ok (back[0]=12 back[15]=12 want 12
+  gdn_gate (parity's call shape)             ok (bad=0@-1 got[0]=-2.07432e-14 want=-2.07432e-14
+  doorbell ring: GPU -> CPU                  ok (ring visible to a spinning CPU after 0.504 ms (no sync)
+  doorbell wait: CPU -> GPU ordering         ok
+  graph replay reads live buffers            ok
+  graph replay compounds                     ok (10 replays compound, 0.383 ms each (measured)
+smoke ok: 0 failures

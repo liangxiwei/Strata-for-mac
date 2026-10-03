@@ -1,0 +1,29 @@
+{
+  "exe": "/Users/liangxw/src/xproject/petproject/Strata/build-metal/strata",
+  "args": [
+    "--pack",
+    "/Users/liangxw/src/xproject/petproject/Q2_0/pack-full",
+    "--native",
+    "/Users/liangxw/src/xproject/petproject/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00001-of-00002.gguf",
+    "--ple-gguf",
+    "/Users/liangxw/src/xproject/petproject/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00002-of-00002.gguf",
+    "--max-context",
+    "32768",
+    "--spec",
+    "4",
+    "--spec-min-p",
+    "0.5",
+    "--prefill",
+    "auto",
+    "--expert-profile",
+    "/Users/liangxw/src/xproject/petproject/Strata/data/expert-profile.bin",
+    "--expert-cache",
+    "auto",
+    "--mtp",
+    "/Users/liangxw/src/xproject/petproject/Q2_0/mtp/rt"
+  ],
+  "cwd": "/Users/liangxw/src/xproject/petproject/Q2_0",
+  "tokenizer": "/Users/liangxw/src/xproject/petproject/Q2_0/pack-full/tokenizer",
+  "host": "127.0.0.1",
+  "log": "/Users/liangxw/src/xproject/petproject/Strata/bench/results/2026-10-03-metal/engine-resident-verify.log"
+}

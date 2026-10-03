@@ -1,0 +1,41 @@
+packed iq2s grid: 0 bytes outside {8, 25, 43}
+native_resident_gu_22    gate 0 up 0 bit differences of 326400 each
+dd2_gu_22                gate 0 up 0 bit differences of 326400 each
+or2_gu_22                gate 0 up 0 bit differences of 326400 each
+native_resident_gu_22    gate 0 up 0 bit differences of 326400 each
+dd2_gu_22                gate 0 up 0 bit differences of 326400 each
+or2_gu_22                gate 0 up 0 bit differences of 326400 each
+native_resident_gu_22    gate 0 up 0 bit differences of 326400 each
+dd2_gu_22                gate 0 up 0 bit differences of 326400 each
+or2_gu_22                gate 0 up 0 bit differences of 326400 each
+  0:native_resident_gu_22      120.94 us
+  1:dd2_gu_22                  108.53 us
+  2:or2_gu_22                  109.95 us
+  3:native_resident_gu_22      121.90 us
+  4:dd2_gu_22                  107.81 us
+  5:or2_gu_22                  111.64 us
+  6:native_resident_gu_22      123.63 us
+  7:dd2_gu_22                  107.37 us
+  8:or2_gu_22                  112.02 us
+  native_resident_down_42       77.84 us
+  native_resident_gu_22        119.70 us
+packed iq2s grid: 0 bytes outside {8, 25, 43}
+native_resident_gu_16    gate 0 up 0 bit differences of 326400 each
+dd2_gu_16                gate 0 up 0 bit differences of 326400 each
+or2_gu_16                gate 0 up 0 bit differences of 326400 each
+native_resident_gu_16    gate 0 up 0 bit differences of 326400 each
+dd2_gu_16                gate 0 up 0 bit differences of 326400 each
+or2_gu_16                gate 0 up 0 bit differences of 326400 each
+native_resident_gu_16    gate 0 up 0 bit differences of 326400 each
+dd2_gu_16                gate 0 up 0 bit differences of 326400 each
+or2_gu_16                gate 0 up 0 bit differences of 326400 each
+  0:native_resident_gu_16      117.78 us
+  1:dd2_gu_16                  116.99 us
+  2:or2_gu_16                  110.17 us
+  3:native_resident_gu_16      118.08 us
+  4:dd2_gu_16                  120.52 us
+  5:or2_gu_16                  110.91 us
+  6:native_resident_gu_16      119.00 us
+  7:dd2_gu_16                  120.62 us
+  8:or2_gu_16                  111.23 us
+  native_resident_gu_16        117.78 us

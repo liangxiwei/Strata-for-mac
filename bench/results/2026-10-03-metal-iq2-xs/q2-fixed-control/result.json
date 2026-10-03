@@ -1,0 +1,43 @@
+{
+  "wall_s": 102.710312917,
+  "first_text_s": 89.448236125,
+  "timings": {
+    "cache_n": 0,
+    "prompt_n": 10000,
+    "prompt_ms": 89356.2,
+    "prompt_per_token_ms": 8.936,
+    "prompt_per_second": 111.9,
+    "predicted_n": 256,
+    "predicted_ms": 13307.0,
+    "predicted_per_token_ms": 51.98,
+    "predicted_per_second": 19.2,
+    "draft_n": 0,
+    "draft_n_accepted": 0
+  },
+  "usage": {
+    "prompt_tokens": 10000,
+    "completion_tokens": 256,
+    "total_tokens": 10256,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "finish_reason": "length",
+  "content": "根据提供的资料，首先提取校验记录中的关键信息：\n\n**项目代号：** 银杏\n**验收日期：** 10月18日\n**校验码：** AX-7319\n\n---\n\n### 统一内存、混合专家模型（MoE）、Prefill 与 Decode 的深度解析\n\n在大型语言模型（LLM）的推理架构中，尤其是像资料中提到的 Strata 引擎所支持的 Qwen3.8-Flash-Next 这类模型，**统一内存（Unified Memory）**、**混合专家模型（Mixture of Experts, MoE）**、**Prefill（预填充）** 和 **Decode（解码）** 这四个概念紧密交织，共同决定了模型在长上下文下的性能表现、显存占用以及响应速度。以下将结合资料中的技术细节，详细解释它们之间的关系。\n\n#### 1. 混合专家模型（MoE）：稀疏激活的架构基础\n\n混合专家模型是一种架构设计，旨在通过“稀疏激活”来降低计算成本。在传统的稠密模型中，每一层的所有神经元都参与计算。而在 MoE 架构中，每一层包含多个“专家”（Expert），但每个输入 token 只激活其中少数几个专家",
+  "reasoning_content": "",
+  "needle_matches": {
+    "银杏": true,
+    "10月18日": true,
+    "AX-7319": true
+  },
+  "health": {
+    "status": "ok",
+    "max_context": 32768,
+    "model": "qwen3.8-flash-next",
+    "images": false,
+    "api_key": false,
+    "loaded": true,
+    "service": "strata"
+  },
+  "sampled_peak_engine_rss_gib": 32.2105712890625
+}

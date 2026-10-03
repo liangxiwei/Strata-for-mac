@@ -1,0 +1,951 @@
+strata generate: PCIe probe: 182.2 GB/s host->device -> pcie_frac 0.55 (default 0.55)
+strata generate: this CPU has no AVX-512: the expert kernels run on AVX-2 (multi-token for the i-quant gate/up rows)
+strata generate: native pack: /Users/liangxw/src/xproject/petproject/IQ2_XS/pack-full experts (largest blob 1.51 MB), token embedding IQ4_XS in mapped host memory (322 MiB)
+metal cb timing: 256 cbs, GPU busy 11.4 ms of 1123.3 ms (1.0%), 0.044 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.7 ms of 126.6 ms (2.9%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 2.9 ms of 134.4 ms (2.1%), 0.011 ms/cb
+strata generate: 1466 MiB of weights loaded from /Users/liangxw/src/xproject/petproject/IQ2_XS/pack-full (302 canonical tensors skipped: served natively)
+metal cb timing: 256 cbs, GPU busy 8.0 ms of 1902.9 ms (0.4%), 0.031 ms/cb
+strata generate: 300 native projection matrices, 1474.85 MiB of weights
+strata generate: the SSD is kept awake while rows are read: one page of the table after 100 ms without a read, until 60 s after the last request (STRATA_SSD_KEEPALIVE=0 turns it off)
+strata generate: profile /Users/liangxw/src/xproject/petproject/Strata/data/expert-profile.bin: 24576 ranked pairs, built for 24576 slots
+strata generate: PLE on, table 320001536 rows of /Users/liangxw/src/xproject/petproject/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf
+strata mtp: draft layer loaded, 869 MiB of VRAM (experts 675, dense 111), files read in 0.29 s (2712 MiB/s)
+strata generate: GPU 0: Apple M2 Max, compute capability 10.0
+strata generate: experts via mmap (--mmap-experts; the GGUF shards in place, no experts.bin)
+strata trace: 74544 MiB free after the weights, the session and the drafter
+strata generate: experimental native Q5_K head, 337715200 bytes
+strata generate: expert cache auto: 72.48 GiB free, 700 MiB reserved (+3 MiB for the draft head) -> 24576 slots
+strata generate: expert cache 24576 slots, 33.02 GiB of VRAM; policy is
+strata trace: 40409 MiB free after opening the expert cache
+strata generate: the GPU computes the experts in the cache; it rounds differently from the CPU,
+                 so a reply can differ slightly from a run without the cache (same quality:
+                 bench/results/2026-09-27-cache-parity).
+                 PROFILE, ranked by routing frequency, no eviction.
+metal cb timing: 256 cbs, GPU busy 90.6 ms of 3923.6 ms (2.3%), 0.354 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.6 ms of 873.5 ms (0.4%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 4.1 ms of 877.3 ms (0.5%), 0.016 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.9 ms of 843.4 ms (0.5%), 0.015 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.7 ms of 944.8 ms (0.4%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.6 ms of 951.8 ms (0.4%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.8 ms of 938.5 ms (0.4%), 0.015 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.4 ms of 502.3 ms (0.7%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.7 ms of 986.6 ms (0.4%), 0.015 ms/cb
+metal cb timing: 256 cbs, GPU busy 4.2 ms of 969.3 ms (0.4%), 0.016 ms/cb
+metal cb timing: 256 cbs, GPU busy 4.0 ms of 780.5 ms (0.5%), 0.016 ms/cb
+metal cb timing: 256 cbs, GPU busy 4.2 ms of 857.4 ms (0.5%), 0.016 ms/cb
+metal cb timing: 256 cbs, GPU busy 4.0 ms of 897.2 ms (0.5%), 0.016 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.9 ms of 759.7 ms (0.5%), 0.015 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 137.4 ms (2.4%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.4 ms of 133.1 ms (2.6%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.6 ms of 273.1 ms (1.3%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.2 ms of 170.2 ms (1.9%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 187.4 ms (1.8%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.6 ms of 306.8 ms (1.2%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.6 ms of 582.6 ms (0.6%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.8 ms of 970.9 ms (0.4%), 0.015 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.5 ms of 544.4 ms (0.6%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.8 ms of 847.8 ms (0.5%), 0.015 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.8 ms of 764.4 ms (0.5%), 0.015 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.4 ms of 374.2 ms (0.9%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.7 ms of 531.0 ms (0.7%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.7 ms of 673.0 ms (0.6%), 0.015 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.7 ms of 382.5 ms (1.0%), 0.015 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 263.2 ms (1.3%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.4 ms of 477.0 ms (0.7%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.8 ms of 476.2 ms (0.8%), 0.015 ms/cb
+metal cb timing: 256 cbs, GPU busy 4.1 ms of 821.6 ms (0.5%), 0.016 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.7 ms of 501.7 ms (0.7%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.7 ms of 300.0 ms (1.2%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.4 ms of 136.6 ms (2.5%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.4 ms of 144.0 ms (2.3%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.0 ms of 143.5 ms (2.1%), 0.012 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.5 ms of 142.7 ms (2.4%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.2 ms of 150.8 ms (2.1%), 0.012 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 150.2 ms (2.2%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 142.1 ms (2.3%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 144.3 ms (2.3%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.9 ms of 972.7 ms (0.4%), 0.015 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.7 ms of 264.2 ms (1.4%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 150.8 ms (2.2%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.4 ms of 146.2 ms (2.3%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 277.7 ms (1.2%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.2 ms of 161.2 ms (2.0%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.6 ms of 150.6 ms (2.4%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.8 ms of 191.2 ms (2.0%), 0.015 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.5 ms of 186.3 ms (1.9%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.4 ms of 144.3 ms (2.3%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 150.7 ms (2.2%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 2.9 ms of 136.6 ms (2.1%), 0.011 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.2 ms of 149.6 ms (2.1%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 2.7 ms of 138.5 ms (1.9%), 0.010 ms/cb
+metal cb timing: 256 cbs, GPU busy 2.9 ms of 141.2 ms (2.1%), 0.011 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.0 ms of 140.5 ms (2.1%), 0.012 ms/cb
+metal cb timing: 256 cbs, GPU busy 2.9 ms of 241.9 ms (1.2%), 0.011 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.2 ms of 135.5 ms (2.4%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 410.8 ms (0.8%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 174.9 ms (1.9%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 157.3 ms (2.1%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.5 ms of 156.0 ms (2.2%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.5 ms of 158.3 ms (2.2%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 147.4 ms (2.3%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 146.9 ms (2.2%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 151.1 ms (2.2%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 143.6 ms (2.3%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.1 ms of 137.3 ms (2.3%), 0.012 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.5 ms of 137.0 ms (2.5%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.5 ms of 347.5 ms (1.0%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.5 ms of 220.0 ms (1.6%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 2.9 ms of 154.5 ms (1.9%), 0.011 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.1 ms of 142.8 ms (2.2%), 0.012 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.2 ms of 144.7 ms (2.2%), 0.012 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.2 ms of 138.1 ms (2.3%), 0.012 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 241.2 ms (1.4%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.9 ms of 556.5 ms (0.7%), 0.015 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.7 ms of 349.6 ms (1.0%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.2 ms of 302.1 ms (1.1%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.2 ms of 160.6 ms (2.0%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.1 ms of 158.5 ms (2.0%), 0.012 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 336.8 ms (1.0%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 264.5 ms (1.3%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.3 ms of 179.8 ms (1.8%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.6 ms of 727.1 ms (0.5%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.2 ms of 159.8 ms (2.0%), 0.013 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.6 ms of 722.7 ms (0.5%), 0.014 ms/cb
+metal cb timing: 256 cbs, GPU busy 4.0 ms of 1118.9 ms (0.4%), 0.016 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.9 ms of 993.0 ms (0.4%), 0.015 ms/cb
+metal cb timing: 256 cbs, GPU busy 4.3 ms of 1010.2 ms (0.4%), 0.017 ms/cb
+metal cb timing: 256 cbs, GPU busy 4.1 ms of 1137.9 ms (0.4%), 0.016 ms/cb
+metal cb timing: 256 cbs, GPU busy 4.2 ms of 1126.1 ms (0.4%), 0.017 ms/cb
+metal cb timing: 256 cbs, GPU busy 3.9 ms of 1197.7 ms (0.3%), 0.015 ms/cb
+strata trace: 40409 MiB free after the profile fill
+strata generate: pre-filled 24576 of 24576 slots from the profile; slot 0 verified
+strata generate: routing-aware prefetch of the file tier on (the next layer's router)
+strata trace: 40409 MiB free after the R4 hit path
+strata generate: R4 hit path ON - resident experts are computed on the GPU
+strata generate: 11 expert-pool workers + the host thread
+strata trace: 40409 MiB free after the expert cache and the graphs
+strata generate: session is up (engine 0.1.34)
+strata generate: token graph hit path: 24576 resident experts, decided on the device
+strata serve: the prompt path allocates its own buffers (too few cache slots to borrow)
+strata trace: 39504 MiB free after the head and the prompt path
+strata hc: METAL: the hyper-connection read runs as the plain one (the split and staged variants are CUDA stagings of the same arithmetic; this port has one read)
+strata verify: --pcie-mode 0 -> 1 on Metal (direct reads of the mapped arena; rules 11 + 9)
+strata verify: window up to 4 tokens, 45.4 MiB of device buffers
+strata trace: 39453 MiB free after the verifier and the drafter's binding
+strata serve: 39453 MiB of VRAM free with everything loaded
+strata trace: request 10000 0
+strata trace: prompt start 9999 -1
+strata trace: prompt chunk 0 of 9993
+strata trace: prompt chunk 1024 of 9993
+strata trace: prompt chunk 2048 of 9993
+metal cb timing: 256 cbs, GPU busy 11122.2 ms of 14545.3 ms (76.5%), 43.446 ms/cb
+strata trace: prompt chunk 3072 of 9993
+strata trace: prompt chunk 4096 of 9993
+strata trace: prompt chunk 5120 of 9993
+strata trace: prompt chunk 6144 of 9993
+metal cb timing: 256 cbs, GPU busy 19984.4 ms of 20886.8 ms (95.7%), 78.064 ms/cb
+strata trace: prompt chunk 7168 of 9993
+strata trace: prompt chunk 8192 of 9993
+strata trace: prompt chunk 9216 of 9993
+strata trace: read 9993 tokens (batched) in 52032.0 ms
+strata verify: captured the 4-token window, all experts on Metal
+strata verify: captured the 2-token window, all experts on Metal
+strata trace: read 6 tokens (windows) in 530.5 ms
+strata trace: prompt done (slots refilled) -1 -1
+strata trace: window 9999 1
+strata verify: captured the 1-token window, all experts on Metal
+strata trace: window 10000 1
+strata trace: window 10001 1
+strata trace: window 10002 1
+strata trace: window 10003 1
+strata trace: window 10004 1
+strata trace: window 10005 1
+strata trace: window 10006 1
+strata trace: window 10007 1
+strata trace: window 10008 1
+strata trace: window 10009 1
+strata trace: window 10010 1
+strata trace: window 10011 1
+strata trace: window 10012 1
+metal cb timing: 256 cbs, GPU busy 17183.3 ms of 18509.1 ms (92.8%), 67.122 ms/cb
+strata trace: window 10013 1
+strata trace: window 10014 1
+strata trace: window 10015 1
+strata trace: window 10016 1
+strata trace: window 10017 1
+strata trace: window 10018 1
+strata trace: window 10019 1
+strata trace: window 10020 1
+strata trace: window 10021 1
+strata trace: window 10022 1
+strata trace: window 10023 1
+strata trace: window 10024 1
+strata trace: window 10025 1
+strata trace: window 10026 1
+strata trace: window 10027 1
+strata trace: window 10028 1
+strata trace: window 10029 1
+strata trace: window 10030 1
+strata trace: window 10031 1
+strata trace: window 10032 1
+strata trace: window 10033 1
+strata trace: window 10034 1
+strata trace: window 10035 1
+strata trace: window 10036 1
+strata trace: window 10037 1
+strata trace: window 10038 1
+strata trace: window 10039 1
+strata trace: window 10040 1
+strata trace: window 10041 1
+strata trace: window 10042 1
+strata trace: window 10043 1
+strata trace: window 10044 1
+strata trace: window 10045 1
+strata trace: window 10046 1
+strata trace: window 10047 1
+strata trace: window 10048 1
+strata trace: window 10049 1
+strata trace: window 10050 1
+strata trace: window 10051 1
+strata trace: window 10052 1
+strata trace: window 10053 1
+strata trace: window 10054 1
+strata trace: window 10055 1
+strata trace: window 10056 1
+strata trace: window 10057 1
+strata trace: window 10058 1
+strata trace: window 10059 1
+strata trace: window 10060 1
+strata trace: window 10061 1
+strata trace: window 10062 1
+strata trace: window 10063 1
+strata trace: window 10064 1
+strata trace: window 10065 1
+strata trace: window 10066 1
+strata trace: window 10067 1
+strata trace: window 10068 1
+strata trace: window 10069 1
+strata trace: window 10070 1
+strata trace: window 10071 1
+strata trace: window 10072 1
+strata trace: window 10073 1
+strata trace: window 10074 1
+strata trace: window 10075 1
+strata trace: window 10076 1
+strata trace: window 10077 1
+strata trace: window 10078 1
+strata trace: window 10079 1
+strata trace: window 10080 1
+strata trace: window 10081 1
+strata trace: window 10082 1
+strata trace: window 10083 1
+strata trace: window 10084 1
+strata trace: window 10085 1
+strata trace: window 10086 1
+strata trace: window 10087 1
+strata trace: window 10088 1
+strata trace: window 10089 1
+strata trace: window 10090 1
+strata trace: window 10091 1
+strata trace: window 10092 1
+strata trace: window 10093 1
+strata trace: window 10094 1
+strata trace: window 10095 1
+strata trace: window 10096 1
+strata trace: window 10097 1
+strata trace: window 10098 1
+strata trace: window 10099 1
+strata trace: window 10100 1
+strata trace: window 10101 1
+strata trace: window 10102 1
+strata trace: window 10103 1
+strata trace: window 10104 1
+strata trace: window 10105 1
+strata trace: window 10106 1
+strata trace: window 10107 1
+strata trace: window 10108 1
+strata trace: window 10109 1
+strata trace: window 10110 1
+strata trace: window 10111 1
+strata trace: window 10112 1
+strata trace: window 10113 1
+strata trace: window 10114 1
+strata trace: window 10115 1
+strata trace: window 10116 1
+strata trace: window 10117 1
+strata trace: window 10118 1
+strata trace: window 10119 1
+strata trace: window 10120 1
+strata trace: window 10121 1
+strata trace: window 10122 1
+strata trace: window 10123 1
+strata trace: window 10124 1
+strata trace: window 10125 1
+strata trace: window 10126 1
+strata trace: window 10127 1
+strata trace: window 10128 1
+strata trace: window 10129 1
+strata trace: window 10130 1
+strata trace: window 10131 1
+strata trace: window 10132 1
+strata trace: window 10133 1
+strata trace: window 10134 1
+strata trace: window 10135 1
+strata trace: window 10136 1
+strata trace: window 10137 1
+strata trace: window 10138 1
+strata trace: window 10139 1
+strata trace: window 10140 1
+metal cb timing: 256 cbs, GPU busy 5344.9 ms of 5771.4 ms (92.6%), 20.879 ms/cb
+strata trace: window 10141 1
+strata trace: window 10142 1
+strata trace: window 10143 1
+strata trace: window 10144 1
+strata trace: window 10145 1
+strata trace: window 10146 1
+strata trace: window 10147 1
+strata trace: window 10148 1
+strata trace: window 10149 1
+strata trace: window 10150 1
+strata trace: window 10151 1
+strata trace: window 10152 1
+strata trace: window 10153 1
+strata trace: window 10154 1
+strata trace: window 10155 1
+strata trace: window 10156 1
+strata trace: window 10157 1
+strata trace: window 10158 1
+strata trace: window 10159 1
+strata trace: window 10160 1
+strata trace: window 10161 1
+strata trace: window 10162 1
+strata trace: window 10163 1
+strata trace: window 10164 1
+strata trace: window 10165 1
+strata trace: window 10166 1
+strata trace: window 10167 1
+strata trace: window 10168 1
+strata trace: window 10169 1
+strata trace: window 10170 1
+strata trace: window 10171 1
+strata trace: window 10172 1
+strata trace: window 10173 1
+strata trace: window 10174 1
+strata trace: window 10175 1
+strata trace: window 10176 1
+strata trace: window 10177 1
+strata trace: window 10178 1
+strata trace: window 10179 1
+strata trace: window 10180 1
+strata trace: window 10181 1
+strata trace: window 10182 1
+strata trace: window 10183 1
+strata trace: window 10184 1
+strata trace: window 10185 1
+strata trace: window 10186 1
+strata trace: window 10187 1
+strata trace: window 10188 1
+strata trace: window 10189 1
+strata trace: window 10190 1
+strata trace: window 10191 1
+strata trace: window 10192 1
+strata trace: window 10193 1
+strata trace: window 10194 1
+strata trace: window 10195 1
+strata trace: window 10196 1
+strata trace: window 10197 1
+strata trace: window 10198 1
+strata trace: window 10199 1
+strata trace: window 10200 1
+strata trace: window 10201 1
+strata trace: window 10202 1
+strata trace: window 10203 1
+strata trace: window 10204 1
+strata trace: window 10205 1
+strata trace: window 10206 1
+strata trace: window 10207 1
+strata trace: window 10208 1
+strata trace: window 10209 1
+strata trace: window 10210 1
+strata trace: window 10211 1
+strata trace: window 10212 1
+strata trace: window 10213 1
+strata trace: window 10214 1
+strata trace: window 10215 1
+strata trace: window 10216 1
+strata trace: window 10217 1
+strata trace: window 10218 1
+strata trace: window 10219 1
+strata trace: window 10220 1
+strata trace: window 10221 1
+strata trace: window 10222 1
+strata trace: window 10223 1
+strata trace: window 10224 1
+strata trace: window 10225 1
+strata trace: window 10226 1
+strata trace: window 10227 1
+strata trace: window 10228 1
+strata trace: window 10229 1
+strata trace: window 10230 1
+strata trace: window 10231 1
+strata trace: window 10232 1
+strata trace: window 10233 1
+strata trace: window 10234 1
+strata trace: window 10235 1
+strata trace: window 10236 1
+strata trace: window 10237 1
+strata trace: window 10238 1
+strata trace: window 10239 1
+strata trace: window 10240 1
+strata trace: window 10241 1
+strata trace: window 10242 1
+strata trace: window 10243 1
+strata trace: window 10244 1
+strata trace: window 10245 1
+strata trace: window 10246 1
+strata trace: window 10247 1
+strata trace: window 10248 1
+strata trace: window 10249 1
+strata trace: window 10250 1
+strata trace: window 10251 1
+strata trace: window 10252 1
+strata trace: window 10253 1
+strata trace: window 10254 1
+strata decode timing: 256 windows, avg T 1.00, 1.00 tokens/window, 44.60 ms/window = verify 44.31 (GPU-reach wait 0.00 + per-layer host 0.00 [plan 0.00 actq 0.00 jobs 0.00 CPU 0.00] + stage 0.58) + commit/emit 0.20 + draft 0.00; per layer-window: CPU experts 0.00 (0.00 entries), VRAM hits 0.00, PCIe 0.00
+strata serve: prompt 10000 tokens = 0 reused + 10000 read in 52920 ms (189.0 tok/s), 256 generated in 11418 ms (22.4 tok/s), drafts accepted 0 of 0, 1 checkpoints
+strata serve: decode expert cache hit rate: 100.0% (122880 hits / 122880 lookups)
+strata serve: expert tiers: GPU 122880 hits this request; since the start RAM 0 blobs, files 0 blobs 35456.5 MB read (the GGUF in place)
+metal cb timing: 256 cbs, GPU busy 4768.4 ms of 5169.7 ms (92.2%), 18.627 ms/cb
+strata trace: request 10000 0
+strata trace: prompt start 9999 -1
+strata trace: read 6 tokens (windows) in 281.9 ms
+strata trace: prompt done (slots refilled) -1 -1
+strata trace: window 9999 1
+strata trace: window 10000 1
+strata trace: window 10001 1
+strata trace: window 10002 1
+strata trace: window 10003 1
+strata trace: window 10004 1
+strata trace: window 10005 1
+strata trace: window 10006 1
+strata trace: window 10007 1
+strata trace: window 10008 1
+strata trace: window 10009 1
+strata trace: window 10010 1
+strata trace: window 10011 1
+strata trace: window 10012 1
+strata trace: window 10013 1
+strata trace: window 10014 1
+strata trace: window 10015 1
+strata trace: window 10016 1
+strata trace: window 10017 1
+strata trace: window 10018 1
+strata trace: window 10019 1
+strata trace: window 10020 1
+strata trace: window 10021 1
+strata trace: window 10022 1
+strata trace: window 10023 1
+strata trace: window 10024 1
+strata trace: window 10025 1
+strata trace: window 10026 1
+strata trace: window 10027 1
+strata trace: window 10028 1
+strata trace: window 10029 1
+strata trace: window 10030 1
+strata trace: window 10031 1
+strata trace: window 10032 1
+strata trace: window 10033 1
+strata trace: window 10034 1
+strata trace: window 10035 1
+strata trace: window 10036 1
+strata trace: window 10037 1
+strata trace: window 10038 1
+strata trace: window 10039 1
+strata trace: window 10040 1
+strata trace: window 10041 1
+strata trace: window 10042 1
+strata trace: window 10043 1
+strata trace: window 10044 1
+strata trace: window 10045 1
+strata trace: window 10046 1
+strata trace: window 10047 1
+strata trace: window 10048 1
+strata trace: window 10049 1
+strata trace: window 10050 1
+strata trace: window 10051 1
+strata trace: window 10052 1
+strata trace: window 10053 1
+strata trace: window 10054 1
+strata trace: window 10055 1
+strata trace: window 10056 1
+strata trace: window 10057 1
+strata trace: window 10058 1
+strata trace: window 10059 1
+strata trace: window 10060 1
+strata trace: window 10061 1
+strata trace: window 10062 1
+strata trace: window 10063 1
+strata trace: window 10064 1
+strata trace: window 10065 1
+strata trace: window 10066 1
+strata trace: window 10067 1
+strata trace: window 10068 1
+strata trace: window 10069 1
+strata trace: window 10070 1
+strata trace: window 10071 1
+strata trace: window 10072 1
+strata trace: window 10073 1
+strata trace: window 10074 1
+strata trace: window 10075 1
+strata trace: window 10076 1
+strata trace: window 10077 1
+strata trace: window 10078 1
+strata trace: window 10079 1
+strata trace: window 10080 1
+strata trace: window 10081 1
+strata trace: window 10082 1
+strata trace: window 10083 1
+strata trace: window 10084 1
+strata trace: window 10085 1
+strata trace: window 10086 1
+strata trace: window 10087 1
+strata trace: window 10088 1
+strata trace: window 10089 1
+strata trace: window 10090 1
+strata trace: window 10091 1
+strata trace: window 10092 1
+strata trace: window 10093 1
+strata trace: window 10094 1
+strata trace: window 10095 1
+strata trace: window 10096 1
+strata trace: window 10097 1
+strata trace: window 10098 1
+strata trace: window 10099 1
+strata trace: window 10100 1
+strata trace: window 10101 1
+strata trace: window 10102 1
+strata trace: window 10103 1
+strata trace: window 10104 1
+strata trace: window 10105 1
+strata trace: window 10106 1
+strata trace: window 10107 1
+strata trace: window 10108 1
+strata trace: window 10109 1
+strata trace: window 10110 1
+strata trace: window 10111 1
+strata trace: window 10112 1
+metal cb timing: 256 cbs, GPU busy 5084.4 ms of 5402.3 ms (94.1%), 19.861 ms/cb
+strata trace: window 10113 1
+strata trace: window 10114 1
+strata trace: window 10115 1
+strata trace: window 10116 1
+strata trace: window 10117 1
+strata trace: window 10118 1
+strata trace: window 10119 1
+strata trace: window 10120 1
+strata trace: window 10121 1
+strata trace: window 10122 1
+strata trace: window 10123 1
+strata trace: window 10124 1
+strata trace: window 10125 1
+strata trace: window 10126 1
+strata trace: window 10127 1
+strata trace: window 10128 1
+strata trace: window 10129 1
+strata trace: window 10130 1
+strata trace: window 10131 1
+strata trace: window 10132 1
+strata trace: window 10133 1
+strata trace: window 10134 1
+strata trace: window 10135 1
+strata trace: window 10136 1
+strata trace: window 10137 1
+strata trace: window 10138 1
+strata trace: window 10139 1
+strata trace: window 10140 1
+strata trace: window 10141 1
+strata trace: window 10142 1
+strata trace: window 10143 1
+strata trace: window 10144 1
+strata trace: window 10145 1
+strata trace: window 10146 1
+strata trace: window 10147 1
+strata trace: window 10148 1
+strata trace: window 10149 1
+strata trace: window 10150 1
+strata trace: window 10151 1
+strata trace: window 10152 1
+strata trace: window 10153 1
+strata trace: window 10154 1
+strata trace: window 10155 1
+strata trace: window 10156 1
+strata trace: window 10157 1
+strata trace: window 10158 1
+strata trace: window 10159 1
+strata trace: window 10160 1
+strata trace: window 10161 1
+strata trace: window 10162 1
+strata trace: window 10163 1
+strata trace: window 10164 1
+strata trace: window 10165 1
+strata trace: window 10166 1
+strata trace: window 10167 1
+strata trace: window 10168 1
+strata trace: window 10169 1
+strata trace: window 10170 1
+strata trace: window 10171 1
+strata trace: window 10172 1
+strata trace: window 10173 1
+strata trace: window 10174 1
+strata trace: window 10175 1
+strata trace: window 10176 1
+strata trace: window 10177 1
+strata trace: window 10178 1
+strata trace: window 10179 1
+strata trace: window 10180 1
+strata trace: window 10181 1
+strata trace: window 10182 1
+strata trace: window 10183 1
+strata trace: window 10184 1
+strata trace: window 10185 1
+strata trace: window 10186 1
+strata trace: window 10187 1
+strata trace: window 10188 1
+strata trace: window 10189 1
+strata trace: window 10190 1
+strata trace: window 10191 1
+strata trace: window 10192 1
+strata trace: window 10193 1
+strata trace: window 10194 1
+strata trace: window 10195 1
+strata trace: window 10196 1
+strata trace: window 10197 1
+strata trace: window 10198 1
+strata trace: window 10199 1
+strata trace: window 10200 1
+strata trace: window 10201 1
+strata trace: window 10202 1
+strata trace: window 10203 1
+strata trace: window 10204 1
+strata trace: window 10205 1
+strata trace: window 10206 1
+strata trace: window 10207 1
+strata trace: window 10208 1
+strata trace: window 10209 1
+strata trace: window 10210 1
+strata trace: window 10211 1
+strata trace: window 10212 1
+strata trace: window 10213 1
+strata trace: window 10214 1
+strata trace: window 10215 1
+strata trace: window 10216 1
+strata trace: window 10217 1
+strata trace: window 10218 1
+strata trace: window 10219 1
+strata trace: window 10220 1
+strata trace: window 10221 1
+strata trace: window 10222 1
+strata trace: window 10223 1
+strata trace: window 10224 1
+strata trace: window 10225 1
+strata trace: window 10226 1
+strata trace: window 10227 1
+strata trace: window 10228 1
+strata trace: window 10229 1
+strata trace: window 10230 1
+strata trace: window 10231 1
+strata trace: window 10232 1
+strata trace: window 10233 1
+strata trace: window 10234 1
+strata trace: window 10235 1
+strata trace: window 10236 1
+strata trace: window 10237 1
+strata trace: window 10238 1
+strata trace: window 10239 1
+strata trace: window 10240 1
+metal cb timing: 256 cbs, GPU busy 5563.4 ms of 5885.5 ms (94.5%), 21.732 ms/cb
+strata trace: window 10241 1
+strata trace: window 10242 1
+strata trace: window 10243 1
+strata trace: window 10244 1
+strata trace: window 10245 1
+strata trace: window 10246 1
+strata trace: window 10247 1
+strata trace: window 10248 1
+strata trace: window 10249 1
+strata trace: window 10250 1
+strata trace: window 10251 1
+strata trace: window 10252 1
+strata trace: window 10253 1
+strata trace: window 10254 1
+strata decode timing: 256 windows, avg T 1.00, 1.00 tokens/window, 45.36 ms/window = verify 45.06 (GPU-reach wait 0.00 + per-layer host 0.00 [plan 0.00 actq 0.00 jobs 0.00 CPU 0.00] + stage 0.02) + commit/emit 0.21 + draft 0.00; per layer-window: CPU experts 0.00 (0.00 entries), VRAM hits 0.00, PCIe 0.00
+strata serve: prompt 10000 tokens = 9993 reused + 7 read in 324 ms (21.6 tok/s), 256 generated in 11613 ms (22.0 tok/s), drafts accepted 0 of 0, 1 checkpoints
+strata serve: decode expert cache hit rate: 100.0% (122880 hits / 122880 lookups)
+strata serve: expert tiers: GPU 122880 hits this request; since the start RAM 0 blobs, files 0 blobs 35456.5 MB read (the GGUF in place)
+strata trace: request 10000 0
+strata trace: prompt start 9999 -1
+strata trace: read 6 tokens (windows) in 312.2 ms
+strata trace: prompt done (slots refilled) -1 -1
+strata trace: window 9999 1
+strata trace: window 10000 1
+strata trace: window 10001 1
+strata trace: window 10002 1
+strata trace: window 10003 1
+strata trace: window 10004 1
+strata trace: window 10005 1
+strata trace: window 10006 1
+strata trace: window 10007 1
+strata trace: window 10008 1
+strata trace: window 10009 1
+strata trace: window 10010 1
+strata trace: window 10011 1
+strata trace: window 10012 1
+strata trace: window 10013 1
+strata trace: window 10014 1
+strata trace: window 10015 1
+strata trace: window 10016 1
+strata trace: window 10017 1
+strata trace: window 10018 1
+strata trace: window 10019 1
+strata trace: window 10020 1
+strata trace: window 10021 1
+strata trace: window 10022 1
+strata trace: window 10023 1
+strata trace: window 10024 1
+strata trace: window 10025 1
+strata trace: window 10026 1
+strata trace: window 10027 1
+strata trace: window 10028 1
+strata trace: window 10029 1
+strata trace: window 10030 1
+strata trace: window 10031 1
+strata trace: window 10032 1
+strata trace: window 10033 1
+strata trace: window 10034 1
+strata trace: window 10035 1
+strata trace: window 10036 1
+strata trace: window 10037 1
+strata trace: window 10038 1
+strata trace: window 10039 1
+strata trace: window 10040 1
+strata trace: window 10041 1
+strata trace: window 10042 1
+strata trace: window 10043 1
+strata trace: window 10044 1
+strata trace: window 10045 1
+strata trace: window 10046 1
+strata trace: window 10047 1
+strata trace: window 10048 1
+strata trace: window 10049 1
+strata trace: window 10050 1
+strata trace: window 10051 1
+strata trace: window 10052 1
+strata trace: window 10053 1
+strata trace: window 10054 1
+strata trace: window 10055 1
+strata trace: window 10056 1
+strata trace: window 10057 1
+strata trace: window 10058 1
+strata trace: window 10059 1
+strata trace: window 10060 1
+strata trace: window 10061 1
+strata trace: window 10062 1
+strata trace: window 10063 1
+strata trace: window 10064 1
+strata trace: window 10065 1
+strata trace: window 10066 1
+strata trace: window 10067 1
+strata trace: window 10068 1
+strata trace: window 10069 1
+strata trace: window 10070 1
+strata trace: window 10071 1
+strata trace: window 10072 1
+strata trace: window 10073 1
+strata trace: window 10074 1
+strata trace: window 10075 1
+strata trace: window 10076 1
+strata trace: window 10077 1
+strata trace: window 10078 1
+strata trace: window 10079 1
+strata trace: window 10080 1
+strata trace: window 10081 1
+strata trace: window 10082 1
+strata trace: window 10083 1
+strata trace: window 10084 1
+metal cb timing: 256 cbs, GPU busy 4815.0 ms of 5060.5 ms (95.2%), 18.809 ms/cb
+strata trace: window 10085 1
+strata trace: window 10086 1
+strata trace: window 10087 1
+strata trace: window 10088 1
+strata trace: window 10089 1
+strata trace: window 10090 1
+strata trace: window 10091 1
+strata trace: window 10092 1
+strata trace: window 10093 1
+strata trace: window 10094 1
+strata trace: window 10095 1
+strata trace: window 10096 1
+strata trace: window 10097 1
+strata trace: window 10098 1
+strata trace: window 10099 1
+strata trace: window 10100 1
+strata trace: window 10101 1
+strata trace: window 10102 1
+strata trace: window 10103 1
+strata trace: window 10104 1
+strata trace: window 10105 1
+strata trace: window 10106 1
+strata trace: window 10107 1
+strata trace: window 10108 1
+strata trace: window 10109 1
+strata trace: window 10110 1
+strata trace: window 10111 1
+strata trace: window 10112 1
+strata trace: window 10113 1
+strata trace: window 10114 1
+strata trace: window 10115 1
+strata trace: window 10116 1
+strata trace: window 10117 1
+strata trace: window 10118 1
+strata trace: window 10119 1
+strata trace: window 10120 1
+strata trace: window 10121 1
+strata trace: window 10122 1
+strata trace: window 10123 1
+strata trace: window 10124 1
+strata trace: window 10125 1
+strata trace: window 10126 1
+strata trace: window 10127 1
+strata trace: window 10128 1
+strata trace: window 10129 1
+strata trace: window 10130 1
+strata trace: window 10131 1
+strata trace: window 10132 1
+strata trace: window 10133 1
+strata trace: window 10134 1
+strata trace: window 10135 1
+strata trace: window 10136 1
+strata trace: window 10137 1
+strata trace: window 10138 1
+strata trace: window 10139 1
+strata trace: window 10140 1
+strata trace: window 10141 1
+strata trace: window 10142 1
+strata trace: window 10143 1
+strata trace: window 10144 1
+strata trace: window 10145 1
+strata trace: window 10146 1
+strata trace: window 10147 1
+strata trace: window 10148 1
+strata trace: window 10149 1
+strata trace: window 10150 1
+strata trace: window 10151 1
+strata trace: window 10152 1
+strata trace: window 10153 1
+strata trace: window 10154 1
+strata trace: window 10155 1
+strata trace: window 10156 1
+strata trace: window 10157 1
+strata trace: window 10158 1
+strata trace: window 10159 1
+strata trace: window 10160 1
+strata trace: window 10161 1
+strata trace: window 10162 1
+strata trace: window 10163 1
+strata trace: window 10164 1
+strata trace: window 10165 1
+strata trace: window 10166 1
+strata trace: window 10167 1
+strata trace: window 10168 1
+strata trace: window 10169 1
+strata trace: window 10170 1
+strata trace: window 10171 1
+strata trace: window 10172 1
+strata trace: window 10173 1
+strata trace: window 10174 1
+strata trace: window 10175 1
+strata trace: window 10176 1
+strata trace: window 10177 1
+strata trace: window 10178 1
+strata trace: window 10179 1
+strata trace: window 10180 1
+strata trace: window 10181 1
+strata trace: window 10182 1
+strata trace: window 10183 1
+strata trace: window 10184 1
+strata trace: window 10185 1
+strata trace: window 10186 1
+strata trace: window 10187 1
+strata trace: window 10188 1
+strata trace: window 10189 1
+strata trace: window 10190 1
+strata trace: window 10191 1
+strata trace: window 10192 1
+strata trace: window 10193 1
+strata trace: window 10194 1
+strata trace: window 10195 1
+strata trace: window 10196 1
+strata trace: window 10197 1
+strata trace: window 10198 1
+strata trace: window 10199 1
+strata trace: window 10200 1
+strata trace: window 10201 1
+strata trace: window 10202 1
+strata trace: window 10203 1
+strata trace: window 10204 1
+strata trace: window 10205 1
+strata trace: window 10206 1
+strata trace: window 10207 1
+strata trace: window 10208 1
+strata trace: window 10209 1
+strata trace: window 10210 1
+strata trace: window 10211 1
+strata trace: window 10212 1
+metal cb timing: 256 cbs, GPU busy 5302.6 ms of 5653.0 ms (93.8%), 20.713 ms/cb
+strata trace: window 10213 1
+strata trace: window 10214 1
+strata trace: window 10215 1
+strata trace: window 10216 1
+strata trace: window 10217 1
+strata trace: window 10218 1
+strata trace: window 10219 1
+strata trace: window 10220 1
+strata trace: window 10221 1
+strata trace: window 10222 1
+strata trace: window 10223 1
+strata trace: window 10224 1
+strata trace: window 10225 1
+strata trace: window 10226 1
+strata trace: window 10227 1
+strata trace: window 10228 1
+strata trace: window 10229 1
+strata trace: window 10230 1
+strata trace: window 10231 1
+strata trace: window 10232 1
+strata trace: window 10233 1
+strata trace: window 10234 1
+strata trace: window 10235 1
+strata trace: window 10236 1
+strata trace: window 10237 1
+strata trace: window 10238 1
+strata trace: window 10239 1
+strata trace: window 10240 1
+strata trace: window 10241 1
+strata trace: window 10242 1
+strata trace: window 10243 1
+strata trace: window 10244 1
+strata trace: window 10245 1
+strata trace: window 10246 1
+strata trace: window 10247 1
+strata trace: window 10248 1
+strata trace: window 10249 1
+strata trace: window 10250 1
+strata trace: window 10251 1
+strata trace: window 10252 1
+strata trace: window 10253 1
+strata trace: window 10254 1
+strata decode timing: 256 windows, avg T 1.00, 1.00 tokens/window, 45.47 ms/window = verify 45.21 (GPU-reach wait 0.00 + per-layer host 0.00 [plan 0.00 actq 0.00 jobs 0.00 CPU 0.00] + stage 0.02) + commit/emit 0.19 + draft 0.00; per layer-window: CPU experts 0.00 (0.00 entries), VRAM hits 0.00, PCIe 0.00
+strata serve: prompt 10000 tokens = 9993 reused + 7 read in 345 ms (20.3 tok/s), 256 generated in 11641 ms (22.0 tok/s), drafts accepted 0 of 0, 1 checkpoints
+strata serve: decode expert cache hit rate: 100.0% (122880 hits / 122880 lookups)
+strata serve: expert tiers: GPU 122880 hits this request; since the start RAM 0 blobs, files 0 blobs 35456.5 MB read (the GGUF in place)

@@ -1,0 +1,16 @@
+Internal ctest changing into directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+Test project /Users/liangxw/src/xproject/petproject/Strata/build-metal
+    Start  6: metal_mmvq_decode_test
+1/5 Test  #6: metal_mmvq_decode_test ...........   Passed    1.48 sec
+    Start  7: metal_quant_integer_test
+2/5 Test  #7: metal_quant_integer_test .........   Passed    0.61 sec
+    Start 22: iq_parity
+3/5 Test #22: iq_parity ........................   Passed    1.68 sec
+    Start 23: iq_multi_parity
+4/5 Test #23: iq_multi_parity ..................   Passed    8.84 sec
+    Start 32: mmvq_multi_parity
+5/5 Test #32: mmvq_multi_parity ................   Passed    1.43 sec
+
+100% tests passed, 0 tests failed out of 5
+
+Total Test time (real) =  14.04 sec

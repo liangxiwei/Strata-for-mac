@@ -405,6 +405,7 @@ struct TokenGraph {
     double ms_wait = 0;              ///< host waiting for rings (the GPU is running)
     double ms_pool = 0;              ///< host inside the pool
     int64_t flushes = 0;             ///< cudaStreamQuery calls made because a ring was slow to appear
+    bool all_gpu = false;           ///< immutable, fully resident Metal experts: no host step between layers
 };
 
 /// Plan v0.3 P4: the VRAM expert tier inside the token graph.  Residency is STATIC during a token (a
@@ -422,6 +423,7 @@ struct TokenHits {
     float* x_scale = nullptr;            ///< and its fp32 scales (the CPU pool's contract)
     void* scratch = nullptr;             ///< moe_hit_grouped_scratch_bytes(k, ...)
     float* hit_out = nullptr;            ///< device, k * n_embd
+    bool all_resident = false;           ///< the entire residency table is static and has no misses
     bool on() const { return d_res && cache_base && d_slot && d_dst && d_count && x_q8 && x_scale && scratch && hit_out; }
 };
 

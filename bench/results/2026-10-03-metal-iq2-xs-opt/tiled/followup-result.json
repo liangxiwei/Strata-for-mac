@@ -1,0 +1,43 @@
+{
+  "wall_s": 5.3723005,
+  "first_text_s": 2.3354617500000003,
+  "timings": {
+    "cache_n": 10255,
+    "prompt_n": 35,
+    "prompt_ms": 2240.4,
+    "prompt_per_token_ms": 64.011,
+    "prompt_per_second": 15.6,
+    "predicted_n": 56,
+    "predicted_ms": 3081.5,
+    "predicted_per_token_ms": 55.027,
+    "predicted_per_second": 18.2,
+    "draft_n": 0,
+    "draft_n_accepted": 0
+  },
+  "usage": {
+    "prompt_tokens": 10290,
+    "completion_tokens": 56,
+    "total_tokens": 10346,
+    "prompt_tokens_details": {
+      "cached_tokens": 10255
+    }
+  },
+  "finish_reason": "stop",
+  "content": "Prefill 阶段负责处理输入提示词，其速度受显存带宽和专家缓存策略影响，而 Decode 阶段负责生成输出 token，其速度受投机解码接受率及专家计算方式影响。校验码为：AX-7319。",
+  "reasoning_content": "",
+  "needle_matches": {
+    "银杏": false,
+    "10月18日": false,
+    "AX-7319": true
+  },
+  "health": {
+    "status": "ok",
+    "max_context": 32768,
+    "model": "qwen3.8-flash-next",
+    "images": false,
+    "api_key": false,
+    "loaded": true,
+    "service": "strata"
+  },
+  "sampled_peak_engine_rss_gib": 33.60929870605469
+}

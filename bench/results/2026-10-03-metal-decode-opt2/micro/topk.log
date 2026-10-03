@@ -1,0 +1,9 @@
+n_kv   2052: original   80.50 us  v2   15.96 us  diff 0
+n_kv   2100: original   79.41 us  v2   15.72 us  diff 0
+n_kv   3000: original   48.30 us  v2   15.09 us  diff 0
+n_kv  10000: original   55.83 us  v2   27.21 us  diff 0
+n_kv  10001: original   52.76 us  v2   27.09 us  diff 0
+n_kv  10003: original   54.06 us  v2   27.23 us  diff 0
+n_kv  32000: original  108.29 us  v2   65.03 us  diff 0
+n_kv  32767: original  105.68 us  v2   65.14 us  diff 0
+block_topk: 65632 ids compared, 0 differ

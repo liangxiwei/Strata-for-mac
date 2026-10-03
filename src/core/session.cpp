@@ -24,8 +24,12 @@
 #if defined(_MSC_VER) || defined(__x86_64__) || defined(__i386__)
 #include <immintrin.h>
 #define STRATA_SPIN_PAUSE() _mm_pause()
+#define STRATA_SPIN_SFENCE() _mm_sfence()
 #else
+// Metal port (Apple Silicon): the seq_cst atomic fences on both sides already carry the ordering; the x86
+// store fence is a no-op spelling of what they guarantee there, absent here
 #define STRATA_SPIN_PAUSE() ((void) 0)
+#define STRATA_SPIN_SFENCE() ((void) 0)
 #endif
 
 namespace strata::core {
@@ -485,29 +489,26 @@ bool session_replay_stage_prefixes(const ModelGeometry& g, int64_t pos, int32_t 
 }
 
 void session_graphs_free(SessionGraphs& gr) {
+    auto drop = [](cudaGraphExec_t e) { cudaGraphExecDestroy(e); };
     if (gr.execs) {
-        for (int64_t i = 0; i < gr.n; ++i) cudaGraphExecDestroy(gr.execs[i]);
+        for (int64_t i = 0; i < gr.n; ++i) drop(gr.execs[i]);
         delete[] gr.execs;
     }
     if (gr.posts) {
-        for (int64_t i = 0; i < gr.n; ++i)
-            if (gr.posts[i] != nullptr) cudaGraphExecDestroy(gr.posts[i]);
+        for (int64_t i = 0; i < gr.n; ++i) drop(gr.posts[i]);
         delete[] gr.posts;
     }
     if (gr.preA) {
-        for (int64_t i = 0; i < gr.n; ++i)
-            if (gr.preA[i] != nullptr) cudaGraphExecDestroy(gr.preA[i]);
+        for (int64_t i = 0; i < gr.n; ++i) drop(gr.preA[i]);
         delete[] gr.preA;
     }
     if (gr.preB) {
-        for (int64_t i = 0; i < gr.n; ++i)
-            if (gr.preB[i] != nullptr) cudaGraphExecDestroy(gr.preB[i]);
+        for (int64_t i = 0; i < gr.n; ++i) drop(gr.preB[i]);
         delete[] gr.preB;
     }
     for (int k = 0; k < 5; ++k) {
         if (gr.preP[k] == nullptr) continue;
-        for (int64_t i = 0; i < gr.n; ++i)
-            if (gr.preP[k][i] != nullptr) cudaGraphExecDestroy(gr.preP[k][i]);
+        for (int64_t i = 0; i < gr.n; ++i) drop(gr.preP[k][i]);
         delete[] gr.preP[k];
         gr.preP[k] = nullptr;
     }
@@ -826,6 +827,41 @@ bool session_token(const WeightTable& tables, const ModelGeometry& g, int64_t po
 
 namespace strata::core {
 
+#if defined(STRATA_METAL_BACKEND)
+// Metal port (rule 11, docs/PORT_METAL/PROGRESS.md round 13): the token graph's doorbell_wait kernels spin
+// on the host-raised flag, and a kernel already spinning does NOT observe a later CPU store - the one-graph
+// token, released mid-flight from the host, cannot work here.  The token runs as SEGMENTS instead, cut at
+// every doorbell_wait: segment l+1 holds [wait (flag pre-set), the pool's copy, the hit combine, layer l's
+// post, layer l+1's pre], and the host raises the flag BETWEEN launches - the pre-set read path the wait
+// kernels were verified on.  No launch ever spins on a flag still down.
+namespace {
+struct TokenSegs {
+    std::vector<cudaGraphExec_t> segs;
+    cudaEvent_t kick = nullptr;   ///< commits the stream's open command buffer after each segment launch
+};
+std::mutex g_token_segs_mu;
+std::map<const TokenGraph*, TokenSegs> g_token_segs;
+TokenSegs* token_segs(const TokenGraph* tg, bool create) {
+    std::lock_guard<std::mutex> lk(g_token_segs_mu);
+    if (create) {
+        TokenSegs& t = g_token_segs[tg];
+        if (t.kick == nullptr) (void) cudaEventCreateWithFlags(&t.kick, cudaEventDisableTiming);
+        return &t;
+    }
+    const auto it = g_token_segs.find(tg);
+    return it == g_token_segs.end() ? nullptr : &it->second;
+}
+void token_segs_free(TokenGraph& tg) {
+    std::lock_guard<std::mutex> lk(g_token_segs_mu);
+    const auto it = g_token_segs.find(&tg);
+    if (it == g_token_segs.end()) return;
+    for (cudaGraphExec_t e : it->second.segs) cudaGraphExecDestroy(e);
+    if (it->second.kick != nullptr) cudaEventDestroy(it->second.kick);
+    g_token_segs.erase(it);
+}
+}  // namespace
+#endif
+
 bool session_capture_token(const WeightTable& tables, const ModelGeometry& g, SessionState& s, float* parts_dev,
                            const float* y_miss_host, size_t parts_bytes, TokenGraph& tg, std::string& err,
                            const TokenHits* hits) {
@@ -870,6 +906,36 @@ bool session_capture_token(const WeightTable& tables, const ModelGeometry& g, Se
                                                     hits->blob, hits->x_q8, hits->scratch, hits->hit_out, (void*) cs,
                                                     hits->x_scale);
         }
+#if defined(STRATA_METAL_BACKEND)
+        if (hits != nullptr && hits->all_resident) {
+            // The output rows are already in route order. Every expert ran on this stream, so neither
+            // a host doorbell nor the CPU staging copy is part of this dependency chain.
+            ok = block_layer_post(tables, g, l, s.k, s.moe, s.block, hits->hit_out, (void*) cs, err);
+            if (qsa) ++qsa_index;
+            tg.all_gpu = true;
+            continue;
+        }
+        // Metal port (rule 11): cut the tape HERE - everything before the wait (this layer's pre, its ring,
+        // its hit launches) is one segment; the wait and what follows start the next one, launched by the
+        // host after it has raised the flag, so the wait reads its exit condition pre-set
+        {
+            cudaGraph_t seg = nullptr;
+            std::vector<cudaGraphExec_t>& segs = token_segs(&tg, true)->segs;
+            if (cudaStreamEndCapture(cs, &seg) != cudaSuccess || seg == nullptr ||
+                cudaGraphInstantiate(&segs.emplace_back(nullptr), seg, 0) != cudaSuccess) {
+                if (seg != nullptr) cudaGraphDestroy(seg);
+                err = "session_capture_token: segment capture failed at layer " + std::to_string(l);
+                ok = false;
+                break;
+            }
+            cudaGraphDestroy(seg);
+            if (cudaStreamBeginCapture(cs, cudaStreamCaptureModeThreadLocal) != cudaSuccess) {
+                err = "session_capture_token: segment capture restart failed";
+                ok = false;
+                break;
+            }
+        }
+#endif
         strata::kernels::doorbell_wait(s.db->d_flag, s.db->d_seq, (void*) cs);
         // A kernel, not a memcpy node: a copy-engine node splits the WDDM submission (measured 67 flushes/token).
         strata::kernels::copy_from_mapped(parts_dev, y_dev, (int64_t) (parts_bytes / sizeof(float)), (void*) cs);
@@ -882,17 +948,37 @@ bool session_capture_token(const WeightTable& tables, const ModelGeometry& g, Se
     cudaGraph_t graph = nullptr;
     const cudaError_t ce = cudaStreamEndCapture(cs, &graph);
     cudaStreamDestroy(cs);
-    if (!ok) { if (graph) cudaGraphDestroy(graph); return false; }
+    if (!ok) {
+        if (graph != nullptr) cudaGraphDestroy(graph);
+#if defined(STRATA_METAL_BACKEND)
+        token_segs_free(tg);          // a half-captured token leaves nothing behind
+#endif
+        return false;
+    }
     if (ce != cudaSuccess) {
         err = std::string("session_capture_token: end capture: ") + cudaGetErrorString(ce);
         return false;
     }
+#if defined(STRATA_METAL_BACKEND)
+    // Metal port: what is left on the tape - the LAST layer's wait, the pool's copy, its combine and post -
+    // is the final segment; the host launches it after the last pool step (see session_run_token)
+    {
+        std::vector<cudaGraphExec_t>& segs = token_segs(&tg, true)->segs;
+        if (cudaGraphInstantiate(&segs.emplace_back(nullptr), graph, 0) != cudaSuccess) {
+            cudaGraphDestroy(graph);
+            err = "session_capture_token: tail segment instantiate failed";
+            return false;
+        }
+        cudaGraphDestroy(graph);
+    }
+#else
     const cudaError_t ie = cudaGraphInstantiate(&tg.exec, graph, 0);
     cudaGraphDestroy(graph);
     if (ie != cudaSuccess) {
         err = std::string("session_capture_token: instantiate: ") + cudaGetErrorString(ie);
         return false;
     }
+#endif
     tg.captured = true;
     tg.n_layers = g.n_layers;
     tg.y_src = y_miss_host;
@@ -908,12 +994,47 @@ bool session_run_token(const ModelGeometry& g, int64_t pos, int32_t pos_base, Se
     ++tg.calls;
     stage_token(g, pos, pos_base, s);
     doorbell_reset(*s.db);
+#if defined(STRATA_METAL_BACKEND)
+    // Metal port (rule 11): the segments cut at every doorbell_wait.  The FIRST holds the staging and layer
+    // 0's pre (ending in its ring); segment l+1 - the wait whose flag the host has just raised, the pool's
+    // copy, the combine and post of layer l, and layer l+1's pre - is launched AFTER `*flag = want` below,
+    // so no waiter ever spins on a flag still down.  The ring poll, the pool and the flag store are the CUDA
+    // tree's own, unchanged.
+    const TokenSegs* ts = token_segs(&tg, false);
+    if (ts == nullptr || ts->segs.empty()) { err = "session_run_token: no captured segments"; return false; }
+    const std::vector<cudaGraphExec_t>& segs = ts->segs;
+    const cudaEvent_t kick = ts->kick;
+    if (tg.all_gpu) {
+        const auto start = std::chrono::steady_clock::now();
+        if (cudaGraphLaunch(segs[0], cs) != cudaSuccess || cudaStreamSynchronize(cs) != cudaSuccess) {
+            err = "session_run_token: fully resident Metal graph failed";
+            return false;
+        }
+        tg.ms_wait += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
+        progress_beat();
+        return true;
+    }
+    {
+        const cudaError_t ml = cudaGraphLaunch(segs[0], cs);
+        if (ml != cudaSuccess) { err = std::string("session_run_token: launch: ") + cudaGetErrorString(ml); return false; }
+        // commit the open command buffer (the runtime's launches sit in it until an event record or a sync)
+        (void) cudaEventRecord(kick, cs);
+    }
+#else
     const cudaError_t le = cudaGraphLaunch(tg.exec, cs);
     if (le != cudaSuccess) { err = std::string("session_run_token: launch: ") + cudaGetErrorString(le); return false; }
+#endif
     (void) cudaStreamQuery(cs);                     // one flush, so WDDM submits the graph now
     static const int flush_us = [] {
         const char* e = std::getenv("STRATA_TG_FLUSH_US");
+#ifdef STRATA_METAL_BACKEND
+        // measured on the M2 Max (PROGRESS round 15): 2000 us costs ring-detection latency the pool also
+        // pays (641.9 -> 449.2 ms/token, +43%, just by seeing each ring sooner); 50 us over-flushes and
+        // regresses (490.4).  200 is the knee.
+        return e ? std::atoi(e) : 200;
+#else
         return e ? std::atoi(e) : 2000;   // 24 Sep: 0 flushes run as fast as 5 us ones; this only notices faults
+#endif
     }();
     volatile uint32_t* const seq = s.db->h_seq;
     volatile uint32_t* const flag = s.db->h_flag;
@@ -948,8 +1069,19 @@ bool session_run_token(const ModelGeometry& g, int64_t pos, int32_t pos_base, Se
         progress_at("token: the CPU experts of layer", l);
         if (pool != nullptr) pool(user, s.db->h_x_f, s.db->h_ids, s.db->h_weights, g.n_embd, s.k, y_miss_host);
         std::atomic_thread_fence(std::memory_order_seq_cst);
-        _mm_sfence();
+        STRATA_SPIN_SFENCE();
         *flag = want;
+#if defined(STRATA_METAL_BACKEND)
+        // the next segment's wait reads `flag == want` pre-set (rule 11): launch it only now
+        if ((size_t) (l + 1) < segs.size()) {
+            const cudaError_t ml = cudaGraphLaunch(segs[(size_t) (l + 1)], cs);
+            if (ml != cudaSuccess) {
+                err = std::string("session_run_token: segment launch: ") + cudaGetErrorString(ml);
+                return false;
+            }
+            (void) cudaEventRecord(kick, cs);   // commit: the next ring waits on this segment's work
+        }
+#endif
         const auto t2 = Clock::now();
         tg.ms_wait += std::chrono::duration<double, std::milli>(t1 - t0).count();
         tg.ms_pool += std::chrono::duration<double, std::milli>(t2 - t1).count();
@@ -963,6 +1095,9 @@ bool session_run_token(const ModelGeometry& g, int64_t pos, int32_t pos_base, Se
 }
 
 void token_graph_free(TokenGraph& tg) {
+#if defined(STRATA_METAL_BACKEND)
+    token_segs_free(tg);   // the segmented token's tapes (tg.exec stays null on this backend)
+#endif
     if (tg.exec) cudaGraphExecDestroy(tg.exec);
     tg = TokenGraph{};
 }

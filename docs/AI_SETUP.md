@@ -7,6 +7,11 @@ version of everything below is [INSTALL.md](INSTALL.md).
 
 Work through the steps in order. Tell the user what you are doing in plain words; they may not be technical.
 
+> **Not on this page: macOS.** The model's engine needs an NVIDIA or AMD graphics card (CUDA or HIP), which a Mac
+> does not have - if the user's machine is a Mac, the model cannot run there at all. Do not follow the steps below;
+> [docs/MAC.md](MAC.md) says what a Mac is good for instead (developing and testing the server, the web app and the
+> CPU-side code), and `./setup.sh` on a Mac says the same and stops.
+
 ## 0. Ground rules
 
 - **Never expose the server without an API key.** Keep the default `--host 127.0.0.1`. Only if the user asks for

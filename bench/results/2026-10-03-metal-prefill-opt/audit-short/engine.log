@@ -1,0 +1,52 @@
+strata generate: PCIe probe: 191.8 GB/s host->device -> pcie_frac 0.55 (default 0.55)
+strata generate: this CPU has no AVX-512: the expert kernels run on AVX-2 (multi-token for the i-quant gate/up rows)
+strata generate: native pack: /Users/liangxw/src/xproject/petproject/IQ2_XS/pack-full experts (largest blob 1.51 MB), token embedding IQ4_XS in mapped host memory (322 MiB)
+strata generate: 1466 MiB of weights loaded from /Users/liangxw/src/xproject/petproject/IQ2_XS/pack-full (302 canonical tensors skipped: served natively)
+strata generate: 300 native projection matrices, 1474.85 MiB of weights
+strata generate: the SSD is kept awake while rows are read: one page of the table after 100 ms without a read, until 60 s after the last request (STRATA_SSD_KEEPALIVE=0 turns it off)
+strata generate: profile /Users/liangxw/src/xproject/petproject/Strata/data/expert-profile.bin: 24576 ranked pairs, built for 24576 slots
+strata generate: PLE on, table 320001536 rows of /Users/liangxw/src/xproject/petproject/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf
+strata mtp: draft layer loaded, 869 MiB of VRAM (experts 675, dense 111), files read in 0.32 s (2491 MiB/s)
+strata generate: GPU 0: Apple M2 Max, compute capability 10.0
+strata generate: experts via mmap (--mmap-experts; the GGUF shards in place, no experts.bin)
+strata generate: experimental native Q5_K head, 337715200 bytes
+strata generate: expert cache auto: 72.48 GiB free, 700 MiB reserved (+3 MiB for the draft head) -> 24576 slots
+strata generate: expert cache 24576 slots, 33.02 GiB of VRAM; policy is
+strata generate: the GPU computes the experts in the cache; it rounds differently from the CPU,
+                 so a reply can differ slightly from a run without the cache (same quality:
+                 bench/results/2026-09-27-cache-parity).
+                 PROFILE, ranked by routing frequency, no eviction.
+strata generate: pre-filled 24576 of 24576 slots from the profile; slot 0 verified
+strata generate: routing-aware prefetch of the file tier on (the next layer's router)
+strata generate: R4 hit path ON - resident experts are computed on the GPU
+strata generate: 11 expert-pool workers + the host thread
+strata generate: session is up (engine 0.1.34)
+strata generate: token graph hit path: 24576 resident experts, decided on the device
+strata serve: the prompt path allocates its own buffers (too few cache slots to borrow)
+strata hc: METAL: the hyper-connection read runs as the plain one (the split and staged variants are CUDA stagings of the same arithmetic; this port has one read)
+strata verify: --pcie-mode 0 -> 1 on Metal (direct reads of the mapped arena; rules 11 + 9)
+strata verify: window up to 4 tokens, 45.4 MiB of device buffers
+strata serve: 39453 MiB of VRAM free with everything loaded
+strata verify: captured the 4-token window, all experts on Metal
+strata verify: captured the 1-token window, all experts on Metal
+strata verify: captured the 2-token window, all experts on Metal
+strata serve: STATE_HASH_GDN ec74 77cf e548 473e 3137 35db fe0f 9b11 f9f3 6af2 fd20 2b2c 5c25 8850 ded5 6825 a7da be84 2aa5 aa33 1b91 ff4f 1dd9 c980 833a d7dc 1026 9207 18d9 db3e 5984 060d ee9b 1809 8038 29e7 
+strata serve: STATE_HASH L=72 gdn=78fdcb06ed3b58a3 ple=93bbd3888cdfa626 tail=948211cee225a6ea pooled=d120e3b9a1db0f85 kv=00a0554e4b75fc38 mtp=aa17da806a0949c9 stale=14650fb0739d0383 dead=acfee55670c0c7d1 pooled_full=c9f18706d887680b ple_prev=248069,271
+strata serve: prompt 72 tokens = 0 reused + 72 read in 3277 ms (22.0 tok/s), 1 generated in 39 ms (25.6 tok/s), drafts accepted 0 of 0, 1 checkpoints
+strata serve: decode expert cache hit rate: 100.0% (480 hits / 480 lookups)
+strata serve: expert tiers: GPU 480 hits this request; since the start RAM 0 blobs, files 0 blobs 35456.5 MB read (the GGUF in place)
+strata serve: STATE_HASH_GDN dcd4 80bd 698c e8db 1908 742a cf20 f32e 9f01 9655 7f8b 6bf0 9edf 9476 9c71 7bcf 3d91 618c 48ef 427b 85a6 6b0e 48c4 f7dd c30b c720 88d1 41c2 27ec 6e36 4179 1597 1496 7a4b b560 30be 
+strata serve: STATE_HASH L=84 gdn=312a4071b5f07186 ple=baba827c632ed447 tail=85f500393011c60e pooled=392ce4c697e41803 kv=2b3e4e2a60938464 mtp=976ed57bf5082a81 stale=14650fb0739d0383 dead=acfee55670c0c7d1 pooled_full=8e57a1e7f4044c45 ple_prev=248069,271
+strata serve: prompt 84 tokens = 0 reused + 84 read in 3113 ms (27.0 tok/s), 1 generated in 38 ms (26.6 tok/s), drafts accepted 0 of 0, 1 checkpoints
+strata serve: decode expert cache hit rate: 100.0% (480 hits / 480 lookups)
+strata serve: expert tiers: GPU 480 hits this request; since the start RAM 0 blobs, files 0 blobs 35456.5 MB read (the GGUF in place)
+strata serve: STATE_HASH_GDN e430 c992 5ffc 5dee d396 4d97 6d54 d3d6 b650 e5c7 c646 6ce2 6028 3b6b 440b 7ff7 6172 d84a 83fd ea3a 65a8 5295 3689 dcdd 20d8 2651 2392 6361 8491 6f42 0fd3 de4f 1e1f 6589 5a19 33c3 
+strata serve: STATE_HASH L=61 gdn=6885474aa76de373 ple=c0cf281a70580763 tail=39d50f47a9bba41f pooled=3c6d38c56dfb91be kv=60cc05c4f44a4bcc mtp=e6a40bd844af04ea stale=3452ac1b08ca8383 dead=acfee55670c0c7d1 pooled_full=4bde1a8b99992f24 ple_prev=248069,271
+strata serve: prompt 61 tokens = 0 reused + 61 read in 2229 ms (27.4 tok/s), 1 generated in 38 ms (26.4 tok/s), drafts accepted 0 of 0, 1 checkpoints
+strata serve: decode expert cache hit rate: 100.0% (480 hits / 480 lookups)
+strata serve: expert tiers: GPU 480 hits this request; since the start RAM 0 blobs, files 0 blobs 35456.5 MB read (the GGUF in place)
+strata serve: STATE_HASH_GDN 026e fb05 d2e7 0651 5280 a1ea 83a7 3685 2eba 09af c282 5178 6e01 ccfd afb8 e611 3132 8889 523c 08c8 1e0b f090 02b2 b51d 6341 da41 0054 5896 0a46 d4c5 e18c 2023 aba1 dba7 f724 c79c 
+strata serve: STATE_HASH L=73 gdn=3f4be3ef4315a3bf ple=b6f8f2f0eca58bec tail=d6331515a4b947e9 pooled=5450ac46574dff04 kv=9e4c696bd84c214f mtp=d23d0e890201cc9c stale=3452ac1b08ca8383 dead=acfee55670c0c7d1 pooled_full=a359da648cbb3fa2 ple_prev=248069,271
+strata serve: prompt 73 tokens = 0 reused + 73 read in 2715 ms (26.9 tok/s), 1 generated in 36 ms (27.5 tok/s), drafts accepted 0 of 0, 1 checkpoints
+strata serve: decode expert cache hit rate: 100.0% (480 hits / 480 lookups)
+strata serve: expert tiers: GPU 480 hits this request; since the start RAM 0 blobs, files 0 blobs 35456.5 MB read (the GGUF in place)

@@ -1,0 +1,8 @@
+Internal ctest changing into directory: /Users/liangxw/src/xproject/petproject/Strata/build-metal
+Test project /Users/liangxw/src/xproject/petproject/Strata/build-metal
+    Start 19: iq_multi_parity
+1/1 Test #19: iq_multi_parity ..................   Passed    5.61 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) =   5.62 sec

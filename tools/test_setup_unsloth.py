@@ -157,6 +157,7 @@ class Main(unittest.TestCase):
 
         patches = [
             mock.patch.object(setup, "ROOT", self.t),
+            mock.patch.object(setup, "MAC", False),     # the simulated PCs are Windows/Linux (the gate is real macOS)
             mock.patch.object(setup, "GPU_PICK", None),
             mock.patch.object(setup, "data_folder", lambda d: (self.t / "data", [])),
             mock.patch.object(setup, "installed_configs", lambda: []),

@@ -1,0 +1,10 @@
+Apple M2 Max
+stage 1 draw 0 dispatch 0 blit 0 tile 0
+set timestamp
+samples 1024 -> ok 
+samples 4096 -> ok 
+samples 8192 -> FAIL Invalid sample buffer length: 65536 B. Expected range: 8 -> 32768
+samples 16384 -> FAIL Invalid sample buffer length: 131072 B. Expected range: 8 -> 32768
+samples 32768 -> FAIL Invalid sample buffer length: 262144 B. Expected range: 8 -> 32768
+samples 65536 -> FAIL Invalid sample buffer length: 524288 B. Expected range: 8 -> 32768
+cpu 103601833 gpu 103601833 ratio 1.000000 timebase 125/3

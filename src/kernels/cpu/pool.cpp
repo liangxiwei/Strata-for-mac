@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <cmath>
 #include <chrono>
-#include <immintrin.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -18,10 +17,24 @@
 #include <pthread.h>
 #include <sched.h>
 #endif
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
+#include <immintrin.h>    // _mm_pause
+#endif
 
 namespace strata::kernels::cpu {
 
 namespace {
+/// The spin-wait hint.  x86 `_mm_pause`; ARM (`yield`) is the same idea.  A no-op elsewhere rather than a full
+/// `std::this_thread::yield()`: the pool parks on an atomic the host bumps once per layer, and a scheduler call
+/// per iteration was measured as pure loss on the x86 spin this mirrors.
+inline void pause_hint() {
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
+    _mm_pause();
+#elif defined(__aarch64__)
+    __asm__ volatile("yield");
+#endif
+}
+
 constexpr uint64_t pack_head(uint32_t epoch, uint32_t n, uint32_t i) {
     return ((uint64_t) epoch << 32) | ((uint64_t) n << 16) | (uint64_t) i;
 }
@@ -135,6 +148,19 @@ CpuTopology detect_cpu_topology(bool skip_first, PoolAffinity affinity) {
         }
         return topo;
     }
+#elif defined(__APPLE__)
+    // macOS: no sysfs and no sched_getaffinity/cpu_set_t.  Every logical CPU the process may use is counted as a
+    // worker core; Apple Silicon's P/E-core split is left to the scheduler (there is no affinity API to shape it
+    // with - thread affinity hints exist per L2 cluster and the QoS classes are not this pool's to set), so
+    // `is_hybrid` stays false and every core is offered, like the sysfs-less fallback on Linux below.
+    for (unsigned i = 0; i < std::thread::hardware_concurrency(); ++i) topo.worker_cores.push_back((int) i);
+    topo.p_cores = (int) topo.worker_cores.size();
+    topo.p_threads = (int) topo.worker_cores.size();
+    if (skip_first && !topo.worker_cores.empty()) {
+        topo.host_core = topo.worker_cores.front();
+        topo.worker_cores.erase(topo.worker_cores.begin());
+    }
+    return topo;
 #else
     // The logical CPUs this process may run on, ONE PER PHYSICAL CORE (issue #40): SMT siblings share a core's
     // load/store bandwidth, so a worker on each would put two workers on one core, as the Windows branch above
@@ -268,6 +294,9 @@ void pin_this_thread(int core) {
     if (core < 0) return;
 #if defined(_WIN32)
     SetThreadAffinityMask(GetCurrentThread(), (DWORD_PTR) 1 << (core & 63));
+#elif defined(__APPLE__)
+    // macOS has no thread-to-core pinning (see detect_cpu_topology above); the scheduler places the thread.
+    (void) core;
 #else
     cpu_set_t set;
     CPU_ZERO(&set);
@@ -285,6 +314,10 @@ long long pin_current_thread(int core) {
     // why the caller must not treat it as a restorable value.
     const DWORD_PTR prev = SetThreadAffinityMask(GetCurrentThread(), (DWORD_PTR) 1 << (core & 63));
     return prev == 0 ? -1 : (long long) prev;
+#elif defined(__APPLE__)
+    // No affinity to save or restore on macOS; -1 says "nothing restorable", as on a failed Windows pin.
+    (void) core;
+    return -1;
 #else
     cpu_set_t prev;
     CPU_ZERO(&prev);
@@ -301,6 +334,8 @@ void restore_thread_affinity(long long previous) {
     if (previous <= 0) return;
 #if defined(_WIN32)
     SetThreadAffinityMask(GetCurrentThread(), (DWORD_PTR) previous);
+#elif defined(__APPLE__)
+    (void) previous;    // pin_current_thread never returned a mask here
 #else
     cpu_set_t set;
     CPU_ZERO(&set);
@@ -417,7 +452,7 @@ void ExpertPool::worker(int id) {
         uint32_t spins = 0;
         while (epoch_.load(std::memory_order_acquire) == seen) {
             if (stop_.load(std::memory_order_relaxed)) return;
-            _mm_pause();
+            pause_hint();
             if ((++spins & 1023u) != 0) continue;
             if (std::chrono::steady_clock::now() - parked_at < spin_before_sleep_) continue;
             std::unique_lock<std::mutex> lk(sleep_mu_);
@@ -475,7 +510,7 @@ void ExpertPool::wait_parked(const char* what) {
     uint32_t spins = 0;
     std::chrono::steady_clock::time_point t0{};
     while (parked_.load(std::memory_order_acquire) != (uint32_t) n_) {
-        _mm_pause();
+        pause_hint();
         if ((++spins & 1023u) != 0) continue;
         const auto now = std::chrono::steady_clock::now();
         if (spins == 1024u) t0 = now;
@@ -498,7 +533,7 @@ void ExpertPool::wait_done(int n) {
     for (;;) {
         const uint32_t d = done_.load(std::memory_order_acquire);
         if (d >= (uint32_t) n) return;                                // `>=`: never a wait that an overshoot outlives
-        _mm_pause();
+        pause_hint();
         if ((++spins & 1023u) != 0) continue;
         const auto now = std::chrono::steady_clock::now();
         if (spins == 1024u || d != seen) { t0 = now; seen = d; }     // progress restarts the clock

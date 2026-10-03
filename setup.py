@@ -58,6 +58,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 WIN = os.name == "nt"
+MAC = sys.platform == "darwin"     # the engine needs CUDA or HIP: on a Mac, main() stops with what does run there
 # #214: every Hugging Face file comes from a fixed commit of its repository (the `sha` of
 # https://huggingface.co/api/models/<repo> when this was pinned), so a checkout installs the same files on any
 # day.  A revision the repository no longer has falls back to its current files, with a message (download()).
@@ -271,6 +272,8 @@ def _memory_status():
 def ram_gb():
     if WIN:
         return _memory_status().ullTotalPhys / 2**30
+    if sys.platform == "darwin":
+        return os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") / 2**30
     for line in open("/proc/meminfo"):
         if line.startswith("MemTotal"):
             return int(line.split()[1]) * 1024 / 2**30
@@ -297,6 +300,9 @@ def cpu_info():
         n = out(["powershell", "-NoProfile", "-Command", "(Get-CimInstance Win32_Processor).Name"]).strip()
         name = n or name
         avx512 = bool(pf(41)) and _cpuid_avx512_full()
+    elif sys.platform == "darwin":
+        # an Apple-Silicon Mac: no AVX2/AVX-512 (the engine's CPU kernels are x86; see the macOS note in main)
+        name = out(["sysctl", "-n", "machdep.cpu.brand_string"]).strip() or "Apple Silicon"
     else:
         try:
             txt = open("/proc/cpuinfo").read()
@@ -2603,6 +2609,20 @@ def main() -> int:
         else:
             ap.error(f"--gpu takes a GPU number as nvidia-smi numbers them, e.g. --gpu 1 (or --gpus 0,2), not {a.gpu!r}")
     say("Strata - Qwen3.8-Flash-Next on a normal PC (a GPU + system RAM + CPU)")
+    if MAC:
+        # The engine is CUDA (NVIDIA) or HIP (AMD); a Mac has neither, and its CPU is not x86 either, so the model
+        # cannot run here.  What a Mac CAN do (docs/MAC.md): the server, the web app and the API against the mock
+        # engine, and the C++/Python test suites.  This stops before creating folders or downloading anything.
+        cpu, _, _ = cpu_info()
+        say()
+        say(f"  This is a Mac ({cpu}, {ram_gb():.0f} GB RAM): the model's engine cannot run here. Strata's engine")
+        say("  needs an NVIDIA GeForce RTX 20/30/40/50 or a supported AMD Radeon graphics card (CUDA or HIP), and")
+        say("  macOS offers neither. Run Strata on a Windows or Linux PC with such a card.")
+        say()
+        say("  A Mac is good for working ON Strata - docs/MAC.md has the measured steps:")
+        say("    cmake -S . -B build -DSTRATA_BUILD_TESTS=ON && cmake --build build && ctest --test-dir build")
+        say(f"    {'.venv/bin/python' if os.path.exists(ROOT / '.venv' / 'bin' / 'python') else 'python3'} -m serve.server --engine mock --port 8080")
+        return 1
     data, elsewhere = data_folder(a.data_dir)          # the model files: in the data folder, found from any copy
     roots = [data, *elsewhere]
     if a.models_dir is None:

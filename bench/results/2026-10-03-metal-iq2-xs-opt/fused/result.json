@@ -1,0 +1,43 @@
+{
+  "wall_s": 146.628148959,
+  "first_text_s": 132.55931866699999,
+  "timings": {
+    "cache_n": 0,
+    "prompt_n": 10000,
+    "prompt_ms": 132463.3,
+    "prompt_per_token_ms": 13.246,
+    "prompt_per_second": 75.5,
+    "predicted_n": 256,
+    "predicted_ms": 14113.2,
+    "predicted_per_token_ms": 55.13,
+    "predicted_per_second": 18.1,
+    "draft_n": 0,
+    "draft_n_accepted": 0
+  },
+  "usage": {
+    "prompt_tokens": 10000,
+    "completion_tokens": 256,
+    "total_tokens": 10256,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "finish_reason": "length",
+  "content": "根据您提供的资料，首先提取校验记录中的关键信息：\n\n**项目代号**：银杏\n**验收日期**：10月18日\n**校验码**：AX-7319\n\n---\n\n### 统一内存、混合专家模型（MoE）、Prefill 与 Decode 的深度解析\n\n在大型语言模型（LLM）的推理过程中，硬件资源的管理与计算流程的优化是决定性能的核心因素。结合 Strata 项目的技术细节，我们可以深入探讨统一内存（Unified Memory）、混合专家模型（Mixture of Experts, MoE）以及推理的两个主要阶段——Prefill（预填充）和 Decode（解码）之间的复杂关系。\n\n#### 1. 混合专家模型（MoE）与内存瓶颈\n\n混合专家模型是一种稀疏激活的架构。以资料中提到的 Qwen3.8-Flash-Next 为例，它拥有大量的专家模块（例如每层512个专家），但在处理每一个 token 时，路由器（Router）只会激活其中极少数的专家（例如10个）。这种架构的优势在于模型参数量巨大，但单次推理的计算量相对较小。然而，这带来了巨大的内存挑战：虽然每次只计算少数专家，",
+  "reasoning_content": "",
+  "needle_matches": {
+    "银杏": true,
+    "10月18日": true,
+    "AX-7319": true
+  },
+  "health": {
+    "status": "ok",
+    "max_context": 32768,
+    "model": "qwen3.8-flash-next",
+    "images": false,
+    "api_key": false,
+    "loaded": true,
+    "service": "strata"
+  },
+  "sampled_peak_engine_rss_gib": 34.59266662597656
+}

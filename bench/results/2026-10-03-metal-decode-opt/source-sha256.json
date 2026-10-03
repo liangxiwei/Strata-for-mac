@@ -1,0 +1,13 @@
+{
+  "src/platform/metal_runtime.mm": "0044568cf5a7797b576f5ba11b49d77aaa690565fff2af2c5c348a54c1b643a7",
+  "src/kernels/metal/runtime_copy.metal": "1a2cd2af0e960c52abfa3257dd76f646419cd55e94b7a71a52b881f9ec859487",
+  "src/kernels/metal/native_mmvq.mm": "429d78dc184da1a75e719f17009546dc71cbaafc2cc64493d961950a6d200baf",
+  "src/kernels/metal/native_mmvq.metal": "24904fd4db03b9fa3c5fcb9b221125869c44ed513562f78ec22b8647be42c1ec",
+  "src/core/native_dense.cpp": "490774427473704d14febaa200a41cc7a1a7cd6c697fc690df4b35b43c3a265e",
+  "include/strata/kernels/metal_mmvq.hpp": "46a37a87536f35d31234d5e4e868e787ede00733510d36149cffae7021d1d44f",
+  "include/strata/metal_compat/cuda_runtime.h": "23e25b286437a7e0f277e852429c23a900a6456875e850ea36b9474c89627b8b",
+  "cmake/metal_backend.cmake": "6033ab5982c7c768223247e8b5df226577dd335ae18ab657459b2332688ad2d0",
+  "CMakeLists.txt": "73f4062e173cd02a5fadbe5eb3635a425a3b5b005a8e9259ee4a569e0b25f65a",
+  "tests/core/metal_copy_test.cpp": "f6ce60740c59e6eb6dd709dd80f85a2c37d010ede8e31f7a66c3746519381c99",
+  "tests/core/metal_mmvq_decode_test.cpp": "af9ad378f5f2c11db1d84ab2a685036619c9e11ecbd298ac617a24e1117448dc"
+}

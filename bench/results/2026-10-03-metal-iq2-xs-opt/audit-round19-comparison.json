@@ -1,0 +1,7 @@
+{
+  "same_requests": true,
+  "same_output_ids": true,
+  "same_committed_states": true,
+  "requests": 4,
+  "states": 4
+}

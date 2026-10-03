@@ -1,0 +1,11 @@
+{
+  "physical_footprint_lines": [
+    "Physical footprint:         40.2G",
+    "Physical footprint (peak):  40.2G"
+  ],
+  "system_swap_mib": {
+    "first": 4775.88,
+    "last": 4759.88,
+    "peak": 4775.88
+  }
+}

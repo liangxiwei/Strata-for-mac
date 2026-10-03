@@ -1,0 +1,43 @@
+argv: ['/Users/liangxw/src/xproject/petproject/Strata/build-metal/strata', '--pack', '/Users/liangxw/src/xproject/petproject/Q2_0/pack-full', '--ple-gguf', '/Users/liangxw/src/xproject/petproject/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00002-of-00002.gguf', '--max-context', '4096', '--max-new', '8', '--stats', '--check-logits', '--tokens', '9707,11,6319,1440,11,2834,10265,11,19147,1079,3844,11,32114,12488,131464,144162,1773,11,1871,1879,3300,51016,45589,13', '--native', '/Users/liangxw/src/xproject/petproject/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00001-of-00002.gguf', '--prefill', '128', '--expert-cache', 'auto']
+strata generate: 1879 MiB of weights loaded from /Users/liangxw/src/xproject/petproject/Q2_0/pack-full (301 canonical tensors skipped: served natively)
+strata generate: 301 native projection matrices, 1376.20 MiB of weights
+strata generate: the SSD is kept awake while rows are read: one page of the table after 100 ms without a read, until 60 s after the last request (STRATA_SSD_KEEPALIVE=0 turns it off)
+strata generate: PLE on, table 320001536 rows of /Users/liangxw/src/xproject/petproject/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00002-of-00002.gguf
+strata generate: GPU 0: Apple M2 Max, compute capability 10.0
+strata generate: expert arena: cudaHostRegister PORTABLE ok; normal pages (no hugetlb on macOS)
+strata generate: loaded 31.64 GiB at 3.28 GiB/s
+strata generate: experimental native Q5_K head, 437043200 bytes
+strata generate: Metal unified expert arena: 24576 experts, 31.64 GiB, no extra copy
+strata generate: expert cache 24576 slots, 31.64 GiB of VRAM; policy is
+strata generate: the GPU computes the experts in the cache; it rounds differently from the CPU,
+                 so a reply can differ slightly from a run without the cache (same quality:
+                 bench/results/2026-09-27-cache-parity).
+                 compulsory-miss (fills with whatever the run routes first).
+strata generate: R4 hit path ON - resident experts are computed on the GPU
+strata generate: 11 expert-pool workers + the host thread
+strata generate: session is up (engine 0.1.34)
+strata generate: sampling greedy
+strata generate: token graph hit path: 24576 resident experts, decided on the device
+strata generate: token graph captured (48 layers, one launch per token)
+strata generate: prompt path allocates its own buffers (no cache slots to borrow)
+strata generate: prefill 23 tokens in 1 chunks, 6932.8 ms (3.3 tok/s); experts streamed 0 (0 by DMA, host 0.0 ms), resident 3707; PLE 5.5 ms
+strata generate: position 23, token 13 (prompt)
+strata generate: position 24, token 95418
+strata generate: position 25, token 117
+strata generate: position 26, token 5581
+strata generate: position 27, token 5581
+strata generate: position 28, token 5581
+strata generate: position 29, token 5581
+strata generate: position 30, token 5581
+prompt  : 9707 11 6319 1440 11 2834 10265 11 19147 1079 3844 11 32114 12488 131464 144162 1773 11 1871 1879 3300 51016 45589 13
+output  : 95418 117 5581 5581 5581 5581 5581 5581
+decode                   8 tokens in 363.8 ms  ->  21.99 tok/s
+prefill                  23 tokens in 6932.8 ms  ->  3.32 tok/s  (time to first token 6991.7 ms)
+  per token              45.476 ms/token (WALL CLOCK: embed, layers, head, sample)
+  token host phases      PLE 0.393  embed 0.098  LAYERS 40.655  head 0.575  readback 3.286  sample 0.467  (sum 45.475 of 45.476 ms)
+  ple io: 496 rows, 8.1% row-cache hits, 456 SSD reads (1.9 MB), read p50 655 us p99 1605 us, blocked 7.381 ms total (submit 0.578 ms), cache 456/1048576 rows, SSD kept awake by 67 reads (slowest 2.4 ms)
+  the CPU expert pool    0.000 ms/token over 48 layers (0 positions, 0 dispatches)
+  expert blobs           0 blobs read
+  R4 overlap             0 of 0 layers the hit work was DONE when the pool returned
+  R4 expert-cache hits   0 of 0 = 0.0000      (0 admitted, 0 refused, cache 0.0000% full)
+  token graph            wait for rings 40.590  pool 0.000 ms/token  (0 flushes over 8 positions)

@@ -60,6 +60,23 @@ void native_expert_grouped(const NativeExpertLayout& L, const unsigned long long
                            const int32_t* n_groups, const int32_t* ent_dst, const int32_t* ent_tok, int64_t cap_groups,
                            int64_t cap_entries, const void* x_q8_1, void* scratch, float* out, void* stream);
 
+#if defined(STRATA_METAL_BACKEND)
+/// Fully resident experts: GPU routes index one bound arena, with device per-slot byte offsets (or a
+/// uniform stride). Output row e corresponds to routed entry e; its input token is e / k. No pointer
+/// readback or host planning, so changing ids/residency after capture is safe. Missing slots yield zero.
+void native_expert_resident(const NativeExpertLayout& L, const uint8_t* arena, const uint64_t* slot_offsets,
+                            int64_t slot_bytes, const int32_t* ids, const int32_t* residency, int n_expert,
+                            int n_tok, int k, const void* x_q8_1, void* scratch, float* out, void* stream);
+/// FP16 expert prefill with quantized weights expanded in threadgroup memory. Each int4 descriptor
+/// contains {blob offset low 32 bits, first sorted input row, rows <= 16, blob offset high 32 bits}.
+bool native_expert_gemm_supported(const NativeExpertLayout& L);
+/// tile_rows 0: descriptors of <= 16 rows, 16 x 32 output tiles; 16 or 32: descriptors of <= tile_rows rows and
+/// 64-column tiles (the same bits). native_expert_gemm_rows picks it from the routed rows per expert (0 = off).
+void native_expert_gemm(const NativeExpertLayout& L, const uint16_t* x, const uint8_t* arena,
+                        const int32_t* tiles, float* y, int64_t n_tiles, bool down, void* stream, int tile_rows = 0);
+int native_expert_gemm_rows(double rows_per_expert);
+#endif
+
 /// `iq_mmvq` and `native_expert_grouped` decode each weight part once and apply it to every column / entry;
 /// true selects the older kernels that decode it again per column (STRATA_OLD_IQ_MMVQ=1 at startup).  Both give
 /// bitwise the same results.  Set before graph capture; captured graphs keep the kernels they captured.

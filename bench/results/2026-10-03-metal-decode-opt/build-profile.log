@@ -1,0 +1,112 @@
+[  1%] Built target strata-plan
+[  1%] Built target gguf_reader_test
+[  1%] Built target strata-gguf
+[  2%] Built target strata-dequant
+[  3%] Built target gguf_split_test
+[  6%] Built target strata_spec
+[  6%] Building OBJCXX object CMakeFiles/strata_metal_kernels.dir/src/platform/metal_runtime.mm.o
+[ 10%] Built target ggml-base
+[ 10%] Built target bf16_bits_test
+[ 11%] Built target conv_cache_test
+[ 11%] Built target coupled_draft_test
+[ 12%] Built target draft_policy_test
+[ 13%] Built target controller_test
+[ 15%] Built target suffix_drafter_test
+[ 22%] Built target ggml-cpu
+[ 25%] Built target strata_kernels_cpu
+[ 25%] Built target expert_parity
+[ 25%] Built target pool_stress
+[ 26%] Built target expert_multi_test
+[ 29%] Built target expert_q2_neon_test
+[ 29%] Built target pool_test
+/Users/liangxw/src/xproject/petproject/Strata/src/platform/metal_runtime.mm:294:26: warning: format specifies type 'size_t' (aka 'unsigned long') but the argument has type 'unsigned long long' [-Wformat]
+  293 |             std::fprintf(stderr, a.buffer != nil ? " [%llu+%llu=%p]" : " [val%zu]",
+      |                                                                              ~~~
+      |                                                                              %llu
+  294 |                          (unsigned long long) a.buffer.length, (unsigned long long) a.offset,
+      |                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/liangxw/src/xproject/petproject/Strata/src/platform/metal_runtime.mm:408:26: warning: format specifies type 'size_t' (aka 'unsigned long') but the argument has type 'unsigned long long' [-Wformat]
+  407 |             std::fprintf(stderr, a.buffer != nil ? " buf%llu@%llu" : " val%zu",
+      |                                                                           ~~~
+      |                                                                           %llu
+  408 |                          a.buffer != nil ? (unsigned long long) a.buffer.length
+      |                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  409 |                                          : (unsigned long long) a.offset,
+      |                                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2 warnings generated.
+[ 30%] Linking OBJCXX static library libstrata_metal_kernels.a
+[ 31%] Built target strata_metal_kernels
+[ 35%] Built target strata_core
+[ 35%] Linking CXX executable platform_memory_test
+[ 36%] Linking CXX executable strata-device
+[ 58%] Built target strata_kernels
+[ 59%] Built target platform_memory_test
+[ 59%] Built target strata-device
+[ 60%] Linking CXX executable metal_smoke
+[ 60%] Linking CXX executable quantize_act_parity
+[ 60%] Linking CXX executable elementwise_parity
+[ 60%] Linking CXX executable router_top10_parity
+[ 62%] Linking CXX executable dequant_s2_parity
+[ 62%] Linking CXX executable s2_gemv_parity
+[ 62%] Linking CXX executable rope_parity
+[ 63%] Linking CXX executable kv_q8_parity
+[ 63%] Built target metal_smoke
+[ 63%] Built target elementwise_parity
+[ 63%] Built target quantize_act_parity
+[ 63%] Built target dequant_s2_parity
+[ 63%] Built target s2_gemv_parity
+[ 64%] Built target router_top10_parity
+[ 65%] Built target kv_q8_parity
+[ 65%] Built target rope_parity
+[ 65%] Linking CXX executable bf16_gemv_parity
+[ 65%] Linking CXX executable cvec_parity
+[ 67%] Linking CXX executable gr_parity
+[ 68%] Linking CXX executable gdn_parity
+[ 69%] Linking CXX executable sampler_parity
+[ 69%] Linking CXX executable s_gemv_parity
+[ 69%] Linking CXX executable shared_expert_parity
+[ 69%] Linking CXX executable iq_parity
+[ 70%] Built target cvec_parity
+[ 70%] Built target gdn_parity
+[ 72%] Built target bf16_gemv_parity
+[ 72%] Built target gr_parity
+[ 72%] Built target sampler_parity
+[ 72%] Built target iq_parity
+[ 73%] Built target s_gemv_parity
+[ 73%] Built target shared_expert_parity
+[ 74%] Linking CXX executable iq_multi_parity
+[ 75%] Linking CXX executable qsa_prompt_attn_parity
+[ 75%] Linking CXX executable qsa_parity
+[ 77%] Linking CXX executable kv_q4_parity
+[ 77%] Linking CXX executable kv_hybrid_parity
+[ 78%] Linking CXX executable ple_parity
+[ 78%] Linking CXX executable kv_stream_parity
+[ 79%] Linking CXX executable s2_expert_grouped_parity
+[ 79%] Built target qsa_prompt_attn_parity
+[ 79%] Built target kv_q4_parity
+[ 81%] Built target qsa_parity
+[ 82%] Built target iq_multi_parity
+[ 82%] Built target kv_hybrid_parity
+[ 82%] Built target s2_expert_grouped_parity
+[ 82%] Built target kv_stream_parity
+[ 82%] Built target ple_parity
+[ 82%] Linking CXX executable s2_gemv_q8_parity
+[ 82%] Linking CXX executable mmvq_multi_parity
+[ 82%] Linking CXX executable metal_fused_gr_test
+[ 83%] Built target strata_prefill
+[ 89%] Built target strata_engine
+[ 89%] Linking CXX executable metal_gemm_test
+[ 91%] Linking CXX executable file_expert_source_test
+[ 91%] Linking CXX executable native_dense_ple_key_test
+[ 92%] Linking CXX executable expert_layout_test
+[ 92%] Linking CXX executable strata
+[ 93%] Built target s2_gemv_q8_parity
+[ 93%] Built target mmvq_multi_parity
+[ 94%] Built target metal_fused_gr_test
+[ 94%] Linking CXX executable expert_cache_per_layer_test
+[ 96%] Built target metal_gemm_test
+[ 96%] Built target file_expert_source_test
+[ 97%] Built target native_dense_ple_key_test
+[ 97%] Built target expert_layout_test
+[ 98%] Built target strata
+[100%] Built target expert_cache_per_layer_test

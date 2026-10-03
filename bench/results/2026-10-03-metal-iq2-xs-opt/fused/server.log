@@ -1,0 +1,45 @@
+loading the model (the first start takes a minute or two) ...
+[strata] starting the engine: reading the model's weights ...
+[strata] loading the experts into RAM (about 39 GB) and locking part of them for the GPU.
+         YOUR PC CAN BE SLOW OR STOP RESPONDING FOR 1-3 MINUTES NOW - this is normal.
+         Please wait and don't close this window; the browser opens when it is ready.
+[strata] filling the GPU's expert cache (24576 experts, 33.02 GiB of VRAM) ...
+ready: http://127.0.0.1:18080/v1  (OpenAI: /v1/chat/completions, Anthropic: /v1/messages, context 32768 tokens)
+       open http://127.0.0.1:18080/ in a browser to chat; close this window to stop the model
+[strata] reading the prompt: 10,000 tokens, 10 s so far
+[strata] reading the prompt: 1,024 of 10,000 tokens, 13 s so far
+[strata] reading the prompt: 1,024 of 10,000 tokens, 23 s so far
+[strata] reading the prompt: 2,048 of 10,000 tokens, 26 s so far
+[strata] reading the prompt: 2,048 of 10,000 tokens, 36 s so far
+[strata] reading the prompt: 3,072 of 10,000 tokens, 40 s so far
+[strata] reading the prompt: 3,072 of 10,000 tokens, 50 s so far
+[strata] reading the prompt: 4,096 of 10,000 tokens, 53 s so far
+[strata] reading the prompt: 4,096 of 10,000 tokens, 63 s so far
+[strata] reading the prompt: 5,120 of 10,000 tokens, 66 s so far
+[strata] reading the prompt: 5,120 of 10,000 tokens, 76 s so far
+[strata] reading the prompt: 6,144 of 10,000 tokens, 80 s so far
+[strata] reading the prompt: 6,144 of 10,000 tokens, 90 s so far
+[strata] reading the prompt: 7,168 of 10,000 tokens, 94 s so far
+[strata] reading the prompt: 7,168 of 10,000 tokens, 104 s so far
+[strata] reading the prompt: 8,192 of 10,000 tokens, 107 s so far
+[strata] reading the prompt: 8,192 of 10,000 tokens, 117 s so far
+[strata] reading the prompt: 9,216 of 10,000 tokens, 121 s so far
+[strata] reading the prompt: 9,216 of 10,000 tokens, 131 s so far
+[strata] reading the prompt: 9,999 of 10,000 tokens, 132 s so far
+[strata] answering: 21 of max 256 tokens, 21.0 tok/s, 134 s
+[strata] answering: 39 of max 256 tokens, 19.1 tok/s, 135 s
+[strata] answering: 58 of max 256 tokens, 18.9 tok/s, 136 s
+[strata] answering: 77 of max 256 tokens, 18.7 tok/s, 137 s
+[strata] answering: 96 of max 256 tokens, 18.6 tok/s, 138 s
+[strata] answering: 114 of max 256 tokens, 18.4 tok/s, 139 s
+[strata] answering: 133 of max 256 tokens, 18.4 tok/s, 140 s
+[strata] answering: 151 of max 256 tokens, 18.3 tok/s, 141 s
+[strata] answering: 170 of max 256 tokens, 18.3 tok/s, 142 s
+[strata] answering: 189 of max 256 tokens, 18.3 tok/s, 143 s
+[strata] answering: 208 of max 256 tokens, 18.3 tok/s, 144 s
+[strata] answering: 227 of max 256 tokens, 18.2 tok/s, 145 s
+[strata] answering: 245 of max 256 tokens, 18.2 tok/s, 146 s
+[strata] done: 256 tokens in 147 s (18.2 tok/s) (length, cancel=False), expert cache 100.0% hit
+
+[strata] stopping (Ctrl+C again to end the engine at once) ...
+[strata] stopped

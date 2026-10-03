@@ -1,0 +1,39 @@
+strata generate: 4630 MiB of weights loaded from /Users/liangxw/src/xproject/petproject/Q2_0/pack-full (0 canonical tensors skipped: served natively)
+strata generate: the SSD is kept awake while rows are read: one page of the table after 100 ms without a read, until 60 s after the last request (STRATA_SSD_KEEPALIVE=0 turns it off)
+strata generate: PLE on, table 320001536 rows of /Users/liangxw/src/xproject/petproject/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00002-of-00002.gguf
+strata generate: GPU 0: Apple M2 Max, compute capability 10.0
+strata generate: expert arena: cudaHostRegister PORTABLE ok; normal pages (no hugetlb on macOS)
+strata generate: loaded 31.64 GiB at 3.04 GiB/s
+strata generate: 11 expert-pool workers + the host thread
+strata generate: session is up (engine 0.1.34)
+strata generate: sampling greedy
+strata generate: token graph captured (48 layers, one launch per token)
+strata generate: position 0, token 9707 (prompt)
+strata generate: position 22, token 45589 (prompt)
+strata generate: position 23, token 13 (prompt)
+strata generate: position 24, token 198
+strata generate: position 25, token 220
+strata generate: position 26, token 44424
+strata generate: position 27, token 75021
+strata generate: position 28, token 1644
+strata generate: position 29, token 918
+strata generate: position 30, token 428
+strata generate: position 31, token 6256
+strata generate: position 32, token 816
+strata generate: position 33, token 283
+strata generate: position 34, token 220
+strata generate: position 35, token 16
+strata generate: position 36, token 20
+strata generate: position 37, token 16
+strata generate: position 38, token 21
+prompt  : 9707 11 6319 1440 11 2834 10265 11 19147 1079 3844 11 32114 12488 131464 144162 1773 11 1871 1879 3300 51016 45589 13
+output  : 198 220 44424 75021 1644 918 428 6256 816 283 220 16 20 16 21 19
+decode                   16 tokens in 6634.1 ms  ->  2.41 tok/s
+prefill                  23 tokens in 9692.4 ms  ->  2.37 tok/s  (time to first token 10066.2 ms)
+  per token              414.634 ms/token (WALL CLOCK: embed, layers, head, sample)
+  token host phases      PLE 0.291  embed 2.943  LAYERS 402.615  head 11.398  readback 0.085  sample 1.298  (sum 418.630 of 414.634 ms)
+  ple io: 624 rows, 0.0% row-cache hits, 624 SSD reads (2.6 MB), read p50 464 us p99 6272 us, blocked 7.809 ms total (submit 1.520 ms), cache 624/1048576 rows, SSD kept awake by 135 reads (slowest 14.5 ms)
+  the CPU expert pool    121.659 ms/token over 48 layers (39 positions, 1872 dispatches)
+  pool phases              wait-park 0.000  drain 121.375  re-park 0.000  ms/token
+  expert blobs           18720 blobs read
+  token graph            wait for rings 273.853  pool 128.575 ms/token  (48181 flushes over 39 positions)

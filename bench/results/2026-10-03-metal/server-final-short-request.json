@@ -1,0 +1,14 @@
+{
+  "model": "strata",
+  "messages": [
+    {
+      "role": "user",
+      "content": "请用中文用两句话解释电脑中的内存和硬盘有什么区别。"
+    }
+  ],
+  "max_tokens": 128,
+  "temperature": 0,
+  "chat_template_kwargs": {
+    "enable_thinking": false
+  }
+}

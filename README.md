@@ -55,6 +55,9 @@ other cards: [speed of each model](docs/MODELS.md#how-fast-is-each-size), [commu
 | **Disk** | about 80 GB free, on an SSD if you can (the first start is much faster) |
 | **System** | Windows 10 / 11 or Linux, and a current graphics driver from NVIDIA or AMD |
 
+**macOS:** the model's engine needs an NVIDIA or AMD card, so it does not run on a Mac - but everything around the
+engine (the server, the web app, the C++ and Python tests) builds and runs there: [docs/MAC.md](docs/MAC.md).
+
 Everything else is installed for you. Two or three cards can share the model ([multi-GPU](docs/MULTI_GPU.md)).
 The full list: [docs/INSTALL.md](docs/INSTALL.md#what-you-need).
 

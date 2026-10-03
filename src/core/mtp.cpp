@@ -284,6 +284,16 @@ bool MtpDrafter::load(const std::string& rt_dir, const ModelGeometry& g, Session
     Bump real;
     real.base = (uint8_t*) arena_;
     carve(real);
+#if defined(STRATA_METAL_BACKEND)
+    // The resident kernel binds one arena and indexes it on the GPU. Keep its
+    // outputs in routing order; no device-written CPU pointer table is captured.
+    std::vector<int32_t> dst((size_t) (T * K));
+    for (size_t i = 0; i < dst.size(); ++i) dst[i] = (int32_t) i;
+    if (cudaMemcpy(hit_dst_, dst.data(), dst.size() * sizeof(int32_t), cudaMemcpyHostToDevice) != cudaSuccess) {
+        err = "mtp: resident expert indices could not be initialized";
+        return false;
+    }
+#endif
     vram_ += count.used;
     {
         std::vector<int32_t> id((size_t) (T * (uint64_t) cap_));
@@ -527,11 +537,17 @@ bool MtpDrafter::record_forward(int T, int step_row0, cudaStream_t cs, std::stri
             if (native_router_enabled()) native_router_top10(logits_ + t * g.n_expert, ids_ + t * K, w_ + t * K, cs);
             else router_top10(logits_ + t * g.n_expert, 1, (int) g.n_expert, (int) K, ids_ + t * K, w_ + t * K, cs);
         }
+        quantize_q8_0_scaled(mixed_, hit_xq_, hit_xs_, (int64_t) T * N, cs);
+#if defined(STRATA_METAL_BACKEND)
+        moe_hit_grouped_s2_multi(experts_, ids_, hit_dst_, nullptr, T * K,
+                                (int64_t) strata::kernels::cpu::BLOB, hit_xq_, hit_xs_, (int) K,
+                                hit_scratch_, parts_, cs);
+#else
         moe_group_resident(ids_, (int) (T * K), (int) K, experts_, (int64_t) strata::kernels::cpu::BLOB, grp_ptr_,
                            grp_start_, grp_counts_, hit_dst_, hit_slot_, cs);
-        quantize_q8_0_scaled(mixed_, hit_xq_, hit_xs_, (int64_t) T * N, cs);
         moe_grouped_s2(grp_ptr_, grp_start_, grp_counts_, hit_dst_, hit_slot_, (int64_t) T * K, (int64_t) T * K, hit_xq_,
                        hit_xs_, hit_scratch_, parts_, cs);
+#endif
         NativeSharedWeights nsw;
         nsw.gate_type = GGML_Q8_0; nsw.gate_data = q8("mlp.shared_expert.gate_proj.weight");
         nsw.up_type = GGML_Q8_0; nsw.up_data = q8("mlp.shared_expert.up_proj.weight");

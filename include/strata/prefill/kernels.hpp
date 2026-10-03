@@ -12,6 +12,12 @@
 
 namespace strata::prefill {
 
+#if defined(STRATA_METAL_BACKEND)
+/// Canonical Q2 expert tiles: int4 {expert, first sorted row, rows <= 16, reserved} per tile.
+void moe_q2_gemm(const uint16_t* x, const uint8_t* arena, const int32_t* tiles, float* y,
+                 int64_t n_tiles, int64_t blob_bytes, bool down, void* stream);
+#endif
+
 // ---- hyper-connection (n_embd 2560, hc 4, hc_lr 320)
 /// xn[t, c*2560 + d] = R[t,c,d] * rsqrt(mean_d R[t,c,:]^2 + eps) * w_norm[c*2560 + d]; also its BF16 image.
 /// `xn16_lo` (null: none) takes bf16(x - xn16): W.xn16 + W.xn16_lo is the product with ~16 mantissa bits of x.

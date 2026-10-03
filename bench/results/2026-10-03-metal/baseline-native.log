@@ -1,0 +1,42 @@
+(lldb) target create "./build-metal/strata-before-opt"
+Current executable set to '/Users/liangxw/src/xproject/petproject/Strata/build-metal/strata-before-opt' (arm64).
+(lldb) settings set -- target.run-args  "--pack" "/Users/liangxw/src/xproject/petproject/Q2_0/pack-full" "--native" "/Users/liangxw/src/xproject/petproject/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00001-of-00002.gguf" "--ple-gguf" "/Users/liangxw/src/xproject/petproject/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00002-of-00002.gguf" "--prefill" "128" "--max-context" "4096" "--max-new" "8" "--stats" "--tokens" "9707,11,6319,1440,11,2834,10265,11,19147,1079,3844,11,32114,12488,131464,144162,1773,11,1871,1879,3300,51016,45589,13"
+(lldb) run
+strata generate: 1879 MiB of weights loaded from /Users/liangxw/src/xproject/petproject/Q2_0/pack-full (301 canonical tensors skipped: served natively)
+strata generate: 301 native projection matrices, 1376.20 MiB of weights
+strata generate: the SSD is kept awake while rows are read: one page of the table after 100 ms without a read, until 60 s after the last request (STRATA_SSD_KEEPALIVE=0 turns it off)
+strata generate: PLE on, table 320001536 rows of /Users/liangxw/src/xproject/petproject/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00002-of-00002.gguf
+strata generate: GPU 0: Apple M2 Max, compute capability 10.0
+strata generate: expert arena: cudaHostRegister PORTABLE ok; normal pages (no hugetlb on macOS)
+strata generate: loaded 31.64 GiB at 3.27 GiB/s
+strata generate: experimental native Q5_K head, 437043200 bytes
+strata generate: 11 expert-pool workers + the host thread
+strata generate: session is up (engine 0.1.34)
+strata generate: sampling greedy
+strata generate: token graph captured (48 layers, one launch per token)
+strata generate: prompt path allocates its own buffers (no cache slots to borrow)
+Context leak detected, CoreAnalytics returned false
+strata generate: prefill 23 tokens in 1 chunks, 2849.4 ms (8.1 tok/s); experts streamed 803 (803 by DMA, host 689.6 ms), resident 0; PLE 4.1 ms
+strata generate: position 23, token 13 (prompt)
+strata generate: position 24, token 0
+strata generate: position 25, token 0
+strata generate: position 26, token 0
+strata generate: position 27, token 0
+strata generate: position 28, token 0
+strata generate: position 29, token 0
+strata generate: position 30, token 0
+prompt  : 9707 11 6319 1440 11 2834 10265 11 19147 1079 3844 11 32114 12488 131464 144162 1773 11 1871 1879 3300 51016 45589 13
+output  : 0 0 0 0 0 0 0 0
+decode                   8 tokens in 2064.1 ms  ->  3.88 tok/s
+prefill                  23 tokens in 2849.4 ms  ->  8.07 tok/s  (time to first token 3121.0 ms)
+  per token              258.012 ms/token (WALL CLOCK: embed, layers, head, sample)
+  token host phases      PLE 0.422  embed 0.241  LAYERS 246.089  head 3.819  readback 0.000  sample 7.440  (sum 258.012 of 258.012 ms)
+  ple io: 496 rows, 14.5% row-cache hits, 424 SSD reads (1.8 MB), read p50 562 us p99 970 us, blocked 6.274 ms total (submit 0.405 ms), cache 424/1048576 rows, SSD kept awake by 44 reads (slowest 11.7 ms)
+  the CPU expert pool    119.985 ms/token over 48 layers (8 positions, 384 dispatches)
+  pool phases              wait-park 0.000  drain 119.805  re-park 0.000  ms/token
+  expert blobs           4643 blobs read
+  token graph            wait for rings 121.709  pool 124.271 ms/token  (4355 flushes over 8 positions)
+Process 63418 launched: '/Users/liangxw/src/xproject/petproject/Strata/build-metal/strata-before-opt' (arm64)
+Process 63418 exited with status = 0 (0x00000000)
+(lldb) thread backtrace all
+error: Command requires a process which is currently stopped.

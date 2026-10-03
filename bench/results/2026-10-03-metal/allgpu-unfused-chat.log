@@ -1,0 +1,75 @@
+argv: ['/Users/liangxw/src/xproject/petproject/Strata/build-metal/strata', '--pack', '/Users/liangxw/src/xproject/petproject/Q2_0/pack-full', '--ple-gguf', '/Users/liangxw/src/xproject/petproject/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00002-of-00002.gguf', '--max-context', '4096', '--max-new', '40', '--stats', '--check-logits', '--tokens-file', '/tmp/strata-chat-tokens.txt', '--native', '/Users/liangxw/src/xproject/petproject/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00001-of-00002.gguf', '--expert-cache', 'auto', '--no-fused-gr']
+strata generate: 1879 MiB of weights loaded from /Users/liangxw/src/xproject/petproject/Q2_0/pack-full (301 canonical tensors skipped: served natively)
+strata generate: 301 native projection matrices, 1376.20 MiB of weights
+strata generate: the SSD is kept awake while rows are read: one page of the table after 100 ms without a read, until 60 s after the last request (STRATA_SSD_KEEPALIVE=0 turns it off)
+strata generate: PLE on, table 320001536 rows of /Users/liangxw/src/xproject/petproject/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00002-of-00002.gguf
+strata generate: GPU 0: Apple M2 Max, compute capability 10.0
+strata generate: expert arena: cudaHostRegister PORTABLE ok; normal pages (no hugetlb on macOS)
+strata generate: loaded 31.64 GiB at 2.93 GiB/s
+strata generate: experimental native Q5_K head, 437043200 bytes
+strata generate: Metal unified expert arena: 24576 experts, 31.64 GiB, no extra copy
+strata generate: expert cache 24576 slots, 31.64 GiB of VRAM; policy is
+strata generate: the GPU computes the experts in the cache; it rounds differently from the CPU,
+                 so a reply can differ slightly from a run without the cache (same quality:
+                 bench/results/2026-09-27-cache-parity).
+                 compulsory-miss (fills with whatever the run routes first).
+strata generate: R4 hit path ON - resident experts are computed on the GPU
+strata generate: 11 expert-pool workers + the host thread
+strata generate: session is up (engine 0.1.34)
+strata generate: sampling greedy
+strata generate: token graph hit path: 24576 resident experts, decided on the device
+strata generate: token graph captured (48 layers, one launch per token)
+strata generate: position 0, token 248045 (prompt)
+strata generate: position 13, token 248068 (prompt)
+strata generate: position 14, token 198 (prompt)
+strata generate: position 15, token 97237
+strata generate: position 16, token 96719
+strata generate: position 17, token 95815
+strata generate: position 18, token 117443
+strata generate: position 19, token 97431
+strata generate: position 20, token 96115
+strata generate: position 21, token 1710
+strata generate: position 22, token 129347
+strata generate: position 23, token 110123
+strata generate: position 24, token 95852
+strata generate: position 25, token 98419
+strata generate: position 26, token 103724
+strata generate: position 27, token 95974
+strata generate: position 28, token 96359
+strata generate: position 29, token 96617
+strata generate: position 30, token 96094
+strata generate: position 31, token 3709
+strata generate: position 32, token 96336
+strata generate: position 33, token 110619
+strata generate: position 34, token 97793
+strata generate: position 35, token 97039
+strata generate: position 36, token 97796
+strata generate: position 37, token 98277
+strata generate: position 38, token 103725
+strata generate: position 39, token 1710
+strata generate: position 40, token 97559
+strata generate: position 41, token 117443
+strata generate: position 42, token 5205
+strata generate: position 43, token 96963
+strata generate: position 44, token 1710
+strata generate: position 45, token 198
+strata generate: position 46, token 248069
+strata generate: position 47, token 271
+strata generate: position 48, token 103724
+strata generate: position 49, token 95974
+strata generate: position 50, token 96359
+strata generate: position 51, token 96617
+strata generate: position 52, token 96094
+strata generate: position 53, token 9616
+prompt  : 248045 846 198 96220 117443 113552 111522 1710 248046 198 248045 74455 198 248068 198
+output  : 97237 96719 95815 117443 97431 96115 1710 129347 110123 95852 98419 103724 95974 96359 96617 96094 3709 96336 110619 97793 97039 97796 98277 103725 1710 97559 117443 5205 96963 1710 198 248069 271 103724 95974 96359 96617 96094 9616 48
+decode                   40 tokens in 2302.1 ms  ->  17.38 tok/s
+prefill                  14 tokens in 1149.9 ms  ->  12.18 tok/s  (time to first token 1212.9 ms)
+  per token              57.554 ms/token (WALL CLOCK: embed, layers, head, sample)
+  token host phases      PLE 0.699  embed 0.070  LAYERS 59.282  head 0.560  readback 2.879  sample 0.438  (sum 63.926 of 57.554 ms)
+  ple io: 864 rows, 6.5% row-cache hits, 808 SSD reads (3.4 MB), read p50 496 us p99 2126 us, blocked 33.295 ms total (submit 2.350 ms), cache 808/1048576 rows, SSD kept awake by 6 reads (slowest 0.9 ms)
+  the CPU expert pool    0.000 ms/token over 48 layers (0 positions, 0 dispatches)
+  expert blobs           0 blobs read
+  R4 overlap             0 of 0 layers the hit work was DONE when the pool returned
+  R4 expert-cache hits   0 of 0 = 0.0000      (0 admitted, 0 refused, cache 0.0000% full)
+  token graph            wait for rings 59.230  pool 0.000 ms/token  (0 flushes over 54 positions)

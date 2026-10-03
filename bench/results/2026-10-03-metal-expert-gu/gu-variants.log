@@ -1,0 +1,69 @@
+packed iq2s grid: 0 bytes outside {8, 25, 43}
+native_resident_gu_22    gate 0 up 0 bit differences of 326400 each
+cpy_resident_gu_22       gate 0 up 0 bit differences of 326400 each
+dd_resident_gu_22        gate 0 up 0 bit differences of 326400 each
+dd2_gu_22                gate 0 up 0 bit differences of 326400 each
+or2_gu_22                gate 0 up 0 bit differences of 326400 each
+un1_gu_22                gate 0 up 0 bit differences of 326400 each
+ra4_gu_22                gate 0 up 0 bit differences of 326400 each
+ru4_gu_22                gate 0 up 0 bit differences of 326400 each
+tg2_gu_22                gate 0 up 0 bit differences of 326400 each
+ta2_gu_22                gate 0 up 0 bit differences of 326400 each
+tq_gu_22                 gate 0 up 0 bit differences of 326400 each
+tqd_gu_22                gate 0 up 0 bit differences of 326400 each
+sws_gu_22                gate 0 up 0 bit differences of 326400 each
+swp_gu_22                gate 0 up 0 bit differences of 326400 each
+w1r1o_gu_22              gate 0 up 0 bit differences of 326400 each
+wG16_gu_22               gate 0 up 0 bit differences of 326400 each
+xt_resident_gu_22        gate 0 up 0 bit differences of 326400 each
+native_resident_gu_22    gate 0 up 0 bit differences of 326400 each
+flS_gu_22                gate 326400 up 326400 bit differences of 326400 each
+flW_gu_22                gate 326400 up 326400 bit differences of 326400 each
+flWA_gu_22               gate 326400 up 326400 bit differences of 326400 each
+flWG_gu_22               gate 326400 up 326400 bit differences of 326400 each
+flWAG_gu_22              gate 326400 up 326400 bit differences of 326400 each
+fcW_gu_22                gate 326400 up 326400 bit differences of 326400 each
+overlap, us per dispatch pair:  concurrent pair 155.11  gu alone 148.63  mmvq alone 15.00  serial pair 166.57
+  concurrent gate 0 up 0 bit differences
+  0:native_resident_gu_22      164.01 us
+  10:tq_gu_22                  185.80 us
+  11:tqd_gu_22                 192.99 us
+  12:sws_gu_22                 216.75 us
+  13:swp_gu_22                 251.51 us
+  14:w1r1o_gu_22               190.27 us
+  15:wG16_gu_22                198.33 us
+  16:xt_resident_gu_22         211.01 us
+  17:native_resident_gu_22     165.54 us
+  18:flS_gu_22                   7.74 us
+  19:flW_gu_22                  43.90 us
+  1:cpy_resident_gu_22         165.04 us
+  20:flWA_gu_22                 81.06 us
+  21:flWG_gu_22                 66.37 us
+  22:flWAG_gu_22               107.19 us
+  23:fcW_gu_22                  33.74 us
+  2:dd_resident_gu_22          176.57 us
+  3:dd2_gu_22                  150.75 us
+  4:or2_gu_22                  155.26 us
+  5:un1_gu_22                  220.28 us
+  6:ra4_gu_22                  216.18 us
+  7:ru4_gu_22                  252.69 us
+  8:tg2_gu_22                  164.24 us
+  9:ta2_gu_22                  223.41 us
+  native_resident_down_42      107.82 us
+  native_resident_gu_22        166.87 us
+packed iq2s grid: 0 bytes outside {8, 25, 43}
+native_resident_gu_16    gate 0 up 0 bit differences of 326400 each
+dd2_gu_16                gate 0 up 0 bit differences of 326400 each
+or2_gu_16                gate 0 up 0 bit differences of 326400 each
+tg2_gu_16                gate 0 up 0 bit differences of 326400 each
+un1_gu_16                gate 0 up 0 bit differences of 326400 each
+ra8_gu_16                gate 0 up 0 bit differences of 326400 each
+tq_gu_16                 gate 0 up 0 bit differences of 326400 each
+  0:native_resident_gu_16      112.75 us
+  1:dd2_gu_16                  112.40 us
+  2:or2_gu_16                  105.28 us
+  3:tg2_gu_16                  125.65 us
+  4:un1_gu_16                  148.81 us
+  5:ra8_gu_16                  147.72 us
+  6:tq_gu_16                   131.77 us
+  native_resident_gu_16        113.91 us

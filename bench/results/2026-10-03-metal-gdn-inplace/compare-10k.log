@@ -1,0 +1,17 @@
+{
+  "reference": "bench/results/2026-10-03-metal-iq2-xs-opt/audit-10k-resident",
+  "candidate": "bench/results/2026-10-03-metal-gdn-inplace/audit-10k",
+  "trace_files": [
+    82,
+    82
+  ],
+  "same_requests": true,
+  "same_output_ids": true,
+  "same_committed_states": true,
+  "same_model_settings": true,
+  "no_drafts": true,
+  "rows": 99,
+  "values": 24583680,
+  "different": 0,
+  "bitwise_pass": true
+}

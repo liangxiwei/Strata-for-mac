@@ -1,0 +1,9 @@
+gr_down_r1 chain: rs 0 xn 0 lo 0 inject 0 Rout 0 mixed 0 bit differences
+gr_down_pf chain: rs 0 xn 0 lo 0 inject 0 Rout 0 mixed 0 bit differences
+fused_gr_down_kernel        27.79 us/dispatch
+fused_gr_norm_kernel        18.53 us/dispatch
+fused_gr_up_kernel          26.99 us/dispatch
+gr_down_pf                  28.02 us/dispatch
+gr_down_r1                  26.28 us/dispatch
+gr_norm_v2                   9.46 us/dispatch
+gr_up_v2                    24.34 us/dispatch

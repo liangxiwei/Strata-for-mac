@@ -1,0 +1,111 @@
+{
+  "binary_sha256": "1a5300ad257e19162346d599d24cb465efb6a51cc11a9e9d6248bfd6578d7b31",
+  "runs": {
+    "all-a": {
+      "sha256": "1a5300ad257e19162346d599d24cb465efb6a51cc11a9e9d6248bfd6578d7b31",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0"
+      },
+      "extra_view_mib": 0,
+      "prefill_tok_s": 116.37704299898984,
+      "cold_decode_tok_s": 22.288973052979845,
+      "warm_decode_ms": [
+        11399.5,
+        11397.9,
+        11430.9
+      ],
+      "warm_median_ms": 11399.5,
+      "warm_median_tok_s": 22.457125312513707,
+      "metrics": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2714.75M  free = 1381.25M  (encrypted)",
+        "startup_seconds": 30.2623795,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2714.75M  free = 1381.25M  (encrypted)",
+        "child_peak_rss_bytes": 36837326848
+      },
+      "output_ids_identical_to_round21": true,
+      "vs_round1_median_pct": 3.000570200447372,
+      "saved_ms_per_token": 1.3361328124999972
+    },
+    "all-b": {
+      "sha256": "1a5300ad257e19162346d599d24cb465efb6a51cc11a9e9d6248bfd6578d7b31",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0"
+      },
+      "extra_view_mib": 0,
+      "prefill_tok_s": 113.24220355739058,
+      "cold_decode_tok_s": 22.764661420123605,
+      "warm_decode_ms": [
+        11518.1,
+        11785.8,
+        11352.4
+      ],
+      "warm_median_ms": 11518.1,
+      "warm_median_tok_s": 22.225887950269573,
+      "metrics": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2714.75M  free = 1381.25M  (encrypted)",
+        "startup_seconds": 44.652709542000004,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2714.75M  free = 1381.25M  (encrypted)",
+        "child_peak_rss_bytes": 36503175168
+      },
+      "output_ids_identical_to_round21": true,
+      "vs_round1_median_pct": 1.9399901025342725,
+      "saved_ms_per_token": 0.8728515624999957
+    },
+    "round1-a": {
+      "sha256": "1a5300ad257e19162346d599d24cb465efb6a51cc11a9e9d6248bfd6578d7b31",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_METAL_IQ4_SG": "0",
+        "STRATA_METAL_GDN_TAIL": "0",
+        "STRATA_METAL_TOPK_SCAN": "0"
+      },
+      "extra_view_mib": 0,
+      "prefill_tok_s": 111.89862879420275,
+      "cold_decode_tok_s": 21.71313220413737,
+      "warm_decode_ms": [
+        11809.5,
+        11768.4,
+        11714.2
+      ],
+      "warm_median_ms": 11768.4,
+      "warm_median_tok_s": 21.753169504775503,
+      "metrics": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2714.75M  free = 1381.25M  (encrypted)",
+        "startup_seconds": 48.530687375,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2714.75M  free = 1381.25M  (encrypted)",
+        "child_peak_rss_bytes": 36327325696
+      },
+      "output_ids_identical_to_round21": true,
+      "vs_round1_median_pct": -0.22815335984500695,
+      "saved_ms_per_token": -0.10488281250000142
+    },
+    "round1-b": {
+      "sha256": "1a5300ad257e19162346d599d24cb465efb6a51cc11a9e9d6248bfd6578d7b31",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_METAL_IQ4_SG": "0",
+        "STRATA_METAL_GDN_TAIL": "0",
+        "STRATA_METAL_TOPK_SCAN": "0"
+      },
+      "extra_view_mib": 0,
+      "prefill_tok_s": 114.6629882780027,
+      "cold_decode_tok_s": 21.820289459777364,
+      "warm_decode_ms": [
+        11686.7,
+        11724.6,
+        11714.7
+      ],
+      "warm_median_ms": 11714.7,
+      "warm_median_tok_s": 21.852885690628014,
+      "metrics": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2714.75M  free = 1381.25M  (encrypted)",
+        "startup_seconds": 23.448717584,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2714.75M  free = 1381.25M  (encrypted)",
+        "child_peak_rss_bytes": 36872994816
+      },
+      "output_ids_identical_to_round21": true,
+      "vs_round1_median_pct": 0.2291992112473995,
+      "saved_ms_per_token": 0.10488281249999432
+    }
+  }
+}

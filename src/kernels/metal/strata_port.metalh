@@ -1,0 +1,97 @@
+// src/kernels/metal/strata_port.metalh - the Metal port's shared helpers (docs/PORT_METAL/).
+//
+// Everything here exists to keep the ported kernels bit-comparable with their CUDA/HIP originals, and each
+// helper says which CUDA spelling it replaces and why the difference is safe (or how it is measured):
+//   * MSL has NO double on Apple GPUs - the divide-and-round and the sum below emulate the two places the
+//     originals rely on fp64 (quantize_act's rint(double-divide), router's ascending double sum);
+//   * `metal::precise::` everywhere math precision matters: xcrun metal defaults to lossy fast math.
+#ifndef STRATA_METAL_PORT_METALH
+#define STRATA_METAL_PORT_METALH
+
+#include <metal_stdlib>
+using namespace metal;
+
+// f16_bits.hpp's f16_from_f32, bit for bit (round-to-nearest-even; a FINITE overflow saturates to inf while
+// an inf/NaN stays - the conflation round 198 fixed in the CUDA tree).
+static inline uint f16_from_f32(float f) {
+    const uint x = as_type<uint>(f);
+    const uint sign = (x >> 16) & 0x8000u;
+    const uint rawexp = (x >> 23) & 0xFFu;
+    const int exp = (int) rawexp - 127 + 15;
+    uint man = x & 0x7FFFFFu;
+    if (rawexp == 0xFFu) return sign | 0x7C00u | (man ? 0x200u : 0u);
+    if (exp >= 31) return sign | 0x7C00u;
+    if (exp <= 0) {
+        if (exp < -10) return sign;
+        man |= 0x800000u;
+        const uint sh = (uint) (14 - exp);
+        uint h = (man >> sh) & 0x3FFu;
+        const uint rem = man & ((1u << sh) - 1u);
+        if (rem > (1u << (sh - 1)) || (rem == (1u << (sh - 1)) && (h & 1u))) ++h;
+        return sign | h;
+    }
+    uint h = sign | ((uint) exp << 10) | (man >> 13);
+    const uint rem = man & 0x1FFFu;
+    if (rem > 0x1000u || (rem == 0x1000u && (h & 1u))) ++h;
+    return h;
+}
+
+// f16_bits.hpp's f32_from_f16: exact (every fp16 is an exact f32, subnormals included).
+static inline float f32_from_f16(uint h) {
+    const uint sign = (h & 0x8000u) << 16;
+    const uint exp = (h >> 10) & 0x1Fu, man = h & 0x3FFu;
+    uint f;
+    if (exp == 0) {
+        if (man == 0) f = sign;
+        else {
+            uint e = 127 - 15 + 1;
+            uint m = man;
+            while (!(m & 0x400u)) { m <<= 1; --e; }
+            f = sign | (e << 23) | ((m & 0x3FFu) << 13);
+        }
+    } else if (exp == 31) {
+        f = sign | 0x7F800000u | (man << 13);
+    } else {
+        f = sign | ((exp - 15 + 127) << 23) | (man << 13);
+    }
+    return as_type<float>(f);
+}
+
+// bf16_bits.hpp's bf16_from_f32.
+static inline uint bf16_from_f32(float f) {
+    uint i = as_type<uint>(f);
+    if ((i & 0x7FFFFFFFu) > 0x7F800000u) return (i >> 16) | 64u;
+    i = (i + ((i >> 16) & 1u) + 0x7FFFu) & 0xFFFF0000u;
+    return i >> 16;
+}
+
+// `rint((double) a / (double) b)` - quantize_act's Q8_0 rule (subtlety 2 in that file), emulated without
+// fp64: a plain f32 division rounds the quotient where the double one does not, exactly at the .5 boundaries
+// rint cares about.  Here the correctly-rounded f32 quotient q0 is refined by its EXACT residual
+// (fma(-b, q0, a) does not round), so the tie decision carries ~46 good bits like the double divide.
+static inline float rint_of_ratio(float a, float b) {
+    const float q0 = a / b;                         // correctly rounded f32 quotient
+    const float near_ = metal::precise::rint(q0);
+    const float dist = metal::precise::fabs(q0 - near_);
+    if (dist < 0.5f - 1e-3f || dist > 0.5f + 1e-3f)
+        return near_;                               // far from any .5 boundary: q0 already decides
+    const float res = fma(-b, q0, a);               // exact residual of the rounded quotient
+    const float frac = q0 + res / b;                // the refined quotient's distance from an integer grid
+    return metal::precise::rint(frac);
+}
+
+// An ascending, compensated (Neumaier) f32 sum - the router's "one thread, ascending, double" sum, with the
+// compensation doing double's job: the error stays ~2^-46 relative where a plain f32 sum would reach 3e-5
+// over 512 terms (the parity tolerance is 1e-5).
+struct KahanSum {
+    float sum = 0.0f, c = 0.0f;
+    inline void add(float x) {
+        const float t = sum + x;
+        if (metal::precise::fabs(sum) >= metal::precise::fabs(x)) c += (sum - t) + x;
+        else c += (x - t) + sum;
+        sum = t;
+    }
+    inline float value() const { return sum + c; }
+};
+
+#endif    // STRATA_METAL_PORT_METALH

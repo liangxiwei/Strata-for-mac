@@ -1,0 +1,17 @@
+[  8%] Built target strata_metal_kernels
+[ 20%] Built target strata_core
+[ 91%] Built target strata_kernels
+[ 95%] Built target strata_prefill
+[100%] Building CXX object CMakeFiles/metal_gemm_test.dir/tests/core/metal_gemm_test.cpp.o
+[100%] Linking CXX executable metal_gemm_test
+[100%] Built target metal_gemm_test
+[  8%] Built target strata_metal_kernels
+[ 21%] Built target strata_core
+[ 95%] Built target strata_kernels
+[ 95%] Building CXX object CMakeFiles/iq_multi_parity.dir/src/kernels/iq_multi_parity.cpp.o
+/Users/liangxw/src/xproject/petproject/Strata/src/kernels/iq_multi_parity.cpp:255:22: warning: variable 'written' set but not used [-Wunused-but-set-variable]
+  255 |     size_t diff = 0, written = 0;
+      |                      ^
+1 warning generated.
+[100%] Linking CXX executable iq_multi_parity
+[100%] Built target iq_multi_parity
