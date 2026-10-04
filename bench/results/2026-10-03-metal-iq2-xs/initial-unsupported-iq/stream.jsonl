@@ -1,2 +1,0 @@
-{"elapsed_s": 0.05405033299999995, "event": {"id": "chatcmpl-e8814fc4ea4948d69fa3898d", "object": "chat.completion.chunk", "created": 1790999128, "model": "qwen3.8-flash-next", "choices": [{"index": 0, "delta": {"role": "assistant", "content": ""}, "finish_reason": null}]}}
-{"elapsed_s": 1.3084293329999999, "event": {"error": {"type": "server_error", "message": "the engine stopped unexpectedly (exit code 1); the next request restarts it"}}}

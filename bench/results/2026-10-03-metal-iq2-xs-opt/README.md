@@ -1,5 +1,7 @@
 # IQ2_XS Metal 优化，2026-10-03
 
+> 仓库里保留本目录的 README、汇总、审计对照、驱动脚本和微基准；每次运行的原始输出子目录（`engine.log`、`results.json`、`config.json`、logits 跟踪）只留在测量的机器上，不进 git（提交 `f90370f` 里还有，可用 `git show f90370f:<路径>` 取回）。
+
 实测机器：Apple M2 Max（38 核 GPU、96 GB 内存），macOS 26.5。继续使用已校验的 IQ2_XS，
 MTP 关闭。相同的冻结输入 **10,000 token**（含模板），输出 **256 token**，temperature=0，
 thinking 关闭，无前缀缓存命中。每个阶段使用新服务进程；模型加载不计入请求时间，首个请求

@@ -1,5 +1,7 @@
 # Metal decode：宽 IQ4_XS、GDN 状态写回、并行 top-k，2026-10-03（round 23）
 
+> 仓库里保留本目录的 README、汇总、审计对照、驱动脚本和微基准；每次运行的原始输出子目录（`engine.log`、`results.json`、`config.json`、logits 跟踪）只留在测量的机器上，不进 git（提交 `f90370f` 里还有，可用 `git show f90370f:<路径>` 取回）。
+
 同一台 M2 Max、同一冻结 10K 提示与日用配置（无 IQ4 视图）。同一二进制（SHA-256 `1a5300ad…d578d7b31`，
 保存为 `build-metal/strata-round23`），`round1-*` 关闭本轮三个开关，`all-*` 全部开启，串行运行：
 

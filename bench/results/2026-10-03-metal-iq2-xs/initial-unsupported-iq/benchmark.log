@@ -1,5 +1,0 @@
-Verified identical 10,000-token input with IQ2_XS tokenizer
-Traceback (most recent call last):
-  File "/Users/liangxw/src/xproject/petproject/Strata/bench/results/2026-10-03-metal-iq2-xs/run_benchmark.py", line 141, in <module>
-    raise RuntimeError(event)
-RuntimeError: {'error': {'type': 'server_error', 'message': 'the engine stopped unexpectedly (exit code 1); the next request restarts it'}}

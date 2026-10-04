@@ -1,5 +1,7 @@
 # Metal decode：有收益的内存缓存，2026-10-03
 
+> 仓库里保留本目录的 README、汇总、审计对照、驱动脚本和微基准；每次运行的原始输出子目录（`engine.log`、`results.json`、`config.json`、logits 跟踪）只留在测量的机器上，不进 git（提交 `f90370f` 里还有，可用 `git show f90370f:<路径>` 取回）。
+
 Apple M2 Max（38 核 GPU、96 GB），macOS 26.5，IQ2_XS，MTP 关闭。保留的主要改动是
 **179 个密集投影矩阵的无损 IQ4 码字缓存，额外 2.24 GiB**。同一二进制开关对照的稳态
 decode 为 **18.69 → 19.53 token/s，约 +4.5%**；每 256 token 节省约 **0.59 秒**。

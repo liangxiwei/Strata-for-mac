@@ -1,5 +1,7 @@
 # 10K 上下文 MTP 对照，2026-10-03
 
+> 仓库里保留本目录的 README、汇总、审计对照、驱动脚本和微基准；每次运行的原始输出子目录（`engine.log`、`results.json`、`config.json`、logits 跟踪）只留在测量的机器上，不进 git（提交 `f90370f` 里还有，可用 `git show f90370f:<路径>` 取回）。
+
 后续更正：本报告的三组都使用了后来发现存在 Q3_K 解量化错误的 Metal 版本（遗漏一个
 缩放字节）。开关 MTP 的输入、输出一致性及当时的耗时仍是实测记录，但检索失败不能
 全部归因于 Q2_0 量化。修复后的对照与 IQ2_XS 结果另见 `../2026-10-03-metal-iq2-xs/`。
@@ -70,3 +72,10 @@ python3 bench/results/2026-10-03-metal-10k-mtp/compare_results.py
 
 复测会覆盖对应目录中的日志和结果。不要在同一已处理过该输入的服务上直接重复，
 否则会命中缓存；脚本会对此报错。
+
+git 里只保留 `mtp-on/` 的 `server-config.json` 和 `request.json`，以及 `mtp-off/prompt-tokens.txt`：
+
+- 三组的 `request.json` 完全相同。
+- `mtp-off` 和 `mtp-t2` 的服务配置只把 `--mtp-max-t` 的 4 改成 1 和 2，日志路径也随之改变。
+- `compare_results.py` 需要三组的原始输出，可以重跑生成，也可以从提交 `f90370f` 取回。
+- 配置里的模型路径（`../Q2_0/`）是当时的位置，现在模型在 `Strata-data/` 里，复测前要改路径。

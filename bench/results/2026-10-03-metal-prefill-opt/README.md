@@ -1,5 +1,7 @@
 # Metal prefill：更大的 GEMM tile、寄存器 attention、更宽的专家 tile，2026-10-03（round 25）
 
+> 仓库里保留本目录的 README、汇总、审计对照、驱动脚本和微基准；每次运行的原始输出子目录（`engine.log`、`results.json`、`config.json`、logits 跟踪）只留在测量的机器上，不进 git（提交 `f90370f` 里还有，可用 `git show f90370f:<路径>` 取回）。
+
 Apple M2 Max（38 核 GPU、96 GB），IQ2_XS，日用配置（32K、FP16 KV、prefill chunk 1,024、无 IQ4 视图），冻结的
 10,000-token 提示，新进程首次请求（无前缀复用）。同一二进制（SHA-256 `69aea4c6…e378a8`，保存为
 `build-metal/strata-round25`），一次只运行一个引擎：

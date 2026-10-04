@@ -1,5 +1,7 @@
 # Metal decode：直接码本与直接点积，2026-10-03（round 22）
 
+> 仓库里保留本目录的 README、汇总、审计对照、驱动脚本和微基准；每次运行的原始输出子目录（`engine.log`、`results.json`、`config.json`、logits 跟踪）只留在测量的机器上，不进 git（提交 `f90370f` 里还有，可用 `git show f90370f:<路径>` 取回）。
+
 Apple M2 Max（38 核 GPU、96 GB），macOS 26.5，IQ2_XS，MTP 关闭，冻结的 10,000-token 提示，每次重新生成
 256 token，temperature=0。同一二进制（SHA-256 `bc95a289…d2c7f0c`）用环境变量切换新旧 kernel：
 

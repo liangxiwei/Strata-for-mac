@@ -1,5 +1,7 @@
 # 专家 gate/up 访存（IQ2_S / IQ2_XXS 常驻 kernel），2026-10-03（round 24，未保留）
 
+> 仓库里保留本目录的 README、汇总、审计对照、驱动脚本和微基准；每次运行的原始输出子目录（`engine.log`、`results.json`、`config.json`、logits 跟踪）只留在测量的机器上，不进 git（提交 `f90370f` 里还有，可用 `git show f90370f:<路径>` 取回）。
+
 目标是 decode 时占约 16% 的 `native_resident_gu_22/16`。结论：在不改算术的前提下没有找到整模型可测的提速，
 代码没有保留。
 

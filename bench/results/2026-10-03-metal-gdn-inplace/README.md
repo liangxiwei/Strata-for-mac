@@ -1,5 +1,7 @@
 # Metal decode：去掉 GDN commit 的重复递推，2026-10-03（round 26）
 
+> 仓库里保留本目录的 README、汇总、审计对照、驱动脚本和微基准；每次运行的原始输出子目录（`engine.log`、`results.json`、`config.json`、logits 跟踪）只留在测量的机器上，不进 git（提交 `f90370f` 里还有，可用 `git show f90370f:<路径>` 取回）。
+
 decode 每个窗口只验证 1 个 token，这个 token 一定会被提交（commit 要求 1 ≤ n_keep ≤ T）。原来的流程里，
 verify 先用 GDN 递推算出输出 y 但不写回状态，commit 再从同一状态、同一输入把 36 层的递推重算一遍，只为写回
 状态。本轮把这件事放到 verify 里一次做完：

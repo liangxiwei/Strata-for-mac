@@ -1,5 +1,7 @@
 # IQ2_XS、关闭 MTP、10K 上下文实测，2026-10-03
 
+> 仓库里保留本目录的 README、汇总、审计对照、驱动脚本和微基准；每次运行的原始输出子目录（`engine.log`、`results.json`、`config.json`、logits 跟踪）只留在测量的机器上，不进 git（提交 `f90370f` 里还有，可用 `git show f90370f:<路径>` 取回）。
+
 Apple M2 Max（38 核 GPU、96 GB 内存），macOS 26.5。同一份冻结的 **10,000 个输入 token**
 （含聊天模板），生成 **256 个 token**，temperature=0，thinking 关闭，无前缀缓存命中。
 模型加载不计入请求时间；首个请求中的计算管线初始化计入时间。
