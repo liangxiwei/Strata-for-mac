@@ -210,8 +210,8 @@ Measured on an M2 Max with 96 GB: IQ2_XS, 32K context, about 24 tokens/s ([MAC.m
 
    Behind a blocked huggingface.co: `HF_ENDPOINT=https://hf-mirror.com ./download-model.sh`.
 5. **Install without starting:** `./setup.sh --yes --no-start`. It compiles the Metal engine and the image encoder
-   (under a minute on an M2 Max) and writes `strata-iq2_xs.json` + `run-iq2_xs.sh`. It downloads nothing that
-   step 4 fetched.
+   (under a minute on an M2 Max) and writes `strata-iq2_xs.json` + `run-iq2_xs.sh` with the default 256K context.
+   It downloads nothing that step 4 fetched.
 6. **Start:** `nohup ./run-iq2_xs.sh > strata-server.out 2>&1 &`, then continue with step 7 above. Loading takes
    30 s - 2 min. The engine log is `strata-iq2_xs.log`.
 
@@ -222,6 +222,9 @@ Notes:
 - **Which one:** measured are `--model IQ2_XS` (29 tok/s writing) and `--model Q2_0` (27 tok/s, a little smaller;
   both read about 277 tok/s). On a 48 GB Mac the recommended one is `--family coder` (untested on a Mac). Under
   20 GB setup stops.
+- **Context:** after a model is chosen, setup offers 128K and 256K; Enter chooses 256K.
+  Both are measured on the M2 Max IQ2_XS and Q2_0 text paths; at 256K, they read 159.8 and 164.5 tokens/s.
+  256K is the model's native context, so it needs no RoPE extension. `--context N` chooses it without the list.
 - **Low Power Mode** (System Settings → Battery, `pmset -g | grep powermode` shows 1) makes it 15-30% slower; the
   numbers above are plugged in, Energy Mode Automatic (0). High Power Mode (2) measured no faster.
 - **Pictures** are on by default (`--vision no` turns them off).

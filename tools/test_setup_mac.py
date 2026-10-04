@@ -1,7 +1,8 @@
-"""setup.py on an Apple-Silicon Mac (install_mac): the run config it writes is the measured one (data/mac-metal.json,
-checked against the arguments of bench/results/2026-10-03-metal-readme/summary.json), with paths relative to the
-Strata folder; the memory, Apple-Silicon and Xcode checks; the Metal engine's build and rebuild; a start that never
-asks nvidia-smi.  Every outside effect is mocked: no GPU, no Xcode, no downloads, nothing written outside a temp folder.
+"""setup.py on an Apple-Silicon Mac (install_mac): the run config it writes has the chosen context and the measured
+engine switches from data/mac-metal.json (the historical 32K arguments are checked against
+bench/results/2026-10-03-metal-readme/summary.json), with paths relative to the Strata folder; the memory,
+Apple-Silicon and Xcode checks; the Metal engine's build and rebuild; a start that never asks nvidia-smi.  Every
+outside effect is mocked: no GPU, no Xcode, no downloads, nothing written outside a temp folder.
 
     python -m unittest tools.test_setup_mac
 """
@@ -116,25 +117,27 @@ def install(ram, argv, answers=None, extra=(), machine="arm64", tty=False, befor
         return code, out.getvalue(), cfg, asked, files
 
 
-def measured_args() -> list:
-    """The measured run's arguments with its paths replaced by the ones setup writes (relative to the Strata folder)."""
+def measured_args(context=262144) -> list:
+    """The measured run's arguments with setup's paths and selected context (relative to the Strata folder)."""
     paths = {"--pack": "Strata-data/packs/iq2_xs", "--native": "Strata-data/models/IQ2_XS/" + SHARD.format(1),
              "--ple-gguf": "Strata-data/models/IQ2_XS/" + SHARD.format(2),
              "--expert-profile": "data/expert-profile.bin", "--mtp": "Strata-data/mtp/rt"}
     a = list(MEASURED["args"])
     for flag, p in paths.items():
         a[a.index(flag) + 1] = p
+    a[a.index("--max-context") + 1] = str(context)
     return a + VISION_ARGS
 
 
 VISION_ARGS = ["--vision", "--vram-reserve-mib", "700"]   # images on (the default): the encoder's room, as on a PC
 
 
-class MeasuredConfig(unittest.TestCase):
-    def test_yes_writes_the_measured_config(self):
+class ContextConfig(unittest.TestCase):
+    def test_yes_writes_the_default_context_config(self):
         code, out, cfg, asked, files = install(96.0, ["--no-start"])
         self.assertEqual(code, 0, out[-3000:])
         self.assertEqual(cfg["args"], measured_args())
+        self.assertIn("* 2) 256K tokens", out)
         for k, v in setup.mac_profile()["env"].items():
             self.assertEqual(cfg["env"][k], v)
             self.assertEqual(MEASURED["env"][k], v)                # the measured run had the same switch
@@ -175,6 +178,8 @@ class MeasuredConfig(unittest.TestCase):
         p = setup.mac_profile()
         self.assertEqual((p["family"], p["model"], p["context"]), ("qwen", "IQ2_XS", 32768))
         self.assertEqual(str(p["context"]), MEASURED["args"][MEASURED["args"].index("--max-context") + 1])
+        self.assertEqual((p["context_options"], p["context_default"]), ([131072, 262144], 262144))
+        self.assertEqual(p["contexts_measured"], [32768, 131072, 262144])
         for flag in ("--mmap-experts", "--no-prefill-borrow"):
             self.assertIn(flag, p["args"])
         self.assertNotIn("--kv", p["args"])                      # FP16 KV, the engine's default
@@ -582,18 +587,19 @@ def put_model(t: Path, tag: str, q: str, cfg: dict | None = None):
 
 
 class Menu(unittest.TestCase):
-    def pick(self, ram, index, before=None, argv=("--no-start",)):
+    def pick(self, ram, index, context_index=1, before=None, argv=("--no-start",)):
         seen = []
 
         def menu(title, lines, default, keys=None):
             seen.append((title, lines, default))
-            return index
+            return index if len(seen) == 1 else context_index
         res = install(ram, list(argv), answers="", tty=True, before=before,
                       extra=[mock.patch.object(setup, "arrow_menu", menu)])
-        return res, seen[0] if seen else None
+        return res, seen
 
     def test_every_run_lists_the_models_downloaded_first(self):
-        (code, out, cfg, _, _), (title, lines, default) = self.pick(96.0, 0, lambda t: put_model(t, "Q2_0", "Q2_0"))
+        (code, out, cfg, _, _), seen = self.pick(96.0, 0, before=lambda t: put_model(t, "Q2_0", "Q2_0"))
+        title, lines, default = seen[0]
         self.assertEqual(code, 0, out[-3000:])
         self.assertIn("96 GB Mac", title)
         self.assertTrue(lines[0].startswith("Qwen3.8-Flash-Next Q2_0"), lines)
@@ -607,7 +613,8 @@ class Menu(unittest.TestCase):
         self.assertIn("Q2_0-00001-of-00002.gguf", cfg["args"][cfg["args"].index("--native") + 1])   # the pick
 
     def test_the_memory_decides_the_brackets(self):
-        _, (_, lines, default) = self.pick(48.0, 0)
+        _, seen = self.pick(48.0, 0)
+        _, lines, default = seen[0]
         by = {x.split(" - ")[0].strip(): x for x in lines}
         self.assertIn("recommended for this Mac", by["Qwen3.8-Flash-Next Coder IQ1_M"])
         self.assertIn("tight: part of it on the CPU", by["Qwen3.8-Flash-Next IQ2_XS"])
@@ -615,9 +622,36 @@ class Menu(unittest.TestCase):
         self.assertIn("Coder IQ1_M", lines[default])                  # nothing installed: the recommended one
 
     def test_the_model_used_last_is_the_default(self):
-        _, (_, lines, default) = self.pick(96.0, 0, lambda t: put_model(t, "Q2_0", "Q2_0", {"args": []}))
+        _, seen = self.pick(96.0, 0, before=lambda t: put_model(t, "Q2_0", "Q2_0", {"args": []}))
+        _, lines, default = seen[0]
         self.assertIn("Q2_0", lines[default])
         self.assertIn("downloaded, set up", lines[default])
+
+    def test_the_model_is_followed_by_two_context_choices(self):
+        (code, out, cfg, _, _), seen = self.pick(96.0, 0)
+        self.assertEqual(code, 0, out[-3000:])
+        self.assertEqual(len(seen), 2)
+        title, lines, default = seen[1]
+        self.assertEqual(title, "  Context length?")
+        self.assertEqual(lines, ["128K tokens  (measured on this Mac)",
+                                 "256K tokens  (measured on this Mac)"])
+        self.assertEqual(default, 1)
+        args = cfg["args"]
+        self.assertEqual(args[args.index("--max-context") + 1], "262144")
+
+    def test_the_128k_context_choice_is_written(self):
+        (code, out, cfg, _, _), seen = self.pick(96.0, 0, context_index=0)
+        self.assertEqual(code, 0, out[-3000:])
+        self.assertEqual(len(seen), 2)
+        args = cfg["args"]
+        self.assertEqual(args[args.index("--max-context") + 1], "131072")
+
+    def test_context_flag_skips_the_context_menu(self):
+        (code, out, cfg, _, _), seen = self.pick(96.0, 0, argv=("--no-start", "--context", "131072"))
+        self.assertEqual(code, 0, out[-3000:])
+        self.assertEqual(len(seen), 1)
+        args = cfg["args"]
+        self.assertEqual(args[args.index("--max-context") + 1], "131072")
 
     def test_keys(self):
         self.assertEqual(setup.menu_step("down", 2, 3), (0, False, False))     # wraps
@@ -635,20 +669,32 @@ class Menu(unittest.TestCase):
 class Installed(unittest.TestCase):
     def test_a_set_up_model_starts_without_a_setup(self):
         started = []
-        code, out, cfg, _, _ = install(96.0, [], before=lambda t: put_model(t, "IQ2_XS", "IQ2_XS", {"args": [], "port": 8090}),
+        code, out, cfg, _, _ = install(96.0, [], before=lambda t: put_model(
+            t, "IQ2_XS", "IQ2_XS", {"args": ["--max-context", "262144"], "port": 8090}),
                                        extra=[mock.patch.object(setup, "start", lambda p, port, gpu, **k: started.append((p.name, port)) or 0),
                                               mock.patch.object(setup, "build_engine_metal", never("a build"))])
         self.assertEqual(code, 0, out[-3000:])
         self.assertEqual(started, [("strata-iq2_xs.json", None)])
 
-    def test_a_setup_again_keeps_what_was_changed_by_hand(self):
+    def test_default_context_rewrites_an_older_context(self):
+        started = []
+        old = {"args": ["--max-context", "131072"], "port": 8090}
+        code, out, cfg, _, _ = install(96.0, [], before=lambda t: put_model(t, "IQ2_XS", "IQ2_XS", old),
+                                       extra=[mock.patch.object(
+                                           setup, "start", lambda p, port, gpu=None, **k: started.append((p.name, port)) or 0)])
+        self.assertEqual(code, 0, out[-3000:])
+        args = cfg["args"]
+        self.assertEqual(args[args.index("--max-context") + 1], "262144")
+        self.assertEqual(started, [("strata-iq2_xs.json", 8090)])
+
+    def test_a_setup_again_uses_the_default_context_and_keeps_other_manual_settings(self):
         old = {"args": ["--max-context", "65536", "--kv", "int8"], "port": 8090, "host": "0.0.0.0", "api_key": "k",
                "sampling": {"temperature": 0.3}, "vision": {"exe": "old"}}
         code, out, cfg, _, _ = install(96.0, ["--setup", "--no-start"], before=lambda t: put_model(t, "IQ2_XS", "IQ2_XS", old))
         self.assertEqual(code, 0, out[-3000:])
         self.assertEqual((cfg["port"], cfg["host"], cfg["api_key"], cfg["sampling"]), (8090, "0.0.0.0", "k", {"temperature": 0.3}))
         a = cfg["args"]
-        self.assertEqual((a[a.index("--max-context") + 1], a[a.index("--kv") + 1]), ("65536", "int8"))
+        self.assertEqual((a[a.index("--max-context") + 1], a[a.index("--kv") + 1]), ("262144", "int8"))
         self.assertEqual(cfg["vision"]["exe"], "engine/strata-vision")   # setup's own keys are setup's
 
 

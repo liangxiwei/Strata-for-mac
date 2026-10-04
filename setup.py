@@ -2208,6 +2208,40 @@ def menu_label(r: dict, recommended: bool) -> str:
     return f"{r['title']} {r['model']:7s} - {r['note']}  ({state}; {fit}; {speed})"
 
 
+def mac_context_options(prof: dict) -> tuple[list[int], int]:
+    """The short Mac context menu and its default.  Keep the historical measured baseline separately in `context`:
+    it is evidence, while these are the choices a new configuration may use."""
+    options = list(prof.get("context_options", [131072, 262144]))
+    default = prof.get("context_default", options[-1] if options else None)
+    if not options or default not in options:
+        fail("data/mac-metal.json needs a non-empty context_options list and a context_default in it")
+    return options, default
+
+
+def mac_context_label(prof: dict, context: int) -> str:
+    measured = context in prof.get("contexts_measured", [prof["context"]])
+    note = "measured on this Mac" if measured else "the model's native context; not benchmarked on this Mac"
+    return f"{context // 1024}K tokens  ({note})"
+
+
+def choose_mac_context(a, prof: dict) -> int:
+    """Pick a context after the model for a configuration that is about to be written.  --context is the scriptable
+    override; no terminal and --yes take the profile's default without asking."""
+    if a.context is not None:
+        return a.context
+    options, default_context = mac_context_options(prof)
+    default = options.index(default_context)
+    lines = [mac_context_label(prof, context) for context in options]
+    if menu_tty() and not a.yes:
+        say()
+        return options[arrow_menu("  Context length?", lines, default)]
+    say()
+    for i, line in enumerate(lines):
+        say(f"  {'*' if i == default else ' '} {i + 1}) {line}")
+    say(f"  (no terminal to choose in, or --yes: {default_context // 1024}K; --context N chooses another)")
+    return default_context
+
+
 def menu_tty() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty() and not WIN
 
@@ -2262,7 +2296,7 @@ def arrow_menu(title: str, lines: list, default: int, keys=None) -> int:
             sys.stdout.flush()
             sel, done_, stop = menu_step(next(keys) if keys is not None else read_key(fd), sel, len(lines))
             if stop:
-                fail("stopped: no model chosen")
+                fail("stopped: no choice made")
             if done_:
                 return sel
     finally:
@@ -2272,9 +2306,9 @@ def arrow_menu(title: str, lines: list, default: int, keys=None) -> int:
 
 def mac_main(a, data, roots) -> int:
     """A Mac, every run: the supported models in a list (the downloaded ones first; in brackets whether each is
-    downloaded and how it fits this Mac's memory), picked with the arrow keys; then it starts, or is set up first
-    (downloaded, built, configured).  --model / --family pick without the list; --yes or no terminal takes the
-    default: the model used last, else the one recommended for this Mac's memory."""
+    downloaded and how it fits this Mac's memory), picked with the arrow keys; it then chooses a context.  When that
+    context is already configured, it starts right away.  --model / --family pick without the list; --yes or no
+    terminal takes the model used last, else the one recommended for this Mac's memory."""
     prof = mac_profile()
     step(1, "checking your Mac")
     bad = apple_silicon_problem()
@@ -2343,18 +2377,22 @@ def mac_main(a, data, roots) -> int:
     cfg_path = ROOT / f"strata-{(fam['tag'] + model).lower()}.json"
     old = json.loads(cfg_path.read_text(encoding="utf-8-sig")) if cfg_path.exists() else {}
     port = a.port or old.get("port") or 8080
-    changed = a.context or a.kv or (a.vision is not None and bool(old.get("vision")) != vision)
+    was = choices_from_config(cfg_path) if old else {}
+    context = None if a.download_only else choose_mac_context(a, prof)
+    changed = ((context is not None and context != was.get("context")) or a.kv or
+               (a.vision is not None and bool(old.get("vision")) != vision))
     if old and not (a.setup or a.no_start or a.download_only or changed):
         update_installed_engine(a.prebuilt)            # a git pull: the engine (and the encoder) compiled again
         return start(cfg_path, a.port, None, yes=a.yes, keep={"host": a.host, "api_key": a.api_key})
-    return install_mac(a, data, roots, port, family, model, ram, vision and fam.get("vision") is not False, source)
+    return install_mac(a, data, roots, port, family, model, ram, vision and fam.get("vision") is not False, source,
+                       context)
 
 
-def install_mac(a, data, roots, port, family, model, ram, vision, source="default") -> int:
+def install_mac(a, data, roots, port, family, model, ram, vision, source="default", context=None) -> int:
     """The install on an Apple-Silicon Mac, for the model mac_main chose: the steps of main() with the Metal engine
-    (and the image encoder) compiled here, and the settings measured on a Mac (data/mac-metal.json).  An unmeasured
-    model, context or KV type is the user's risk; the speed projection, the GPU flags and the low-RAM mode are PC
-    features."""
+    (and the image encoder) compiled here, and the measured engine settings in data/mac-metal.json.  The context
+    menu offers the model's measured native 128K and 256K lengths.  An unmeasured model, other context or KV type is
+    the user's risk; the speed projection, the GPU flags and the low-RAM mode are PC features."""
     prof = mac_profile()
     fam = FAMILIES[family]
     names = [m for m in MODELS if family in MODELS[m].get("families", ("qwen", "swift"))]
@@ -2391,9 +2429,11 @@ def install_mac(a, data, roots, port, family, model, ram, vision, source="defaul
     old_cfg = ROOT / f"strata-{(fam['tag'] + model).lower()}.json"
     old = json.loads(old_cfg.read_text(encoding="utf-8-sig")) if old_cfg.exists() else {}
     was = choices_from_config(old_cfg) if old else {}
-    a.kv = a.kv or was.get("kv")                        # a setup again keeps the context and KV it had
-    ctx = a.context or was.get("context") or prof["context"]
-    if ctx not in prof.get("contexts_measured", [prof["context"]]):
+    a.kv = a.kv or was.get("kv")                        # a setup again keeps the KV type it had
+    ctx = context if context is not None else a.context if a.context is not None else \
+        was.get("context") or prof.get("context_default", prof["context"])
+    options, _ = mac_context_options(prof)
+    if ctx not in prof.get("contexts_measured", [prof["context"]]) and ctx not in options:
         warn(f"{ctx} tokens of context is not validated on a Mac (measured: "
              f"{', '.join(str(c) for c in prof.get('contexts_measured', [prof['context']]))}); kept as you chose")
     try:
@@ -2402,7 +2442,8 @@ def install_mac(a, data, roots, port, family, model, ram, vision, source="defaul
         fail(str(e))
     if scaling is not None:
         ok(f"rope scaling: {scaling}, factor {rope_scale:g}")
-    ok(f"context: {ctx} tokens")
+    ok(f"context: {ctx} tokens" + (" (the model's native context; not benchmarked on this Mac)"
+                                    if ctx not in prof.get("contexts_measured", [prof["context"]]) else ""))
     if a.kv:
         warn(f"--kv {a.kv} is not measured on a Mac (measured: FP16, the engine's default); kept as you chose")
     ok("images: " + ("on (the encoder on the Mac's GPU)" if vision else "off"))

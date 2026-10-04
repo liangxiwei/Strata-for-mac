@@ -35,8 +35,10 @@ Measured on an **Apple M2 Max (38-core GPU, 96 GB), macOS 26.5**, plugged in, En
 - **Reading:** a long prompt is read once. The follow-up reused all 128,026 tokens already read and read only the
   24 new ones. Reading gets slower as the text grows: 277 tokens/s at 30,000 tokens, 203-204 at 128,000.
 - **Writing:** 27-29 tokens/s in a short chat, about 25 after 128,000 tokens.
-- **Context:** setup's default is 32K; `./setup.sh --setup --context 131072` sets a model up for 128K. At 128K the
-  engine takes about 2.6 GiB more (peak: 43.4 GB with IQ2_XS, 41.9 GB with Q2_0).
+- **Context:** after choosing a model, setup offers the measured 128K and 256K contexts, with 256K selected by
+  default. On the 256,000-token text test, the measured IQ2_XS and Q2_0 models read 159.8 and 164.5 tokens/s; both
+  found all three planted facts. `./setup.sh --setup --context 131072` selects 128K explicitly. The 256K text-path
+  footprint peaked at 47.0G with IQ2_XS and 45.4G with Q2_0.
 - **Energy Mode** (System Settings → Battery), measured on the same Mac with the same engine and inputs:
   - **Low Power Mode** makes it slower. It wrote 15-16% slower (24 / 23 tokens/s) and read 26-30% slower (202-205
     tokens/s at 30,000 tokens, 141-143 at 128,000).
@@ -51,6 +53,7 @@ How these were measured, and every optimization behind them:
 
 - [bench/results/2026-10-04-metal-models](bench/results/2026-10-04-metal-models/README.md) (IQ2_XS, Q2_0);
 - [bench/results/2026-10-04-metal-128k](bench/results/2026-10-04-metal-128k/README.md) (128K context);
+- [bench/results/2026-10-04-metal-256k](bench/results/2026-10-04-metal-256k/README.md) (256K context);
 - [bench/results/2026-10-04-metal-vision](bench/results/2026-10-04-metal-vision/README.md) (pictures);
 - [docs/PORT_METAL/PROGRESS.md](docs/PORT_METAL/PROGRESS.md) (the optimizations).
 
@@ -91,6 +94,14 @@ come first. The brackets say for each one:
   ...
 ```
 
+Setup follows the model menu with the context menu:
+
+```text
+  Context length?   (up/down, Enter; q to stop)
+  1) 128K tokens  (measured on this Mac)
+> 2) 256K tokens  (measured on this Mac)
+```
+
 **`./download-model.sh`** downloads the chosen model's files only:
 
 - the GGUFs, 58-84 GB from Hugging Face, fetched over four connections at once;
@@ -116,15 +127,18 @@ Setup remembers either choice.
    Toolchain).
 2. Compiles the Metal engine and the image encoder (under a minute on an M2 Max).
 3. Prepares the model (seconds).
-4. Writes `strata-<model>.json` with the measured settings ([data/mac-metal.json](data/mac-metal.json)).
+4. Writes `strata-<model>.json` with the selected context and the measured engine settings
+   ([data/mac-metal.json](data/mac-metal.json)).
 5. Starts the model.
 
 The model loads in 30 seconds to 2 minutes. Then your browser opens the Strata app at `http://127.0.0.1:8080`.
-Ctrl+C stops it. **Next time,** `./setup.sh` shows the list again and starts the model you pick right away. A model
-that is not downloaded yet is downloaded first, after asking.
+Ctrl+C stops it. **Next time,** `./setup.sh` shows both lists again. An installed configuration starts right away
+when its selected context is unchanged; a different context rewrites its config. A model that is not downloaded yet
+is downloaded first, after asking.
 
-Without a terminal, or with `--yes`, setup takes the model used last, else the recommended one. `--model Q2_0` (and
-`--family coder` / `swift`) chooses without the list.
+Without a terminal, or with `--yes`, setup takes the model used last, else the recommended one, then takes 256K.
+`--model Q2_0` (and `--family coder` / `swift`) chooses without the model list; `--context N` chooses the context
+without its list.
 
 ### Let your AI set it up
 

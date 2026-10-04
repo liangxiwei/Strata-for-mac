@@ -1,0 +1,70 @@
+{
+ "config": "strata-q2_0.json",
+ "args": [
+  "--pack",
+  "Strata-data/packs/q2_0",
+  "--native",
+  "Strata-data/models/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00001-of-00002.gguf",
+  "--ple-gguf",
+  "Strata-data/models/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00002-of-00002.gguf",
+  "--max-context",
+  "262144",
+  "--spec",
+  "4",
+  "--spec-min-p",
+  "0.5",
+  "--prefill",
+  "1024",
+  "--expert-profile",
+  "data/expert-profile.bin",
+  "--expert-cache",
+  "auto",
+  "--mtp",
+  "Strata-data/mtp/rt",
+  "--mtp-max-t",
+  "1",
+  "--suffix-draft",
+  "0",
+  "--mmap-experts",
+  "--no-prefill-borrow"
+ ],
+ "capacity": 262144,
+ "corpus_rev": "dc047b5",
+ "prompt_sha256": "44c53fdefffe8d78051852804152d1de508a5a541ea385778a3d460889dc4bbd",
+ "startup_s": 93.0798165,
+ "peak_footprint": "45.4G",
+ "runs": [
+  {
+   "kind": "256K prompt, fresh",
+   "prompt_tokens": 256000,
+   "reused": 0,
+   "generated": 26,
+   "prompt_ms": 1556498.2,
+   "decode_ms": 1210.2,
+   "prefill_tok_s": 164.47176103383865,
+   "decode_tok_s": 21.484052222773094,
+   "first_token_s": 1556.704106917,
+   "fields_found": [
+    "银杏",
+    "10月18日",
+    "AX-7319"
+   ],
+   "answer": "项目代号为银杏，验收日期为10月18日，校验码为AX-7319。<|im_end|>"
+  },
+  {
+   "kind": "follow-up, same conversation",
+   "prompt_tokens": 256049,
+   "reused": 256025,
+   "generated": 7,
+   "prompt_ms": 819.2,
+   "decode_ms": 295.9,
+   "prefill_tok_s": 29.296875,
+   "decode_tok_s": 23.656640757012507,
+   "first_token_s": 0.9185937499999,
+   "fields_found": [
+    "AX-7319"
+   ],
+   "answer": "AX-7319<|im_end|>"
+  }
+ ]
+}

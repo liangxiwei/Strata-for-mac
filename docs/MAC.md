@@ -117,9 +117,11 @@ The model files come from `./download-model.sh` (or `./setup.sh`), in `Strata-da
 Sources and checksums: [PROGRESS round 19](PORT_METAL/PROGRESS.md).
 
 The config `./setup.sh` writes, `strata-iq2_xs.json`, names the engine and model by paths relative to the Strata
-folder. Its arguments are [data/mac-metal.json](../data/mac-metal.json)'s, the measured ones:
+folder. Its arguments use the context selected in [data/mac-metal.json](../data/mac-metal.json), plus the measured
+engine switches:
 
-- 32K context, FP16 KV, 1,024-token prefill chunks;
+- 128K or 256K context (256K is the default; both are measured on this Mac's IQ2_XS and Q2_0 text paths), FP16 KV,
+  1,024-token prefill chunks;
 - `--spec 4 --mtp-max-t 1 --suffix-draft 0`, which makes zero drafts in practice;
 - `--mmap-experts --no-prefill-borrow`;
 - `STRATA_METAL_IQ4_EXPAND=0`.
@@ -184,11 +186,15 @@ when it is already done.
    - The recommended model is the first measured one that fits.
    - Without a terminal, or with `--yes`, setup takes the model used last, else the recommended one, and prints the
      list. `--model` / `--family` choose without it.
-   - An installed model starts right away. A model that is not downloaded is downloaded after asking. A model with
-     too little memory is asked about first (with `--yes` alone it stops).
-3. **The settings** are data/mac-metal.json's measured ones: 32K context, FP16 KV, images on.
-   - `--context` and `--kv` are kept, with a note that they are not measured on a Mac. A setup again keeps the
-     context, KV, port, host, API key and any key you added to the config by hand.
+   - It next offers the measured 128K and 256K contexts; Enter selects 256K. 256K is inside the model's trained
+     context, so it needs no RoPE extension.
+   - An installed model starts right away when its selected context is unchanged. A model that is not downloaded is
+     downloaded after asking. A model with too little memory is asked about first (with `--yes` alone it stops).
+3. **The settings** are the selected context, FP16 KV, and images on; the remaining engine switches are
+   [data/mac-metal.json](../data/mac-metal.json)'s measured ones.
+   - `--context` skips the context list. `--kv` is kept with a note that it is not measured on a Mac. A rerun with
+     the same context starts the installed config unchanged. A rewrite keeps the port, host, API key and any key you
+     added to the config by hand.
    - `--vision no` sets a model up without pictures. The speed projection, the GPU flags and the low-RAM mode are PC
      features.
 4. **Installs** the Python packages into `.venv` (CMake and Ninja too) and gets llama.cpp (ggml, gguf-py).
@@ -227,6 +233,7 @@ Measured results:
 - IQ2_XS and Q2_0: [bench/results/2026-10-04-metal-models](../bench/results/2026-10-04-metal-models/README.md).
 - Pictures: [bench/results/2026-10-04-metal-vision](../bench/results/2026-10-04-metal-vision/README.md).
 - 128K context: [bench/results/2026-10-04-metal-128k](../bench/results/2026-10-04-metal-128k/README.md).
+- 256K context: [bench/results/2026-10-04-metal-256k](../bench/results/2026-10-04-metal-256k/README.md).
 
 ## How the build differs
 
