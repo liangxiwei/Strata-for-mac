@@ -601,7 +601,7 @@ class Menu(unittest.TestCase):
         iq2 = next(x for x in lines if "IQ2_XS" in x and "Swift" not in x)
         self.assertIn("not downloaded, 68 GB", iq2)
         self.assertIn("recommended for this Mac", iq2)
-        self.assertIn("measured: 24 tok/s", iq2)
+        self.assertIn("measured: 29 tok/s", iq2)
         self.assertEqual(sum("recommended" in x for x in lines), 1)
         self.assertEqual(len(lines), len(setup.mac_profile()["menu"]))
         self.assertIn("Q2_0-00001-of-00002.gguf", cfg["args"][cfg["args"].index("--native") + 1])   # the pick

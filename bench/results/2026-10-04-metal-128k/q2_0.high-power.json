@@ -29,7 +29,9 @@
   "--no-prefill-borrow"
  ],
  "capacity": 131072,
- "startup_s": 107.13920450001024,
+ "corpus_rev": "dc047b5",
+ "prompt_sha256": "ba9ca84e292bda95e0de2057ec9d458d746d5968e5eb4b2b8b86cf66efb4b6ca",
+ "startup_s": 92.83107449999079,
  "peak_footprint": "41.9G",
  "runs": [
   {
@@ -37,11 +39,11 @@
    "prompt_tokens": 128000,
    "reused": 0,
    "generated": 27,
-   "prompt_ms": 626101.3,
-   "decode_ms": 1103.2,
-   "prefill_tok_s": 204.43976078631363,
-   "decode_tok_s": 24.474256707759245,
-   "first_token_s": 626.1652166249987,
+   "prompt_ms": 638400.3,
+   "decode_ms": 1092.5,
+   "prefill_tok_s": 200.50115891236265,
+   "decode_tok_s": 24.71395881006865,
+   "first_token_s": 638.4689345419756,
    "fields_found": [
     "银杏",
     "10月18日",
@@ -54,11 +56,11 @@
    "prompt_tokens": 128050,
    "reused": 128026,
    "generated": 7,
-   "prompt_ms": 822.8,
-   "decode_ms": 286.5,
-   "prefill_tok_s": 29.16869227029655,
-   "decode_tok_s": 24.43280977312391,
-   "first_token_s": 0.8848593750008149,
+   "prompt_ms": 818.3,
+   "decode_ms": 279.9,
+   "prefill_tok_s": 29.32909690822437,
+   "decode_tok_s": 25.008931761343337,
+   "first_token_s": 0.8805979170138016,
    "fields_found": [
     "AX-7319"
    ],

@@ -1,13 +1,13 @@
 {
  "exe": "/Users/liangxw/src/xproject/petproject/Strata/build-vision-metal/bin/strata-vision",
  "gpu": {
-  "start_s": 11.368318833003286,
-  "rss_kib": 1368928,
+  "start_s": 12.445955917006359,
+  "rss_kib": 1371536,
   "footprint": "1.3G"
  },
  "cpu": {
-  "start_s": 0.4983400829951279,
-  "rss_kib": 1092768,
+  "start_s": 0.5603920420107897,
+  "rss_kib": 1094144,
   "footprint": "1.0G"
  },
  "images": [
@@ -22,8 +22,8 @@
    "min_row_cosine": 0.983567476272583,
    "max_abs_diff_over_max": 0.0722511038184166,
    "finite": true,
-   "gpu_ms": 277.0,
-   "cpu_ms": 54278.0
+   "gpu_ms": 276.0,
+   "cpu_ms": 55005.0
   },
   {
    "image": "dots.png",
@@ -36,8 +36,8 @@
    "min_row_cosine": 0.9933638572692871,
    "max_abs_diff_over_max": 0.03659402206540108,
    "finite": true,
-   "gpu_ms": 380.0,
-   "cpu_ms": 78193.0
+   "gpu_ms": 371.0,
+   "cpu_ms": 79578.0
   },
   {
    "image": "receipt.png",
@@ -50,8 +50,8 @@
    "min_row_cosine": 0.9958301782608032,
    "max_abs_diff_over_max": 0.02617036923766136,
    "finite": true,
-   "gpu_ms": 449.0,
-   "cpu_ms": 96790.0
+   "gpu_ms": 451.0,
+   "cpu_ms": 98245.0
   },
   {
    "image": "screenshot.jpg",
@@ -64,8 +64,8 @@
    "min_row_cosine": 0.6947275996208191,
    "max_abs_diff_over_max": 0.22321005165576935,
    "finite": true,
-   "gpu_ms": 1185.0,
-   "cpu_ms": 225174.0
+   "gpu_ms": 1210.0,
+   "cpu_ms": 232756.0
   },
   {
    "image": "shapes.png",
@@ -78,8 +78,8 @@
    "min_row_cosine": 0.9894734621047974,
    "max_abs_diff_over_max": 0.04073299467563629,
    "finite": true,
-   "gpu_ms": 361.0,
-   "cpu_ms": 74446.0
+   "gpu_ms": 350.0,
+   "cpu_ms": 77095.0
   }
  ]
 }

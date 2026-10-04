@@ -14,7 +14,7 @@ check: 96,596,480 logits compared, all equal; [the Metal port](docs/PORT_METAL/H
 
 ## How fast is it?
 
-Measured on an **Apple M2 Max (38-core GPU, 96 GB), macOS 26.5**:
+Measured on an **Apple M2 Max (38-core GPU, 96 GB), macOS 26.5**, plugged in, Energy Mode **Automatic**:
 
 - **Writes answers** is how fast the reply appears in a short chat.
 - **Reads your prompt** is how fast it takes in what you send (here a 30,000-token document).
@@ -22,22 +22,29 @@ Measured on an **Apple M2 Max (38-core GPU, 96 GB), macOS 26.5**:
 
 | Size | Writes answers | Reads your prompt |
 | --- | ---: | ---: |
-| **IQ2_XS** | 24 tokens/s | 196 tokens/s |
-| **Q2_0** | 23 tokens/s | 205 tokens/s |
+| **IQ2_XS** | 29 tokens/s | 277 tokens/s |
+| **Q2_0** | 27 tokens/s | 276 tokens/s |
 
 **Long texts (128K context).** With `--context 131072` the model takes a 128,000-token prompt (about 96,000 words):
 
 | Size | Reads 128,000 tokens | Writes after it | Follow-up in the same chat | Found the 3 facts planted in the middle |
 | --- | ---: | ---: | ---: | :---: |
-| **IQ2_XS** | 141 tokens/s (15 min) | 24.5 tokens/s | first word after 0.95 s | 3 of 3 |
-| **Q2_0** | 143 tokens/s (15 min) | 23.1 tokens/s | first word after 0.91 s | 3 of 3 |
+| **IQ2_XS** | 203 tokens/s (10.5 min) | 25.3 tokens/s | first word after 0.94 s | 3 of 3 |
+| **Q2_0** | 204 tokens/s (10.5 min) | 24.5 tokens/s | first word after 0.88 s | 3 of 3 |
 
-- **Reading:** a long prompt is read once. The follow-up reused all 128,025 tokens already read and read only the
-  24 new ones. Reading gets slower as the text grows: 196-205 tokens/s at 30,000 tokens, 141-143 at 128,000.
-- **Writing** stays at 22-25 tokens/s, with 10,000 or 128,000 tokens in the conversation.
+- **Reading:** a long prompt is read once. The follow-up reused all 128,026 tokens already read and read only the
+  24 new ones. Reading gets slower as the text grows: 277 tokens/s at 30,000 tokens, 203-204 at 128,000.
+- **Writing:** 27-29 tokens/s in a short chat, about 25 after 128,000 tokens.
 - **Context:** setup's default is 32K; `./setup.sh --setup --context 131072` sets a model up for 128K. At 128K the
-  engine takes about 2.6 GiB more (Q2_0's peak: 41.9 GB).
-- **Pictures** are encoded on the Mac's GPU in 0.4-1.4 s. Turning them on changes nothing in text answers: the same
+  engine takes about 2.6 GiB more (peak: 43.4 GB with IQ2_XS, 41.9 GB with Q2_0).
+- **Energy Mode** (System Settings → Battery), measured on the same Mac with the same engine and inputs:
+  - **Low Power Mode** makes it slower. It wrote 15-16% slower (24 / 23 tokens/s) and read 26-30% slower (202-205
+    tokens/s at 30,000 tokens, 141-143 at 128,000).
+  - **High Power Mode** measured no faster than Automatic. It wrote 27-29 tokens/s and read 272-275 tokens/s at
+    30,000 tokens and 194-201 at 128,000, all within 5% of Automatic. Two High Power runs of the same test differed
+    by 3.4%.
+  - The answers to the same inputs were word for word the same in all three modes.
+- **Pictures** are encoded on the Mac's GPU in 0.3-1.2 s. Turning them on changes nothing in text answers: the same
   output, the same speed.
 
 How these were measured, and every optimization behind them:
@@ -77,8 +84,8 @@ come first. The brackets say for each one:
 
 ```text
   Which model? (96 GB Mac)   (up/down, Enter; q to stop)
-> 1) Qwen3.8-Flash-Next IQ2_XS  - the original model, 2-bit, writes a little faster  (downloaded, set up; recommended for this Mac; measured: 24 tok/s)
-  2) Qwen3.8-Flash-Next Q2_0    - the original model, 2-bit, reads prompts a little faster  (downloaded, set up; fits this Mac; measured: 23 tok/s)
+> 1) Qwen3.8-Flash-Next IQ2_XS  - the original model, 2-bit, writes a little faster  (downloaded, set up; recommended for this Mac; measured: 29 tok/s)
+  2) Qwen3.8-Flash-Next Q2_0    - the original model, 2-bit, a little smaller  (downloaded, set up; fits this Mac; measured: 27 tok/s)
   3) Qwen3.8-Flash-Next Coder IQ1_M   - the Coder: half the experts, for code  (not downloaded, 58 GB; fits this Mac; untested on a Mac)
   4) Swift 1.5 IQ2_XS  - a fine-tune that thinks shorter  (not downloaded, 68 GB; fits this Mac; untested on a Mac)
   ...
@@ -134,8 +141,8 @@ gives the GPU (77.8 of 96 GiB on the measured Mac), plus the rest the measured r
 
 | Model | Download | Memory it takes (estimate) | On a Mac |
 | --- | ---: | ---: | --- |
-| **Qwen3.8-Flash-Next IQ2_XS** | 68 GB | ~42 GiB | **measured**: 24 tok/s writing, 196 reading, pictures |
-| **Qwen3.8-Flash-Next Q2_0** | 66 GB | ~40 GiB | **measured**: 23 tok/s writing, 205 reading |
+| **Qwen3.8-Flash-Next IQ2_XS** | 68 GB | ~42 GiB | **measured**: 29 tok/s writing, 277 reading, pictures |
+| **Qwen3.8-Flash-Next Q2_0** | 66 GB | ~40 GiB | **measured**: 27 tok/s writing, 276 reading |
 | Qwen3.8-Flash-Next Coder IQ1_M | 58 GB | ~30 GiB | untested; for code (91% of the full model's SWE-bench Verified, by its authors) |
 | Swift 1.5 IQ2_XS | 68 GB | ~42 GiB | untested; a fine-tune that thinks shorter |
 | Qwen3.8-Flash-Next IQ3_XXS | 76 GB | ~49 GiB | untested; 3-bit |
@@ -160,7 +167,7 @@ By this estimate:
   API key, any model name. For apps that use Anthropic's API: `http://127.0.0.1:8080/v1/messages`. For Claude Code:
   `ANTHROPIC_BASE_URL=http://127.0.0.1:8080`.
 - **Pictures:** click **Picture** in the chat, or attach them in your app (an `image_url` part, or Anthropic's
-  `image` block). The Mac's GPU encodes a picture in 0.4-1.4 s.
+  `image` block). The Mac's GPU encodes a picture in 0.3-1.2 s.
   - Checked on this Mac: it read a receipt's shop name and total, named three shapes and their colours, counted
     seven dots, read Chinese text back exactly, described a screenshot, and answered a follow-up about a picture
     earlier in the chat ([bench/results/2026-10-04-metal-vision](bench/results/2026-10-04-metal-vision/README.md)).
@@ -168,7 +175,7 @@ By this estimate:
 - **Thinking:** choose **off, low, medium or high** in the chat menu or in your app's "reasoning effort". Off is
   fastest; high is best for hard questions.
 - **From your phone or another computer:** `./setup.sh --host 0.0.0.0 --api-key <secret>`. Always use a key.
-- **Good to know:** it answers one request at a time. The first message of a chat is read in full (about 2.5 minutes
+- **Good to know:** it answers one request at a time. The first message of a chat is read in full (about 2 minutes
   per 30,000 tokens on the M2 Max). Follow-ups start in seconds.
 
 The API: [docs/DETAILS.md](docs/DETAILS.md#using-it).
@@ -193,7 +200,7 @@ More, and the details of the Mac port: [docs/MAC.md](docs/MAC.md).
 - **The model is a team of 24,576 small specialists ("experts"),** and each word needs only 10 of them.
 - **A Mac's GPU and processor share one memory,** so all 24,576 experts stay where the GPU reads them. The GPU
   computes every word on its own, as one graph, with no trips back to the processor.
-- **Long texts are read in pieces** of 1,024 tokens at a time, about 196 tokens per second on the M2 Max.
+- **Long texts are read in pieces** of 1,024 tokens at a time, about 277 tokens per second on the M2 Max.
 - **Pictures** go through the model's own vision encoder (llama.cpp's mtmd, on the GPU). The model reads them in
   place of image tokens in the chat.
 

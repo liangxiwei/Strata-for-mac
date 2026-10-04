@@ -219,9 +219,11 @@ Notes:
 
 - **The model:** without `--model` and with `--yes` (or no terminal), setup takes the model used last, else the one
   recommended for the Mac's memory, and prints the list with each one's state and fit.
-- **Which one:** measured are `--model IQ2_XS` (24 tok/s writing) and `--model Q2_0` (23 tok/s, reads prompts a
-  little faster). On a 48 GB Mac the recommended one is `--family coder` (untested on a Mac). Under 20 GB setup
-  stops.
+- **Which one:** measured are `--model IQ2_XS` (29 tok/s writing) and `--model Q2_0` (27 tok/s, a little smaller;
+  both read about 277 tok/s). On a 48 GB Mac the recommended one is `--family coder` (untested on a Mac). Under
+  20 GB setup stops.
+- **Low Power Mode** (System Settings → Battery, `pmset -g | grep powermode` shows 1) makes it 15-30% slower; the
+  numbers above are plugged in, Energy Mode Automatic (0). High Power Mode (2) measured no faster.
 - **Pictures** are on by default (`--vision no` turns them off).
 - **PC features:** the speed projection, `--gpu`/`--gpus` and calibration.
 - **Stopping:** `kill -TERM <server pid>`, or Ctrl+C in its window.

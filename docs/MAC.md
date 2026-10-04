@@ -1,12 +1,17 @@
 # Strata on a Mac
 
 On an Apple-Silicon Mac the model runs on the **Metal backend** (`-DSTRATA_ENABLE_METAL=ON`,
-[docs/PORT_METAL/](PORT_METAL/HANDOFF.md)). Measured on an M2 Max (96 GB) with a 30,000-token prompt:
+[docs/PORT_METAL/](PORT_METAL/HANDOFF.md)). Measured on an M2 Max (96 GB), plugged in, Energy Mode Automatic,
+with a 30,000-token prompt:
 
 | Model | Writes | Reads |
 | --- | --- | --- |
-| IQ2_XS | 24 tokens/s | 196 tokens/s |
-| Q2_0 | 23 tokens/s | 205 tokens/s |
+| IQ2_XS | 29 tokens/s | 277 tokens/s |
+| Q2_0 | 27 tokens/s | 276 tokens/s |
+
+In Low Power Mode the same Mac writes 15-16% and reads 26-30% slower. High Power Mode measured no faster than
+Automatic (within 5%)
+([bench/results/2026-10-04-metal-models](../bench/results/2026-10-04-metal-models/README.md)).
 
 It also reads pictures, encoded on the Mac's GPU.
 

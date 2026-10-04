@@ -24,7 +24,7 @@
       "--mtp",
       "Strata-data/mtp/rt",
       "--mtp-max-t",
-      "1",
+      "2",
       "--suffix-draft",
       "0",
       "--mmap-experts",
@@ -39,16 +39,16 @@
     },
     "doc_tokens": 30000
   },
-  "startup_s": 98.73944804200437,
+  "startup_s": 69.1400559169997,
   "runs": [
     {
       "kind": "short chat",
       "prompt_tokens": 31,
       "generated": 256,
       "reused": 0,
-      "prompt_ms": 2327.0,
-      "decode_ms": 8754.8,
-      "decode_tok_s": 29.241102024032532,
+      "prompt_ms": 2293.8,
+      "decode_ms": 12635.8,
+      "decode_tok_s": 20.2598964845914,
       "text_start": "# Engineering Resilience: How Bridges Are Designed to Survive Earthquakes\n\nBridges are among the most"
     },
     {
@@ -56,9 +56,9 @@
       "prompt_tokens": 31,
       "generated": 256,
       "reused": 0,
-      "prompt_ms": 1041.9,
-      "decode_ms": 8897.2,
-      "decode_tok_s": 28.77309715416086,
+      "prompt_ms": 1048.6,
+      "decode_ms": 12113.6,
+      "decode_tok_s": 21.133271694624224,
       "text_start": "**地下脉络：城市地铁系统的规划与建设**\n\n城市地铁不仅是现代都市交通的动脉，更是衡量一个"
     },
     {
@@ -66,9 +66,9 @@
       "prompt_tokens": 35,
       "generated": 256,
       "reused": 0,
-      "prompt_ms": 1177.9,
-      "decode_ms": 9019.9,
-      "decode_tok_s": 28.3816893757137,
+      "prompt_ms": 1187.6,
+      "decode_ms": 12194.8,
+      "decode_tok_s": 20.992554203430974,
       "text_start": "Modern CPU execution is a marvel of engineering, designed to maximize throughput by overlapping the processing of multiple instructions simultaneously. While a"
     },
     {
@@ -76,9 +76,9 @@
       "prompt_tokens": 33,
       "generated": 256,
       "reused": 0,
-      "prompt_ms": 1129.9,
-      "decode_ms": 9005.1,
-      "decode_tok_s": 28.42833505458018,
+      "prompt_ms": 1132.4,
+      "decode_ms": 12353.2,
+      "decode_tok_s": 20.723375319755203,
       "text_start": "一杯咖啡从田间到餐桌的旅程，是一场跨越地理与时间的精密协作，其过程大致可分为种植、采摘"
     },
     {
@@ -86,10 +86,10 @@
       "prompt_tokens": 30000,
       "generated": 64,
       "reused": 0,
-      "prompt_ms": 108390.8,
-      "prefill_tok_s": 276.776257763574,
-      "decode_ms": 2332.7,
-      "decode_tok_s": 27.436018347837273,
+      "prompt_ms": 108458.5,
+      "prefill_tok_s": 276.60349350212294,
+      "decode_ms": 3421.9,
+      "decode_tok_s": 18.703059703673397,
       "text_start": "Strata distributes memory across multiple tiers, keeping the most frequently used experts in GPU VRAM while storing all 24,576 experts in RAM for CPU computation when they are not cached on"
     }
   ]

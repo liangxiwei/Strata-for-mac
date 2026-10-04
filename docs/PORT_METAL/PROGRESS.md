@@ -857,3 +857,30 @@ tok/s (+3.5%), with run-to-run noise of 20.2-22.8 in this session (a background 
 256-token output equals the reference; real-model audit 389 positions / 96,596,480 logits / 6 committed states
 (GDN included) bitwise, AX-7319 returned; CTest 50 pass. Binary `build-metal/strata-round26`, SHA-256
 `02bf0dfec002de459972fbeac2440d2394206fa0f4f0c621be6c84f8f62336aa`.
+
+## 2026-10-04: the README numbers again, in Energy Mode Automatic
+
+The user said the measurements so far were taken in Low Power Mode, and switched the Mac (plugged in) to Energy Mode
+Automatic (`pmset -g`: `powermode 0`). Same binary (`engine/strata`, SHA-256 `71cb4981…`), same configs and inputs,
+one engine at a time:
+
+| | Low Power Mode | Automatic |
+| --- | ---: | ---: |
+| IQ2_XS short-chat decode (median of 4) | 23.93 tok/s | 28.60 tok/s (+19.5%) |
+| IQ2_XS 30,000-token prefill | 201.8 tok/s | 276.8 tok/s (+37.2%) |
+| Q2_0 short-chat decode | 22.68 tok/s | 26.68 tok/s (+17.6%) |
+| Q2_0 30,000-token prefill | 205.3 tok/s | 276.5 tok/s (+34.7%) |
+| IQ2_XS / Q2_0 128,000-token prefill | 141.1 / 142.6 tok/s | 202.6 / 204.4 tok/s (+43.6 / +43.4%) |
+
+The 30K runs' output is the same in both modes; the GPU memory left is the same. MTP drafts stay off: in
+Automatic, `--mtp-max-t 2` decodes 20.86 tok/s against 28.60 (-27.1%, drafts 76-80% accepted, the same output). The 128K prompt had changed
+between the two runs (the script read the working tree's docs, edited in between), so it is now pinned to commit
+`dc047b5`. Evidence: `bench/results/2026-10-04-metal-models/`, `-128k/`, `-vision/` (the `*.low-power.json` files
+are the earlier runs). The absolute tok/s in rounds 9-26 above are Low Power Mode numbers; each round compared
+its two sides in the same mode.
+
+High Power Mode (`powermode 2`) afterwards, the same binary and inputs: IQ2_XS short-chat decode 27.98 / 28.93
+tok/s (two runs; Automatic 28.60), 30K prefill 271.7 (276.8); Q2_0 27.03 (26.68), 275.0 (276.5); 128K prefill
+193.7 / 200.5 (202.6 / 204.4); the image encoder within 4%, the picture checks all pass. No measurable gain. The
+output is the same, and so is the memory. Chrome, WindowServer and Spotlight were running in the background.
+`--mtp-max-t 2` is still slower there: 21.57 tok/s. The README keeps the Automatic numbers.

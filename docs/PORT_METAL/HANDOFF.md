@@ -49,13 +49,19 @@ The CUDA/HIP engine is ported to Metal (Apple M2 Max, macOS 26.5) end to end:
   Short and 2D copies also avoid compute/blit pass switches. No eager graph commit is introduced.
 * **2026-10-04: pictures, Q2_0, 128K, the model list.**
   - **Pictures.** `strata-vision` (llama.cpp mtmd, `-DGGML_METAL=ON`) matches the CPU encoder: median row cosine
-    0.99998, 2 of 2,178 rows under 0.9. It takes 0.4-1.4 s a picture on Metal; the CPU takes 1-4.5 min. Through the
+    0.99998, 2 of 2,178 rows under 0.9. It takes 0.3-1.2 s a picture on Metal; the CPU takes 0.9-3.8 min. Through the
     server, all 7 picture/text checks pass. With `--vision`, text answers are the same as without, at the same speed.
     Evidence: `bench/results/2026-10-04-metal-vision/`.
-  - **Q2_0** (native pack): 22.5-22.8 tok/s writing, 205 reading, 31.64 GiB of experts
+  - **Q2_0** (native pack): 26.7-26.8 tok/s writing, 276 reading, 31.64 GiB of experts; IQ2_XS 28.4-29.2 / 277
     (`bench/results/2026-10-04-metal-models/`).
-  - **128K** (IQ2_XS, corrected engine): 141 tok/s reading, 24.5 writing, the planted fields 3/3, follow-up 0.95 s
-    (`bench/results/2026-10-04-metal-128k/`).
+  - **128K** (corrected engine): IQ2_XS 203 tok/s reading, 25.3 writing; Q2_0 204 / 24.5; the planted fields 3/3,
+    follow-up 0.88-0.94 s (`bench/results/2026-10-04-metal-128k/`, prompt pinned to commit `dc047b5`).
+  - **Energy Mode.** The numbers above are plugged in, Energy Mode Automatic (`pmset -g`: `powermode 0`). The
+    earlier runs of 2026-10-04 were in Low Power Mode: the same binary and inputs wrote 15-16% slower and read
+    26-30% slower, with the same output (the `*.low-power.json` files beside them). High Power Mode (`powermode 2`,
+    `*.high-power.json`) measured no faster: -4.4% to +1.3% against Automatic, with background apps running. The user said the earlier
+    measurements were in Low Power Mode, so the absolute tok/s in rounds 9-26 and the 2026-10-03 bench READMEs are
+    Low Power Mode numbers; each round's before/after pair ran in the same mode.
   - **setup.** It shows the model list every run (arrow keys; data/mac-metal.json's `menu`), puts images on by
     default, downloads a big file over four connections and checks each file's published SHA-256.
 * **Installed by setup now (2026-10-03, after round 26):** `./download-model.sh` + `./setup.sh` compile the Metal

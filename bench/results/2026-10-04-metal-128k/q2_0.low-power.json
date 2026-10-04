@@ -29,36 +29,36 @@
   "--no-prefill-borrow"
  ],
  "capacity": 131072,
- "startup_s": 107.13920450001024,
+ "startup_s": 105.82769720900978,
  "peak_footprint": "41.9G",
  "runs": [
   {
    "kind": "128K prompt, fresh",
    "prompt_tokens": 128000,
    "reused": 0,
-   "generated": 27,
-   "prompt_ms": 626101.3,
-   "decode_ms": 1103.2,
-   "prefill_tok_s": 204.43976078631363,
-   "decode_tok_s": 24.474256707759245,
-   "first_token_s": 626.1652166249987,
+   "generated": 26,
+   "prompt_ms": 897599.2,
+   "decode_ms": 1127.8,
+   "prefill_tok_s": 142.60262264048365,
+   "decode_tok_s": 23.05373293137081,
+   "first_token_s": 897.676726500009,
    "fields_found": [
     "银杏",
     "10月18日",
     "AX-7319"
    ],
-   "answer": "项目代号为“银杏”，验收日期为10月18日，校验码为AX-7319。<|im_end|>"
+   "answer": "项目代号为银杏，验收日期为10月18日，校验码为AX-7319。<|im_end|>"
   },
   {
    "kind": "follow-up, same conversation",
-   "prompt_tokens": 128050,
-   "reused": 128026,
+   "prompt_tokens": 128049,
+   "reused": 128025,
    "generated": 7,
-   "prompt_ms": 822.8,
-   "decode_ms": 286.5,
-   "prefill_tok_s": 29.16869227029655,
-   "decode_tok_s": 24.43280977312391,
-   "first_token_s": 0.8848593750008149,
+   "prompt_ms": 844.8,
+   "decode_ms": 299.4,
+   "prefill_tok_s": 28.40909090909091,
+   "decode_tok_s": 23.380093520374082,
+   "first_token_s": 0.9131758330040611,
    "fields_found": [
     "AX-7319"
    ],

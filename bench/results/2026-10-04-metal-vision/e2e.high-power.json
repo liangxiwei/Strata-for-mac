@@ -1,6 +1,6 @@
 {
  "config": "strata-iq2_xs.json",
- "ready_s": 114.4,
+ "ready_s": 96.2,
  "health": {
   "status": "ok",
   "max_context": 32768,
@@ -43,7 +43,7 @@
     ]
    ],
    "pass": true,
-   "seconds": 5.49,
+   "seconds": 6.32,
    "usage": {
     "prompt_tokens": 424,
     "completion_tokens": 25,
@@ -78,7 +78,7 @@
     ]
    ],
    "pass": true,
-   "seconds": 4.81,
+   "seconds": 4.85,
    "usage": {
     "prompt_tokens": 332,
     "completion_tokens": 78,
@@ -98,7 +98,7 @@
     ]
    ],
    "pass": true,
-   "seconds": 2.31,
+   "seconds": 2.36,
    "usage": {
     "prompt_tokens": 350,
     "completion_tokens": 2,
@@ -117,7 +117,7 @@
     ]
    ],
    "pass": true,
-   "seconds": 2.0,
+   "seconds": 2.1,
    "usage": {
     "prompt_tokens": 248,
     "completion_tokens": 6,
@@ -132,7 +132,7 @@
    "answer": "This screenshot shows a dual-monitor setup with a Strata AI model monitoring dashboard on the left displaying real-time performance metrics (GPU load, VRAM, temperature, etc.) and recent request logs, while the right side shows a code editor with a detailed description of a Voxel Japanese Pagoda Garden project including HTML structure, animation logic, and a TODO list.",
    "checks": [],
    "pass": null,
-   "seconds": 7.56,
+   "seconds": 7.77,
    "usage": {
     "prompt_tokens": 941,
     "completion_tokens": 73,
@@ -151,7 +151,7 @@
     ]
    ],
    "pass": true,
-   "seconds": 1.04,
+   "seconds": 1.06,
    "usage": {
     "prompt_tokens": 27,
     "completion_tokens": 4,
@@ -172,7 +172,7 @@
     ]
    ],
    "pass": true,
-   "seconds": 1.96,
+   "seconds": 1.99,
    "usage": {
     "prompt_tokens": 371,
     "completion_tokens": 2,

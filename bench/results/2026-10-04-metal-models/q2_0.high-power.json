@@ -39,16 +39,16 @@
     },
     "doc_tokens": 30000
   },
-  "startup_s": 105.72249866698985,
+  "startup_s": 92.47520387501572,
   "runs": [
     {
       "kind": "short chat",
       "prompt_tokens": 31,
       "generated": 256,
       "reused": 0,
-      "prompt_ms": 2627.0,
-      "decode_ms": 9568.2,
-      "decode_tok_s": 26.755293576639282,
+      "prompt_ms": 2268.5,
+      "decode_ms": 9474.3,
+      "decode_tok_s": 27.02046589193925,
       "text_start": "**Engineering Resilience: How Bridges Are Designed to Survive Earthquakes**\n\nBridges are among the"
     },
     {
@@ -56,9 +56,9 @@
       "prompt_tokens": 31,
       "generated": 256,
       "reused": 0,
-      "prompt_ms": 999.8,
-      "decode_ms": 9591.1,
-      "decode_tok_s": 26.691411829717133,
+      "prompt_ms": 983.3,
+      "decode_ms": 9465.8,
+      "decode_tok_s": 27.044729447062057,
       "text_start": "城市地铁系统不仅是现代都市的动脉，更是衡量一座城市现代化水平的重要标志。然而，从蓝图到通车"
     },
     {
@@ -66,9 +66,9 @@
       "prompt_tokens": 35,
       "generated": 256,
       "reused": 0,
-      "prompt_ms": 1125.7,
-      "decode_ms": 9599.5,
-      "decode_tok_s": 26.668055627897285,
+      "prompt_ms": 1135.7,
+      "decode_ms": 9653.4,
+      "decode_tok_s": 26.519153873246733,
       "text_start": "The execution of instructions in a modern Central Processing Unit (CPU) is a complex orchestration of hardware components designed to maximize"
     },
     {
@@ -76,9 +76,9 @@
       "prompt_tokens": 33,
       "generated": 256,
       "reused": 0,
-      "prompt_ms": 1076.9,
-      "decode_ms": 9598.1,
-      "decode_tok_s": 26.671945489211407,
+      "prompt_ms": 1077.2,
+      "decode_ms": 9330.0,
+      "decode_tok_s": 27.438370846730976,
       "text_start": "一杯咖啡从种子到杯中，是一场跨越地理与时间的旅程，其过程既复杂又充满艺术性。这一"
     },
     {
@@ -86,10 +86,10 @@
       "prompt_tokens": 30000,
       "generated": 64,
       "reused": 0,
-      "prompt_ms": 108515.8,
-      "prefill_tok_s": 276.45743753444196,
-      "decode_ms": 2503.0,
-      "decode_tok_s": 25.56931681981622,
+      "prompt_ms": 109099.3,
+      "prefill_tok_s": 274.9788495434893,
+      "decode_ms": 2404.9,
+      "decode_tok_s": 26.61233315314566,
       "text_start": "Strata manages memory by keeping all 24,576 model experts in system RAM while the GPU holds only the most frequently used ones in its VRAM cache. For systems with limited RAM"
     }
   ]
