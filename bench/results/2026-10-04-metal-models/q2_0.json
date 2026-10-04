@@ -1,0 +1,96 @@
+{
+  "config": {
+    "exe": "engine/strata",
+    "exe_sha256": "71cb4981fd68f439ba595a57f3b535ef4337ea50340d56ceca75bd315f899d97",
+    "args": [
+      "--pack",
+      "Strata-data/packs/q2_0",
+      "--native",
+      "Strata-data/models/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00001-of-00002.gguf",
+      "--ple-gguf",
+      "Strata-data/models/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00002-of-00002.gguf",
+      "--max-context",
+      "32768",
+      "--spec",
+      "4",
+      "--spec-min-p",
+      "0.5",
+      "--prefill",
+      "1024",
+      "--expert-profile",
+      "data/expert-profile.bin",
+      "--expert-cache",
+      "auto",
+      "--mtp",
+      "Strata-data/mtp/rt",
+      "--mtp-max-t",
+      "1",
+      "--suffix-draft",
+      "0",
+      "--mmap-experts",
+      "--no-prefill-borrow",
+      "--vision",
+      "--vram-reserve-mib",
+      "700"
+    ],
+    "env": {
+      "STRATA_METAL_IQ4_EXPAND": "0",
+      "STRATA_DECODE_TIMING": "1"
+    },
+    "doc_tokens": 30000
+  },
+  "startup_s": 29.07809462500154,
+  "runs": [
+    {
+      "kind": "short chat",
+      "prompt_tokens": 31,
+      "generated": 256,
+      "reused": 0,
+      "prompt_ms": 1430.5,
+      "decode_ms": 11224.7,
+      "decode_tok_s": 22.8068456172548,
+      "text_start": "**Engineering Resilience: How Bridges Are Designed to Survive Earthquakes**\n\nBridges are among the"
+    },
+    {
+      "kind": "short chat",
+      "prompt_tokens": 31,
+      "generated": 256,
+      "reused": 0,
+      "prompt_ms": 1162.9,
+      "decode_ms": 11229.6,
+      "decode_tok_s": 22.796893923202962,
+      "text_start": "城市地铁系统不仅是现代都市的动脉，更是衡量一座城市现代化水平的重要标志。然而，从蓝图到通车"
+    },
+    {
+      "kind": "short chat",
+      "prompt_tokens": 35,
+      "generated": 256,
+      "reused": 0,
+      "prompt_ms": 1331.9,
+      "decode_ms": 11350.6,
+      "decode_tok_s": 22.55387380402798,
+      "text_start": "The execution of instructions in a modern Central Processing Unit (CPU) is a complex orchestration of hardware components designed to maximize"
+    },
+    {
+      "kind": "short chat",
+      "prompt_tokens": 33,
+      "generated": 256,
+      "reused": 0,
+      "prompt_ms": 1298.0,
+      "decode_ms": 11382.6,
+      "decode_tok_s": 22.490467907156535,
+      "text_start": "一杯咖啡从种子到杯中，是一场跨越地理与时间的旅程，其过程既复杂又充满艺术性。这一"
+    },
+    {
+      "kind": "document",
+      "prompt_tokens": 30000,
+      "generated": 64,
+      "reused": 0,
+      "prompt_ms": 146104.3,
+      "prefill_tok_s": 205.33276570230993,
+      "decode_ms": 2926.9,
+      "decode_tok_s": 21.866138234992654,
+      "text_start": "Strata manages memory by keeping all 24,576 model experts in system RAM while the GPU holds only the most frequently used ones in its VRAM cache. For systems with limited RAM"
+    }
+  ]
+}

@@ -47,6 +47,17 @@ The CUDA/HIP engine is ported to Metal (Apple M2 Max, macOS 26.5) end to end:
   625 MiB output-head view produced no clear overall gain and was removed, along with larger FP16
   views, GR rewrites and a gate fusion that only moved the full-model result by about 0.1%.
   Short and 2D copies also avoid compute/blit pass switches. No eager graph commit is introduced.
+* **2026-10-04: pictures, Q2_0, 128K, the model list.**
+  - **Pictures.** `strata-vision` (llama.cpp mtmd, `-DGGML_METAL=ON`) matches the CPU encoder: median row cosine
+    0.99998, 2 of 2,178 rows under 0.9. It takes 0.4-1.4 s a picture on Metal; the CPU takes 1-4.5 min. Through the
+    server, all 7 picture/text checks pass. With `--vision`, text answers are the same as without, at the same speed.
+    Evidence: `bench/results/2026-10-04-metal-vision/`.
+  - **Q2_0** (native pack): 22.5-22.8 tok/s writing, 205 reading, 31.64 GiB of experts
+    (`bench/results/2026-10-04-metal-models/`).
+  - **128K** (IQ2_XS, corrected engine): 141 tok/s reading, 24.5 writing, the planted fields 3/3, follow-up 0.95 s
+    (`bench/results/2026-10-04-metal-128k/`).
+  - **setup.** It shows the model list every run (arrow keys; data/mac-metal.json's `menu`), puts images on by
+    default, downloads a big file over four connections and checks each file's published SHA-256.
 * **Installed by setup now (2026-10-03, after round 26):** `./download-model.sh` + `./setup.sh` compile the Metal
   engine into `engine/strata` and write `strata-iq2_xs.json` from `data/mac-metal.json` (the settings below, paths
   relative to the repo); the model files live in the repo's git-ignored `Strata-data/` (models/IQ2_XS, packs/iq2_xs,
@@ -202,7 +213,8 @@ the ring-poll cadence (200 us is the Metal default and the measured knee - do no
    and violates mapped-source late-write ordering; its CSV is diagnostic history only. Use the safe
    CPU-only `STRATA_METAL_GRAPH_TIMING=1` or an order-preserving GPU profiler. Keep original operations,
    independent references and round 20's matched-input real-model audit scripts as correctness gates.
-2. Repeat 100K and cached-follow-up validation with IQ2_XS and the corrected engine before claiming
+2. (Done 2026-10-04 at 128K, one sample per model: `bench/results/2026-10-04-metal-128k/`.) Repeat 100K and
+   cached-follow-up validation with IQ2_XS and the corrected engine before claiming
    usable long-context quality. The 10K check now passes, but it does not validate 100K. Reconsider
    speculative windows only with fresh measurements; the old Q2 comparison predates the Q3_K fix.
    For captured resident experts, bind an immutable arena and index it on the GPU: reading a

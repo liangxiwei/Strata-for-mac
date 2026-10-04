@@ -1,17 +1,31 @@
 {
  "about": "The Metal engine's run settings on an Apple-Silicon Mac: what setup.py writes into strata-<model>.json there. These are the measured ones (README, docs/MAC.md): all experts resident in the Mac's memory and decoded on the GPU as one graph (--mmap-experts --no-prefill-borrow), 1,024-token prompt chunks, FP16 KV, the MTP layer loaded (the server needs it) but no drafts (--mtp-max-t 1 --suffix-draft 0: on the M2 Max the checking cost more than it saved). {pack} {gguf} {ple} {profile} {mtp} {context} are filled in by setup.",
- "measured_on": "Apple M2 Max (38-core GPU, 96 GB), macOS 26.5, Xcode 26.1, IQ2_XS",
- "evidence": "bench/results/2026-10-03-metal-readme/ (24 tok/s writing, 196 tok/s reading a 30,000-token prompt)",
+ "measured_on": "Apple M2 Max (38-core GPU, 96 GB), macOS 26.5, Xcode 26.1",
+ "evidence": "bench/results/2026-10-03-metal-readme/ (IQ2_XS), bench/results/2026-10-04-metal-models/ (IQ2_XS, Q2_0), bench/results/2026-10-04-metal-vision/ (images), bench/results/2026-10-04-metal-128k/ (128K context)",
  "model": "IQ2_XS",
  "family": "qwen",
  "context": 32768,
+ "contexts_measured": [32768, 131072],
  "ram_gb": 96,
  "footprint_gb": 40.3,
+ "overhead_gib": 7.3,
+ "gpu_share": 0.81,
+ "min_ram_gb": 20,
  "args": ["--pack", "{pack}", "--native", "{gguf}", "--ple-gguf", "{ple}", "--max-context", "{context}",
           "--spec", "4", "--spec-min-p", "0.5", "--prefill", "1024", "--expert-profile", "{profile}",
           "--expert-cache", "auto", "--mtp", "{mtp}", "--mtp-max-t", "1", "--suffix-draft", "0",
           "--mmap-experts", "--no-prefill-borrow"],
  "env": {"STRATA_METAL_IQ4_EXPAND": "0"},
  "cmake": ["-DSTRATA_ENABLE_METAL=ON", "-DSTRATA_METAL_ENGINE=ON", "-DSTRATA_NATIVE_EXPERTS=ON",
-           "-DSTRATA_BUILD_TESTS=OFF"]
+           "-DSTRATA_BUILD_TESTS=OFF"],
+ "vision": {"default": true, "max_tokens": 1024, "reserve_mib": 700, "footprint_gib": 1.3,
+            "cmake": ["-DGGML_METAL=ON"]},
+ "menu": [
+  {"family": "qwen", "model": "IQ2_XS", "note": "the original model, 2-bit, writes a little faster", "measured": {"write_tok_s": 24, "read_tok_s": 196}},
+  {"family": "qwen", "model": "Q2_0", "note": "the original model, 2-bit, reads prompts a little faster", "measured": {"write_tok_s": 23, "read_tok_s": 205}},
+  {"family": "coder", "model": "IQ1_M", "note": "the Coder: half the experts, for code", "measured": null},
+  {"family": "swift", "model": "IQ2_XS", "note": "a fine-tune that thinks shorter", "measured": null},
+  {"family": "qwen", "model": "IQ3_XXS", "note": "the original model, 3-bit", "measured": null},
+  {"family": "qwen", "model": "IQ3_S", "note": "the original model, 3.5-bit, the best quality", "measured": null}
+ ]
 }

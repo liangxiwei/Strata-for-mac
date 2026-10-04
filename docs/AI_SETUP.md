@@ -209,13 +209,22 @@ Measured on an M2 Max with 96 GB: IQ2_XS, 32K context, about 24 tokens/s ([MAC.m
    ```
 
    Behind a blocked huggingface.co: `HF_ENDPOINT=https://hf-mirror.com ./download-model.sh`.
-5. **Install without starting:** `./setup.sh --yes --no-start` (compiles the Metal engine, 25 s on an M2 Max, and
-   writes `strata-iq2_xs.json` + `run-iq2_xs.sh`; it downloads nothing that step 4 fetched).
+5. **Install without starting:** `./setup.sh --yes --no-start`. It compiles the Metal engine and the image encoder
+   (under a minute on an M2 Max) and writes `strata-iq2_xs.json` + `run-iq2_xs.sh`. It downloads nothing that
+   step 4 fetched.
 6. **Start:** `nohup ./run-iq2_xs.sh > strata-server.out 2>&1 &`, then continue with step 7 above. Loading takes
-   30 s - 1.5 min. The engine log is `strata-iq2_xs.log`.
+   30 s - 2 min. The engine log is `strata-iq2_xs.log`.
 
-Images, the speed projection, `--gpu`/`--gpus` and calibration are PC features. Stop the server with
-`kill -TERM <server pid>` (or Ctrl+C in its window).
+Notes:
+
+- **The model:** without `--model` and with `--yes` (or no terminal), setup takes the model used last, else the one
+  recommended for the Mac's memory, and prints the list with each one's state and fit.
+- **Which one:** measured are `--model IQ2_XS` (24 tok/s writing) and `--model Q2_0` (23 tok/s, reads prompts a
+  little faster). On a 48 GB Mac the recommended one is `--family coder` (untested on a Mac). Under 20 GB setup
+  stops.
+- **Pictures** are on by default (`--vision no` turns them off).
+- **PC features:** the speed projection, `--gpu`/`--gpus` and calibration.
+- **Stopping:** `kill -TERM <server pid>`, or Ctrl+C in its window.
 
 ## Alternative: the MCP server
 

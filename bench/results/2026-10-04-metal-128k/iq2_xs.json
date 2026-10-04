@@ -1,0 +1,69 @@
+{
+ "config": "strata-iq2_xs.json",
+ "args": [
+  "--pack",
+  "Strata-data/packs/iq2_xs",
+  "--native",
+  "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+  "--ple-gguf",
+  "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+  "--max-context",
+  "131072",
+  "--spec",
+  "4",
+  "--spec-min-p",
+  "0.5",
+  "--prefill",
+  "1024",
+  "--expert-profile",
+  "data/expert-profile.bin",
+  "--expert-cache",
+  "auto",
+  "--mtp",
+  "Strata-data/mtp/rt",
+  "--mtp-max-t",
+  "1",
+  "--suffix-draft",
+  "0",
+  "--mmap-experts",
+  "--no-prefill-borrow"
+ ],
+ "capacity": 131072,
+ "startup_s": null,
+ "peak_footprint": null,
+ "note": "the rows as the run printed them; its summary write failed on a path bug (fixed), so the startup time and the sampled footprint were not saved",
+ "runs": [
+  {
+   "kind": "128K prompt, fresh",
+   "prompt_tokens": 128000,
+   "reused": 0,
+   "generated": 26,
+   "prompt_ms": 906983.1,
+   "decode_ms": 1060.4,
+   "prefill_tok_s": 141.1272161520981,
+   "decode_tok_s": 24.519049415314974,
+   "first_token_s": 907.0581063329882,
+   "fields_found": [
+    "银杏",
+    "10月18日",
+    "AX-7319"
+   ],
+   "answer": "项目代号为银杏，验收日期为10月18日，校验码为AX-7319。<|im_end|>"
+  },
+  {
+   "kind": "follow-up, same conversation",
+   "prompt_tokens": 128049,
+   "reused": 128025,
+   "generated": 7,
+   "prompt_ms": 884.4,
+   "decode_ms": 275.6,
+   "prefill_tok_s": 27.137042062415198,
+   "decode_tok_s": 25.399129172714076,
+   "first_token_s": 0.9510407089983346,
+   "fields_found": [
+    "AX-7319"
+   ],
+   "answer": "AX-7319<|im_end|>"
+  }
+ ]
+}

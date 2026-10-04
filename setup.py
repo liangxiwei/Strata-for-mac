@@ -53,7 +53,9 @@ import shutil
 import struct
 import subprocess
 import sys
+import threading
 import time
+import http.client
 import urllib.error
 import urllib.request
 import zipfile
@@ -741,6 +743,13 @@ def download(url, dst: Path, what=None):
         ok(f"{what or dst.name} already downloaded")
         return
     have = part.stat().st_size if part.exists() else 0
+    # a Mac: a model file in parallel ranges - hf-mirror serves ~3 MB/s per connection, four took 44 MB/s (measured)
+    if MAC and total >= 1 << 30 and (part.with_name(part.name + ".plan").exists() or ranges_ok(url)):
+        download_ranges(url, part, total, what or dst.name)
+        part.replace(dst)
+        mark(dst)
+        ok(f"{what or dst.name} downloaded")
+        return
     for attempt in range(30):
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "strata-setup", "Range": f"bytes={have}-"})
@@ -774,6 +783,116 @@ def download(url, dst: Path, what=None):
     part.replace(dst)
     mark(dst)
     ok(f"{what or dst.name} downloaded")
+
+
+DOWNLOAD_RANGES = 4
+
+
+def ranges_ok(url) -> bool:
+    """The server answers a byte range with that range (206 + Content-Range), not the whole file (#327's mirror)."""
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "strata-setup", "Range": "bytes=0-0"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return r.status == 206 and (r.headers.get("Content-Range") or "").startswith("bytes 0-0/")
+    except (OSError, http.client.HTTPException):
+        return False
+
+
+def download_ranges(url, part: Path, total: int, what: str) -> None:
+    """The rest of a download in DOWNLOAD_RANGES parallel byte ranges, written in place into <name>.part; resumable
+    (the ranges' progress is <name>.part.plan).  What a single-stream .part already holds is kept."""
+    plan_path = part.with_name(part.name + ".plan")
+    plan = json.loads(plan_path.read_text()) if plan_path.exists() else None
+    if not plan or plan.get("total") != total:
+        start = part.stat().st_size if part.exists() else 0
+        step = max(1, -(-(total - start) // DOWNLOAD_RANGES))
+        plan = {"total": total, "ranges": [{"start": s, "end": min(total, s + step), "at": s}
+                                           for s in range(start, total, step)]}
+    with open(part, "ab"):
+        pass
+    if part.stat().st_size != total:
+        os.truncate(part, total)                       # in place; the bytes already there stay
+    lock = threading.Lock()
+
+    def save():
+        with lock:
+            tmp = plan_path.with_name(plan_path.name + ".tmp")
+            tmp.write_text(json.dumps(plan))
+            os.replace(tmp, plan_path)
+
+    def fetch(r):
+        for attempt in range(30):
+            if r["at"] >= r["end"]:
+                return
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "strata-setup",
+                                                           "Range": f"bytes={r['at']}-{r['end'] - 1}"})
+                fd = os.open(part, os.O_WRONLY)
+                try:
+                    with urllib.request.urlopen(req, timeout=60) as resp:
+                        if resp.status != 206:
+                            raise OSError(f"the server sent HTTP {resp.status} for a byte range")
+                        while r["at"] < r["end"]:
+                            b = resp.read(4 << 20)
+                            if not b:
+                                break
+                            b = memoryview(b)[: r["end"] - r["at"]]
+                            while b:                   # unbuffered: the plan never runs ahead of the file
+                                n = os.pwrite(fd, b, r["at"])
+                                r["at"] += n
+                                b = b[n:]
+                finally:
+                    os.close(fd)
+            except (OSError, http.client.HTTPException):
+                time.sleep(10)
+    save()
+    workers = [threading.Thread(target=fetch, args=(r,), daemon=True) for r in plan["ranges"] if r["at"] < r["end"]]
+    for w in workers:
+        w.start()
+    left = lambda: sum(r["end"] - r["at"] for r in plan["ranges"])   # noqa: E731
+    while any(w.is_alive() for w in workers):
+        time.sleep(2)
+        save()
+        have = total - left()
+        print(f"\r  {what}: {have / 1e9:6.2f} / {total / 1e9:.2f} GB ({100 * have / total:.0f}%, "
+              f"{len(workers)} connections)   ", end="", flush=True)
+    print()
+    save()
+    if left():
+        fail(f"could not finish downloading {part.name[:-5]}: {left():,} bytes still missing",
+             "check your internet connection and run it again (the download resumes where it stopped)")
+    plan_path.unlink(missing_ok=True)
+
+
+def hf_sha256(url: str) -> str | None:
+    """The SHA-256 Hugging Face publishes for a file (its LFS oid), from the repository's tree at the URL's revision;
+    None when the URL is not a Hugging Face file or the API cannot be reached."""
+    m = re.match(r"^(https?://[^/]+)/(.+?)/resolve/([^/]+)/(.+)$", url)
+    if not m:
+        return None
+    host, repo, rev, path = m.groups()
+    folder, _, name = path.rpartition("/")
+    try:
+        api = f"{host}/api/models/{repo}/tree/{rev}" + (f"/{folder}" if folder else "")
+        req = urllib.request.Request(api, headers={"User-Agent": "strata-setup"})
+        for f in json.loads(urllib.request.urlopen(req, timeout=60).read()):
+            if f.get("path") == path:
+                return (f.get("lfs") or {}).get("oid")
+    except (OSError, ValueError, http.client.HTTPException):
+        return None
+    return None
+
+
+def verify_hf(s: Path, url: str) -> None:
+    """A downloaded file against the SHA-256 Hugging Face publishes for it, once (kept in its finish mark); a wrong
+    file is deleted so the next run downloads it again.  Offline, it stays unchecked until a later run."""
+    m = s.with_name(s.name + ".done")
+    if m.exists() and "sha256 " in m.read_text(encoding="utf-8", errors="replace"):
+        return
+    sha = hf_sha256(url)
+    if sha:
+        verify_sha256(s, s.stat().st_size, sha)
+        ok(f"{s.name}: SHA-256 matches Hugging Face's")
 
 
 def whole_shard(s: Path) -> bool:
@@ -1615,12 +1734,14 @@ def update_installed_engine(url_base) -> None:
     meta_text = info.read_text()
     meta = json.loads(meta_text)
     if meta.get("backend") == "metal":                 # a Mac: compiled here, again when its source changed
-        if meta.get("src") != source_hash(METAL_SOURCES):
-            try:
+        try:
+            if meta.get("src") != source_hash(METAL_SOURCES):
                 build_engine_metal(False, get_llama_cpp())
-            except (Exception, SystemExit) as e:
-                warn(f"could not compile the updated engine{'' if isinstance(e, SystemExit) else f' ({e})'}: "
-                     "starting the installed one")
+            if meta.get("vision") == "gpu" and meta.get("vision_src") != source_hash(VISION_SOURCES_MAC):
+                build_vision_metal(get_llama_cpp())
+        except (Exception, SystemExit) as e:
+            warn(f"could not compile the updated engine{'' if isinstance(e, SystemExit) else f' ({e})'}: "
+                 "starting the installed one")
         return
     if meta.get("backend") == "hip" and WIN:           # AMD on Windows: the ready-made HIP engine, when older
         ver = tuple(int(x) for x in str(meta.get("version", "0")).split(".")[:3] if x.isdigit())
@@ -1877,12 +1998,31 @@ def build_engine(gpu, vision, yes, llama) -> Path:
 # The GPU and the CPU share one memory, so there is no VRAM to size and no card to pick: every expert is resident.
 MAC_PROFILE = Path(__file__).resolve().parent / "data" / "mac-metal.json"
 METAL_SOURCES = (*ENGINE_SOURCES, "cmake")     # + cmake/metal_backend.cmake (the metallib) and embed_binary.cmake
-MAC_MIN_RAM_GB = 60    # under it the 33 GiB of experts and the rest cannot all stay resident (the measured 96 GB Mac
-                       # gives Metal a 77.8 GiB working set): a stop by default, a risk the user can take
+VISION_SOURCES_MAC = ("tools/vision",)
 
 
 def mac_profile() -> dict:
     return json.loads(MAC_PROFILE.read_text(encoding="utf-8"))
+
+
+def measured_names(prof: dict) -> str:
+    return ", ".join(f"{FAMILIES[m['family']]['title']} {m['model']}" for m in prof["menu"] if m["measured"])
+
+
+def mac_need_gib(prof: dict, model: str, vision: bool) -> float:
+    """The memory a model takes on a Mac with every expert resident: its experts, plus what the measured IQ2_XS run
+    used beside them (dense weights, KV, MTP layer, buffers: 40.3 GiB - 33.06 GiB), plus the image encoder."""
+    return MODELS[model]["arena_gb"] / 1.073741824 + prof["overhead_gib"] + (
+        prof["vision"]["footprint_gib"] if vision else 0)
+
+
+def mac_fit(prof: dict, model: str, ram: float, vision: bool) -> str:
+    """"fits": every expert in the share of the memory macOS gives the GPU (77.8 of 96 GiB on the measured Mac);
+    "tight": in the memory, but not all on the GPU (the rest computed on the CPU: slower, untested); else "short"."""
+    need = mac_need_gib(prof, model, vision)
+    if need <= ram * prof["gpu_share"] - prof["vision"]["reserve_mib"] / 1024:
+        return "fits"
+    return "tight" if need <= ram - 4 else "short"
 
 
 def apple_silicon_problem() -> str | None:
@@ -1969,19 +2109,173 @@ def build_engine_metal(yes, llama) -> Path:
     # (a running engine, or the next start of one overwritten with cp)
     shutil.copy2(ROOT / "build-metal-engine" / EXE, eng / (EXE + ".new"))
     os.replace(eng / (EXE + ".new"), eng / EXE)
-    stamp.write_text(json.dumps({"source": "local", "backend": "metal", "version": source_version(), "src": src,
-                                 "vision": "none"}, indent=1))
+    stamp.write_text(json.dumps({**{k: v for k, v in meta.items() if k.startswith("vision")}, "source": "local",
+                                 "backend": "metal", "version": source_version(), "src": src}, indent=1))
     ok(f"engine compiled: {eng / EXE}")
     return eng
 
 
-def install_mac(a, data, roots, port) -> int:
-    """The install on an Apple-Silicon Mac: the steps of main() with the Metal engine compiled here, and the model
-    set up as measured (data/mac-metal.json: IQ2_XS, 32K context, every expert resident).  Another size, family or
-    context is asked as a risk (not measured on a Mac); images, the speed projection, the GPU flags and the low-RAM
-    mode are PC features."""
+def build_vision_metal(llama) -> Path:
+    """The image encoder (tools/vision, llama.cpp's mtmd) with ggml's Metal backend, into engine/ - again when its
+    source changed.  It needs no Metal compiler: ggml embeds its shader source and compiles it when it starts."""
+    eng = ROOT / "engine"
+    stamp = eng / "BUILD.json"
+    meta = json.loads(stamp.read_text()) if stamp.exists() else {}
+    src = source_hash(VISION_SOURCES_MAC)
+    if meta.get("vision") == "gpu" and meta.get("vision_src") == src and (eng / VEXE).exists():
+        ok("image encoder already built")
+        return eng / VEXE
+    say("  Compiling the image encoder (Metal; under a minute on an M2 Max, once) ...")
+    cmake_build(ROOT / "tools" / "vision", ROOT / "build-vision-metal", "strata-vision",
+                [f"-DLLAMA_DIR={llama}", *mac_profile()["vision"]["cmake"]], None, "")
+    shutil.copy2(ROOT / "build-vision-metal" / "bin" / VEXE, eng / (VEXE + ".new"))
+    os.replace(eng / (VEXE + ".new"), eng / VEXE)
+    meta = json.loads(stamp.read_text()) if stamp.exists() else {}
+    stamp.write_text(json.dumps({**meta, "vision": "gpu", "vision_src": src}, indent=1))
+    ok(f"image encoder compiled: {eng / VEXE}")
+    return eng / VEXE
+
+
+def model_shards(a, roots, fam: dict, model: str) -> list:
+    """Where a model's GGUF shards are (or go): --gguf-dir, or the one remembered for it, or <data>/models/<tag>; a
+    copy finished in another Strata folder's data counts too."""
+    tag = fam["tag"] + model
+    g = a.gguf_dir or load_settings().get("gguf_dirs", {}).get(tag)
+    if g and all(s.is_file() for s in gguf_dir_shards(Path(g), fam, model)):
+        return gguf_dir_shards(Path(g), fam, model)
+    own = [Path(a.models_dir) / tag / fam["file"].format(q=model, i=i) for i in range(1, fam.get("shards", 2) + 1)]
+    if not all(s.exists() and done(s) for s in own):
+        for r in roots[1:]:
+            cand = [r / "models" / tag / s.name for s in own]
+            if all(c.exists() and done(c) for c in cand):
+                return cand
+    return own
+
+
+def bytes_have(s: Path) -> int:
+    """Bytes of a model file on the disk: finished, or downloaded so far (a parallel download's .part is full size
+    from the start; its .plan says how much of it is there)."""
+    if s.exists():
+        return s.stat().st_size
+    part = s.with_name(s.name + ".part")
+    plan = part.with_name(part.name + ".plan")
+    if plan.exists():
+        try:
+            p = json.loads(plan.read_text())
+            return p["total"] - sum(r["end"] - r["at"] for r in p["ranges"])
+        except (OSError, ValueError, KeyError):
+            return 0
+    return part.stat().st_size if part.exists() else 0
+
+
+def mac_status(a, roots, fam: dict, model: str) -> dict:
+    """A model's state for the menu: "set up" (its config is written), "downloaded", "partly", or "not"."""
+    shards = model_shards(a, roots, fam, model)
+    total = MODELS[model]["download_gb"]
+    whole = all(s.exists() for s in shards)            # a download ends as <name>.part until it is complete
+    got = sum(bytes_have(s) for s in shards) / 1e9
+    tag = fam["tag"] + model
+    state = ("set up" if (ROOT / f"strata-{tag.lower()}.json").exists() else "downloaded") if whole else \
+        "partly" if got > 0.05 else "not"
+    return {"state": state, "have_gb": got, "total_gb": total, "shards": shards, "tag": tag}
+
+
+def mac_menu(a, roots, ram: float, vision: bool) -> tuple:
+    """The supported models (data/mac-metal.json's "menu"), the downloaded ones first: (entries, recommended index)."""
     prof = mac_profile()
-    # ---- 1. the Mac
+    rows = []
+    for i, m in enumerate(prof["menu"]):
+        fam = FAMILIES[m["family"]]
+        st = mac_status(a, roots, fam, m["model"])
+        rows.append({**m, **st, "title": fam["title"], "order": i,
+                     "fit": mac_fit(prof, m["model"], ram, vision and fam.get("vision") is not False)})
+    # the recommendation is the memory's (data/mac-metal.json's order: measured first), whatever is downloaded
+    best = next((r for r in rows if r["fit"] == "fits" and r["measured"]), None) or \
+        next((r for r in rows if r["fit"] == "fits"), None)
+    rows.sort(key=lambda r: (r["state"] not in ("set up", "downloaded"), r["order"]))
+    return rows, (rows.index(best) if best is not None else None)
+
+
+def menu_label(r: dict, recommended: bool) -> str:
+    state = {"set up": "downloaded, set up", "downloaded": "downloaded",
+             "partly": f"partly downloaded, {r['have_gb']:.0f} of {r['total_gb']:.0f} GB",
+             "not": f"not downloaded, {r['total_gb']:.0f} GB"}[r["state"]]
+    fit = "recommended for this Mac" if recommended else {
+        "fits": "fits this Mac", "tight": "tight: part of it on the CPU, slower",
+        "short": "too little memory"}[r["fit"]]
+    m = r["measured"]
+    speed = f"measured: {m['write_tok_s']} tok/s" if m else "untested on a Mac"
+    return f"{r['title']} {r['model']:7s} - {r['note']}  ({state}; {fit}; {speed})"
+
+
+def menu_tty() -> bool:
+    return sys.stdin.isatty() and sys.stdout.isatty() and not WIN
+
+
+def read_key(fd) -> str:
+    """One key from a terminal in cbreak mode: "up", "down", "enter", "quit", or the character."""
+    import select
+    b = os.read(fd, 1)
+    if b == b"\x1b":                                   # an arrow key is ESC [ A / ESC [ B (or ESC O A / B)
+        if select.select([fd], [], [], 0.05)[0]:
+            seq = os.read(fd, 2)
+            return {b"[A": "up", b"OA": "up", b"[B": "down", b"OB": "down"}.get(seq, "")
+        return "quit"
+    if b in (b"\r", b"\n"):
+        return "enter"
+    return b.decode("utf-8", "replace")
+
+
+def menu_step(key: str, sel: int, n: int):
+    """-> (the selection, done?, quit?) after a key: arrows / j k move, a number picks, Enter takes, q or Esc stops."""
+    if key in ("up", "k"):
+        return (sel - 1) % n, False, False
+    if key in ("down", "j"):
+        return (sel + 1) % n, False, False
+    if key.isdigit() and 1 <= int(key) <= n:
+        return int(key) - 1, True, False
+    if key in ("enter", " "):
+        return sel, True, False
+    return sel, False, key in ("quit", "q")
+
+
+def arrow_menu(title: str, lines: list, default: int, keys=None) -> int:
+    """A list to pick from with the arrow keys (Enter takes it); keys: a key source for tests, else the terminal."""
+    import termios
+    import tty
+    fd = sys.stdin.fileno() if keys is None else None
+    old = termios.tcgetattr(fd) if fd is not None else None
+    width = shutil.get_terminal_size((120, 20)).columns - 1
+    sel, first = default, True
+    try:
+        if fd is not None:
+            tty.setcbreak(fd)                          # keys one by one, no echo; Ctrl+C still stops setup
+        say(title + "   (up/down, Enter; q to stop)")
+        while True:
+            if not first:
+                sys.stdout.write(f"\x1b[{len(lines)}A")
+            first = False
+            for i, line in enumerate(lines):
+                text = (f"> {i + 1}) " if i == sel else f"  {i + 1}) ") + line
+                text = text[:width]
+                sys.stdout.write("\x1b[2K" + (f"\x1b[7m{text}\x1b[0m" if i == sel else text) + "\n")
+            sys.stdout.flush()
+            sel, done_, stop = menu_step(next(keys) if keys is not None else read_key(fd), sel, len(lines))
+            if stop:
+                fail("stopped: no model chosen")
+            if done_:
+                return sel
+    finally:
+        if old is not None:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+
+def mac_main(a, data, roots) -> int:
+    """A Mac, every run: the supported models in a list (the downloaded ones first; in brackets whether each is
+    downloaded and how it fits this Mac's memory), picked with the arrow keys; then it starts, or is set up first
+    (downloaded, built, configured).  --model / --family pick without the list; --yes or no terminal takes the
+    default: the model used last, else the one recommended for this Mac's memory."""
+    prof = mac_profile()
     step(1, "checking your Mac")
     bad = apple_silicon_problem()
     if bad:
@@ -1989,58 +2283,119 @@ def install_mac(a, data, roots, port) -> int:
     cpu, _, _ = cpu_info()
     ram = ram_gb()
     ok(f"Mac: {cpu}, {ram:.0f} GB of memory (shared by the GPU and the CPU)")
-    if ram < MAC_MIN_RAM_GB:
-        if not a.check:
-            confirm_risk(f"{ram:.0f} GB of memory: the model's 33 GiB of experts and the rest need about "
-                         f"{prof['footprint_gb']:.0f} GB, measured on a {prof['ram_gb']} GB Mac; with less, macOS gives "
-                         "the GPU too little of it and the model may not start, or swap", bool(a.model), a.yes,
-                         f"{ram:.0f} GB of memory is too little for the model on a Mac (measured: {prof['ram_gb']} GB)",
-                         "--model IQ2_XS --yes sets it up anyway")
-            warn(f"going on with {ram:.0f} GB of memory, as you chose")
-    elif ram < prof["ram_gb"] - 6:
-        warn(f"measured on a {prof['ram_gb']} GB Mac; with {ram:.0f} GB it is untested (the engine used about "
-             f"{prof['footprint_gb']:.0f} GB there): close other apps while it runs")
+    if ram < prof["min_ram_gb"]:
+        fail(f"{ram:.0f} GB of memory is too little: the smallest model needs about "
+             f"{min(mac_need_gib(prof, m['model'], False) for m in prof['menu']):.0f} GB on a Mac",
+             "Strata needs a Mac with 24 GB of memory or more (measured: 96 GB)")
     good, why, _ = (True, "", None) if a.download_only else metal_probe()   # a download needs no compiler
     if good and why:
         ok(f"Metal compiler: {why}")
     elif not good:
         warn("Xcode's Metal compiler is not ready (" + ("Xcode is not installed: get it from the App Store"
              if not xcode_apps() else "the Metal Toolchain is missing: setup offers to download it") + ")")
-    if a.check:
-        say()
-        say(f"  {prof['family']} {prof['model']}, {prof['context'] // 1024}K context: " +
-            ("fits (the measured setup)" if ram >= prof["ram_gb"] - 6 else "untested with this much memory"
-             if ram >= MAC_MIN_RAM_GB else "does not fit"))
-        say("\nThis Mac can run Strata" + ("" if good else " once Xcode's Metal compiler is installed") +
-            ". Run it again without --check to install.")
-        return 0
     for flag, val in (("--gpu", a.gpu), ("--gpus", a.gpus), ("--layer-split", a.layer_split), ("--backend", a.backend),
                       ("--resident-budget-gib", a.resident_budget_gib), ("--draft-vocab", a.draft_vocab)):
         if val is not None:
             warn(f"{flag} is for a PC: a Mac has one GPU sharing the memory with the CPU")
     if a.low_ram != "auto" or a.kv_streaming != "auto":
         warn("--low-ram / --kv-streaming are for a PC: on a Mac every expert stays in the memory the GPU reads")
+    if a.calibrate:
+        warn("tuning is for NVIDIA PCs: a Mac runs the measured settings of data/mac-metal.json")
+    vision = prof["vision"]["default"] if a.vision is None else a.vision in ("yes", "gpu")
+    if a.vision == "cpu":
+        warn("images on the CPU take 1-4.5 minutes a picture on the M2 Max (measured): the Mac's GPU encodes them")
 
-    # ---- 2. the choices
-    step(2, "your choices")
-    family = a.family or prof["family"]
+    # ---- 2. the model: the list, every run
+    step(2, "the model")
+    rows, rec = mac_menu(a, roots, ram, vision)
+    lines = [menu_label(r, i == rec) for i, r in enumerate(rows)]
+    last = next((i for c in installed_configs() for i, r in enumerate(rows)
+                 if c.name == f"strata-{r['tag'].lower()}.json"), None)
+    default = last if last is not None else rec if rec is not None else 0
+    explicit = bool(a.model or a.family)
+    if explicit:
+        family = a.family or next((m["family"] for m in prof["menu"] if m["model"] == a.model), prof["family"])
+        names = [m for m in MODELS if family in MODELS[m].get("families", ("qwen", "swift"))]
+        model = a.model or next((m["model"] for m in prof["menu"] if m["family"] == family and m["model"] in names),
+                                names[0] if names else "")
+        source = "flag"
+    elif menu_tty() and not a.yes and not a.check:
+        say()
+        r = rows[arrow_menu(f"  Which model? ({ram:.0f} GB Mac)", lines, default)]
+        family, model, source = r["family"], r["model"], "menu"
+    else:
+        say()
+        for i, line in enumerate(lines):
+            say(f"  {'*' if i == default else ' '} {i + 1}) {line}")
+        r = rows[default]
+        family, model, source = r["family"], r["model"], "default"
+        if not a.check:
+            say(f"  (no terminal to choose in, or --yes: {r['title']} {r['model']}; --model / --family choose another)")
+    if a.check:
+        r = rows[rec] if rec is not None else None
+        say("\nThis Mac can run Strata" + ("" if good else " once Xcode's Metal compiler is installed") +
+            (f" (recommended: {r['title']} {r['model']})" if r else " (no model fits its memory well)") +
+            ". Run it again without --check to install.")
+        return 0
+    if family not in FAMILIES:
+        fail(f"no model family {family!r}", "choose one of: " + ", ".join(FAMILIES))
+    fam = FAMILIES[family]
+    cfg_path = ROOT / f"strata-{(fam['tag'] + model).lower()}.json"
+    old = json.loads(cfg_path.read_text(encoding="utf-8-sig")) if cfg_path.exists() else {}
+    port = a.port or old.get("port") or 8080
+    changed = a.context or a.kv or (a.vision is not None and bool(old.get("vision")) != vision)
+    if old and not (a.setup or a.no_start or a.download_only or changed):
+        update_installed_engine(a.prebuilt)            # a git pull: the engine (and the encoder) compiled again
+        return start(cfg_path, a.port, None, yes=a.yes, keep={"host": a.host, "api_key": a.api_key})
+    return install_mac(a, data, roots, port, family, model, ram, vision and fam.get("vision") is not False, source)
+
+
+def install_mac(a, data, roots, port, family, model, ram, vision, source="default") -> int:
+    """The install on an Apple-Silicon Mac, for the model mac_main chose: the steps of main() with the Metal engine
+    (and the image encoder) compiled here, and the settings measured on a Mac (data/mac-metal.json).  An unmeasured
+    model, context or KV type is the user's risk; the speed projection, the GPU flags and the low-RAM mode are PC
+    features."""
+    prof = mac_profile()
     fam = FAMILIES[family]
     names = [m for m in MODELS if family in MODELS[m].get("families", ("qwen", "swift"))]
-    model = a.model or (prof["model"] if prof["model"] in names else names[0])
     if model not in names:
         fail(f"{fam['title']} has no {model} model file", "choose one of: " + ", ".join(names))
     if MODELS[model].get("budget"):
         fail(f"{model} is not set up on a Mac: it reads most of its experts from the SSD (a PC mode)",
              f"use the measured --model {prof['model']}")
-    if (family, model) != (prof["family"], prof["model"]):
-        confirm_risk(f"{fam['title']} {model} is not measured on a Mac yet (measured: {prof['model']}): it may not fit "
-                     "the memory the GPU can use, or run slower", bool(a.model or a.family), a.yes,
-                     f"{fam['title']} {model} is not measured on a Mac", f"--model {model} --yes sets it up anyway")
-        warn(f"setting up {fam['title']} {model} on a Mac, as you chose (please report how it runs)")
+    entry = next((m for m in prof["menu"] if (m["family"], m["model"]) == (family, model)), {"measured": None})
+    fit = mac_fit(prof, model, ram, vision)
+    need = mac_need_gib(prof, model, vision)
+    # source: "menu" (picked from the list), "flag" (--model / --family) or "default" (--yes or no terminal).  A pick,
+    # or a flag with --yes, is the user's choice; --yes alone keeps the stops (the owner's rule)
+    picked = source == "menu" or (source == "flag" and a.yes)
+    if fit == "short":
+        confirm_risk(f"{fam['title']} {model} needs about {need:.0f} GiB with every expert in memory; this Mac has "
+                     f"{ram:.0f} GB: it would swap, or not start", picked, a.yes,
+                     f"{fam['title']} {model} needs more memory than this Mac has",
+                     f"choose a smaller model, or --model {model} --yes to set it up anyway")
+        warn(f"setting up {fam['title']} {model} with {ram:.0f} GB of memory, as you chose")
+    elif fit == "tight":
+        warn(f"{fam['title']} {model} (~{need:.0f} GiB) does not all fit the memory macOS gives the GPU: the rest of its "
+             "experts run on the CPU - slower, and untested on a Mac")
+    if not entry["measured"]:
+        if source != "flag":                           # the list says "untested on a Mac" beside it
+            warn(f"{fam['title']} {model} is not measured on a Mac yet (measured: " + measured_names(prof) + "): please report how "
+                 "it runs")
+        else:
+            confirm_risk(f"{fam['title']} {model} is not measured on a Mac yet (measured: " + measured_names(prof) + "): it may not "
+                         "fit the memory the GPU can use, or run slower", bool(a.model or a.family), a.yes,
+                         f"{fam['title']} {model} is not measured on a Mac", f"--model {model} --yes sets it up anyway")
+            warn(f"setting up {fam['title']} {model} on a Mac, as you chose (please report how it runs)")
     ok(f"model: {fam['title']} {model}")
-    ctx = a.context or prof["context"]
-    if ctx != prof["context"]:
-        warn(f"{ctx} tokens of context is not validated on a Mac (measured: {prof['context']}); kept as you chose")
+    old_cfg = ROOT / f"strata-{(fam['tag'] + model).lower()}.json"
+    old = json.loads(old_cfg.read_text(encoding="utf-8-sig")) if old_cfg.exists() else {}
+    was = choices_from_config(old_cfg) if old else {}
+    a.kv = a.kv or was.get("kv")                        # a setup again keeps the context and KV it had
+    ctx = a.context or was.get("context") or prof["context"]
+    if ctx not in prof.get("contexts_measured", [prof["context"]]):
+        warn(f"{ctx} tokens of context is not validated on a Mac (measured: "
+             f"{', '.join(str(c) for c in prof.get('contexts_measured', [prof['context']]))}); kept as you chose")
     try:
         scaling, rope_scale = resolve_rope(ctx, a.rope_scaling, a.rope_scale)
     except ValueError as e:
@@ -2050,8 +2405,7 @@ def install_mac(a, data, roots, port) -> int:
     ok(f"context: {ctx} tokens")
     if a.kv:
         warn(f"--kv {a.kv} is not measured on a Mac (measured: FP16, the engine's default); kept as you chose")
-    if a.vision not in (None, "no", "none"):
-        warn("images are not set up on a Mac yet: off")
+    ok("images: " + ("on (the encoder on the Mac's GPU)" if vision else "off"))
     if (a.experimental_speed_projection or "off").strip().lower() not in ("off", "no", "n", "0"):
         warn("the experimental speed projection is not tested on a Mac: off")
     tag = fam["tag"] + model
@@ -2080,10 +2434,15 @@ def install_mac(a, data, roots, port) -> int:
         if s.exists() and not done(s) and whole_shard(s):
             mark(s, "whole (checked against its own tensor directory)")
     have_model = all(s.exists() and (done(s) or a.gguf_dir) for s in shards)
-    on_disk = sum(f.stat().st_size for s in shards for f in (s, s.with_name(s.name + ".part")) if f.is_file()) / 1e9
-    need = (0 if a.gguf_dir or have_model else max(MODELS[model]["download_gb"] - on_disk, 0)) + 8
+    on_disk = sum(bytes_have(s) for s in shards) / 1e9
+    left = 0 if a.gguf_dir or have_model else max(MODELS[model]["download_gb"] - on_disk, 0)
+    need = left + 8
     if free_gb(models_dir) < need:
         fail(f"not enough free disk space in {models_dir}: need ~{need:.0f} GB", "use --models-dir on a bigger drive")
+    if left > 1 and not a.yes and not a.download_only:     # a big download is said, and asked, before it starts
+        if ask(f"  {fam['title']} {model} is not downloaded yet: download about {left:.0f} GB now (resumable)?",
+               ["y", "n"], "y", a.yes) != "y":
+            fail("no model downloaded", "./download-model.sh downloads it alone (resumable), then run ./setup.sh again")
 
     # ---- 3. python packages
     step(3, "Python packages")
@@ -2095,6 +2454,7 @@ def install_mac(a, data, roots, port) -> int:
     llama = get_llama_cpp()
     ok(f"llama.cpp {LLAMA_CPP_COMMIT[:7]} (gguf-py, ggml)")
     eng = None if a.download_only else build_engine_metal(a.yes, llama)
+    vexe = build_vision_metal(llama) if vision and not a.download_only else None
 
     # ---- 5. the model files (a finished file has a .done mark, or is checked whole above: never downloaded again)
     step(5, f"downloading {fam['title']} {model}")
@@ -2103,9 +2463,33 @@ def install_mac(a, data, roots, port) -> int:
             if s.exists() and done(s):
                 ok(f"{s.name} already downloaded")
                 continue
-            download(fam["hf"].format(q=model) + s.name, s)
+            url = fam["hf"].format(q=model) + s.name
+            # the same file under another size (the original's shard 2 is every size's): linked, not downloaded -
+            # when the copy here was checked against the SHA-256 Hugging Face publishes for this one
+            m = SHARD_NAME.search(s.name)
+            same = [p for p in Path(a.models_dir).glob(f"*/*{m.group(0)}") if p != s and done(p)] if m else []
+            if same and not s.exists() and (sha := hf_sha256(url)):
+                src = next((p for p in same if f"sha256 {sha}" in p.with_name(p.name + ".done").read_text()), None)
+                if src is not None:
+                    try:
+                        os.link(src, s)
+                        mark(s, f"sha256 {sha} (linked: the same file as {src.parent.name}/{src.name})")
+                        ok(f"{s.name} shared with {src.parent.name} (the same file: SHA-256 {sha[:12]}...)")
+                        continue
+                    except OSError:
+                        pass
+            download(url, s)
     check_shards(shards)
+    if not a.gguf_dir:                                 # against the SHA-256 Hugging Face publishes, once per file
+        for s in shards:
+            verify_hf(s, fam["hf"].format(q=model) + s.name)
     ok(f"model files present: {shards[0].parent}")
+    mmproj = None
+    if vision:                                         # the image encoder's weights, shared by every size
+        mmproj = Path(a.models_dir) / fam["mmproj"]
+        mmproj = mmproj if mmproj.exists() else find_in(roots, f"models/{fam['mmproj']}") or mmproj
+        download(fam["mmproj_hf"] + fam["mmproj"], mmproj, "image encoder weights")
+        verify_hf(mmproj, fam["mmproj_hf"] + fam["mmproj"])
 
     # ---- 6. the pack and the MTP layer
     step(6, "the MTP layer" if a.download_only else "preparing the model for Strata")
@@ -2140,6 +2524,8 @@ def install_mac(a, data, roots, port) -> int:
         say("Downloaded.")
         say(f"  Model files: {shards[0].parent}")
         say(f"  MTP layer:   {rt}")
+        if mmproj is not None:
+            say(f"  Images:      {mmproj}")
         say(f"  Next:        ./setup.sh{where}   (builds the engine, writes the config, starts it - nothing is "
             "downloaded again)")
         return 0
@@ -2165,9 +2551,17 @@ def install_mac(a, data, roots, port) -> int:
         args += ["--rope-scaling", scaling, "--rope-scale", f"{rope_scale:g}"]
     if a.kv:
         args += ["--kv", a.kv]
+    if vision:                     # the encoder's room beside the expert cache (as on a PC)
+        args += ["--vision", "--vram-reserve-mib", str(prof["vision"]["reserve_mib"])]
     cfg = {"exe": rel(eng / EXE), "args": args, "cwd": ".", "tokenizer": rel(pack / "tokenizer"),
            "model_name": f"{fam['name']}-{model.lower()}", "log": f"strata-{tag.lower()}.log",
            "port": port, "backend": "metal", "env": dict(prof["env"])}
+    if vision:
+        cfg["vision"] = {"exe": rel(vexe), "mmproj": rel(mmproj), "model": rel(shards[0]), "gpu": True,
+                         "max_tokens": prof["vision"]["max_tokens"]}
+    # a setup again keeps what the user changed in the config by hand (sampling, MCP, ...), and the network settings
+    keep = {k: v for k, v in old.items() if k not in cfg and k != "vision"}
+    cfg = {**cfg, **keep}
     if a.host:
         cfg["host"] = a.host
     if a.api_key:
@@ -2666,7 +3060,9 @@ def start(cfg_path: Path, port: int | None, gpu: int | list | None = None, open_
           layer_split=None, keep=None) -> int:
     """keep: settings given on this start that the model keeps from now on (--host, --api-key, --draft-vocab)."""
     cfg = upgrade_config(cfg_path, json.loads(cfg_path.read_text(encoding="utf-8-sig")))
-    missing = [p for p in [cfg["exe"], *[a for a in cfg["args"] if a.endswith(".gguf")]]
+    vis = cfg.get("vision") if isinstance(cfg.get("vision"), dict) else {}
+    missing = [p for p in [cfg["exe"], *[a for a in cfg["args"] if a.endswith(".gguf")],
+                           *[vis[k] for k in ("exe", "mmproj") if vis.get(k)]]
                if not cfg_file(cfg_path, cfg, p).exists()]
     if missing:
         fail(f"{cfg_path.name} refers to missing files: {missing[0]}", "run it again with --setup to repair")
@@ -2990,8 +3386,8 @@ def main() -> int:
     roots = [data, *elsewhere]
     if a.models_dir is None:
         a.models_dir = str(data / "models")
-    if a.download_only:                                # the model files only: no engine, no config, no start
-        return install_mac(a, data, roots, a.port or 8080)
+    if MAC:                                            # every run: the model list, then start / set up / download it
+        return mac_main(a, data, roots)
 
     # ---- 0. already installed: just start it
     have = installed_configs()
@@ -3047,8 +3443,6 @@ def main() -> int:
         if pick <= len(have):
             return start(have[pick - 1], a.port, run_gpu, yes=a.yes, layer_split=a.layer_split,
                      keep={"host": a.host, "api_key": a.api_key, "draft_vocab": a.draft_vocab})
-    if MAC:                                            # the Metal engine and the measured Mac setup
-        return install_mac(a, data, roots, port)
 
     # ---- 1. the PC
     step(1, "checking your PC")

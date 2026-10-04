@@ -1,0 +1,110 @@
+{
+ "exe": "/Users/liangxw/src/xproject/petproject/Strata/build-vision-metal/bin/strata-vision",
+ "gpu": {
+  "start_s": 40.27876683299837,
+  "rss_kib": 1368400,
+  "footprint": "1.3G"
+ },
+ "cpu": {
+  "start_s": 0.6492290409951238,
+  "rss_kib": 1093664,
+  "footprint": "1.0G"
+ },
+ "images": [
+  {
+   "image": "chinese.png",
+   "tokens": 225,
+   "grid": [
+    25,
+    9
+   ],
+   "same_grid_as_cpu": true,
+   "min_row_cosine": 0.983567476272583,
+   "max_abs_diff_over_max": 0.0722511038184166,
+   "finite": true,
+   "gpu_ms": 457.0,
+   "cpu_ms": 65764.0,
+   "mean_row_cosine": 0.999753,
+   "median_row_cosine": 0.999974,
+   "p01_row_cosine": 0.99544,
+   "rows_below_0_99": 1,
+   "rows_below_0_9": 0
+  },
+  {
+   "image": "dots.png",
+   "tokens": 325,
+   "grid": [
+    25,
+    13
+   ],
+   "same_grid_as_cpu": true,
+   "min_row_cosine": 0.9933638572692871,
+   "max_abs_diff_over_max": 0.03659402206540108,
+   "finite": true,
+   "gpu_ms": 380.0,
+   "cpu_ms": 95545.0,
+   "mean_row_cosine": 0.999917,
+   "median_row_cosine": 0.999984,
+   "p01_row_cosine": 0.999015,
+   "rows_below_0_99": 0,
+   "rows_below_0_9": 0
+  },
+  {
+   "image": "receipt.png",
+   "tokens": 400,
+   "grid": [
+    25,
+    16
+   ],
+   "same_grid_as_cpu": true,
+   "min_row_cosine": 0.9958301782608032,
+   "max_abs_diff_over_max": 0.02617036923766136,
+   "finite": true,
+   "gpu_ms": 450.0,
+   "cpu_ms": 117525.0,
+   "mean_row_cosine": 0.999931,
+   "median_row_cosine": 0.999988,
+   "p01_row_cosine": 0.998883,
+   "rows_below_0_99": 0,
+   "rows_below_0_9": 0
+  },
+  {
+   "image": "screenshot.jpg",
+   "tokens": 920,
+   "grid": [
+    40,
+    23
+   ],
+   "same_grid_as_cpu": true,
+   "min_row_cosine": 0.6947275996208191,
+   "max_abs_diff_over_max": 0.22321005165576935,
+   "finite": true,
+   "gpu_ms": 1379.0,
+   "cpu_ms": 273407.0,
+   "mean_row_cosine": 0.999391,
+   "median_row_cosine": 0.999986,
+   "p01_row_cosine": 0.997907,
+   "rows_below_0_99": 2,
+   "rows_below_0_9": 2
+  },
+  {
+   "image": "shapes.png",
+   "tokens": 308,
+   "grid": [
+    28,
+    11
+   ],
+   "same_grid_as_cpu": true,
+   "min_row_cosine": 0.9894734621047974,
+   "max_abs_diff_over_max": 0.04073299467563629,
+   "finite": true,
+   "gpu_ms": 443.0,
+   "cpu_ms": 90743.0,
+   "mean_row_cosine": 0.999902,
+   "median_row_cosine": 0.999983,
+   "p01_row_cosine": 0.999018,
+   "rows_below_0_99": 1,
+   "rows_below_0_9": 0
+  }
+ ]
+}

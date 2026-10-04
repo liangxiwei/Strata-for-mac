@@ -1,18 +1,24 @@
 # Strata on a Mac
 
 On an Apple-Silicon Mac the model runs on the **Metal backend** (`-DSTRATA_ENABLE_METAL=ON`,
-[docs/PORT_METAL/](PORT_METAL/HANDOFF.md)). On an M2 Max (96 GB), IQ2_XS writes about 24 tokens/s and reads a
-30,000-token prompt at 196 tokens/s.
+[docs/PORT_METAL/](PORT_METAL/HANDOFF.md)). Measured on an M2 Max (96 GB) with a 30,000-token prompt:
+
+| Model | Writes | Reads |
+| --- | --- | --- |
+| IQ2_XS | 24 tokens/s | 196 tokens/s |
+| Q2_0 | 23 tokens/s | 205 tokens/s |
+
+It also reads pictures, encoded on the Mac's GPU.
 
 To install it:
 
 ```sh
 ./download-model.sh     # the model files, into Strata-data/ (git-ignored)
-./setup.sh              # builds the engine, writes the config, starts it
+./setup.sh              # every run: the model list; builds, writes the config, starts it
 ```
 
 [What setup does on a Mac](#what-setup-does-on-a-mac) below says what each step does; the
-[README](../README.md#on-a-mac) gives the short version. The default build (without
+[README](../README.md#install) gives the short version. The default build (without
 `-DSTRATA_ENABLE_METAL=ON`) has no engine on a Mac. Its engine is CUDA (NVIDIA) or HIP (AMD), and its CPU expert
 kernels are x86 intrinsics (AVX-512 VNNI/VBMI, AVX2).
 
@@ -29,7 +35,7 @@ build and pass on Apple Silicon.
 
 | | on a Mac (Apple Silicon) |
 | --- | --- |
-| The model, installed by `./setup.sh` | **yes** - the Metal engine with IQ2_XS, measured on an M2 Max with 96 GB ([what setup does](#what-setup-does-on-a-mac)) |
+| The model, installed by `./setup.sh` | **yes** - the Metal engine with IQ2_XS or Q2_0, measured on an M2 Max with 96 GB, text and pictures ([what setup does](#what-setup-does-on-a-mac)) |
 | The model, the default build's `strata --serve` | **no** - the default build needs an NVIDIA or AMD GPU ([why](#strata-on-a-mac)) |
 | The server, the API, the web app | **yes** - against the mock engine (a scripted answer) for development, or the real model on the Metal backend |
 | C++ build + `ctest` | **yes** - the CPU-side targets; the AVX2/AVX-512 kernels are compiled out and their scalar transcriptions stand in |
@@ -152,30 +158,50 @@ everywhere, do not expose the server beyond `127.0.0.1` without `--api-key`.
 
 ## What setup does on a Mac
 
-`./setup.sh` (`setup.py`'s `install_mac`) runs the PC's steps for a Mac. Each step is skipped when it is already
-done:
+`./setup.sh` runs `setup.py`'s `mac_main`, then `install_mac`. These are the PC's steps for a Mac; each is skipped
+when it is already done.
 
 1. **Checks the Mac:**
-   - Apple Silicon with a native arm64 Python. An Intel Mac, or a Python under Rosetta, stops with the fix.
-   - Memory: the measured Mac had 96 GB. Under 60 GB it stops unless you pass `--model IQ2_XS --yes`; under 90 GB it
-     says the size is untested.
-   - Xcode's Metal compiler: it tries every Xcode in `/Applications` through `DEVELOPER_DIR`, no sudo. A missing
-     Metal Toolchain is downloaded after asking. Xcode itself must come from the App Store. A license that has not
-     been accepted is reported with the command that accepts it.
-2. **Takes the measured choices** from [data/mac-metal.json](../data/mac-metal.json): Qwen3.8-Flash-Next IQ2_XS, 32K
-   context, FP16 KV.
-   - `--model`, `--family`, `--context` and `--kv` are kept, with a note that they are not measured on a Mac.
-   - Images, the speed projection, the GPU flags and the low-RAM mode are PC features: left off, with a note.
-   - Unsloth's SSD budget mode is refused.
-3. Installs the Python packages into `.venv`, including CMake and Ninja.
-4. Gets llama.cpp (ggml, gguf-py) and **compiles the Metal engine** into `engine/strata`. On the M2 Max this takes
-   113 build steps, 25 s.
-   - `engine/BUILD.json` keeps a hash of the source; after a `git pull` that changes it, the next start compiles
-     again.
-5. **The model files**, into `Strata-data/models/IQ2_XS/`. A finished file gets a `.done` mark and is never
-   downloaded again. A whole file copied in by hand is checked against its own tensor directory and kept.
-6. Writes the pack (4 s) and the MTP layer.
-7. Writes `strata-iq2_xs.json` and `run-iq2_xs.sh`, both relative to the folder, and starts the server.
+   - It needs Apple Silicon and a native arm64 Python. An Intel Mac, or a Python under Rosetta, stops with the fix.
+   - Under 20 GB of memory (a 16 or 18 GB Mac) it stops: the smallest model needs about 30 GiB.
+   - It looks for Xcode's Metal compiler in every Xcode in `/Applications` (through `DEVELOPER_DIR`, no sudo).
+     - A missing Metal Toolchain is downloaded after asking.
+     - Xcode itself must come from the App Store.
+     - A license that has not been accepted is reported with the command that accepts it.
+2. **The model list, every run.** It shows the models of [data/mac-metal.json](../data/mac-metal.json)'s `menu`,
+   downloaded ones first. You pick with the arrow keys or a number; Enter takes it, q stops.
+   - Each line's brackets say whether the model is downloaded, how it fits this Mac's memory, and its measured
+     speed (or "untested on a Mac").
+   - Fit is "recommended for this Mac", "fits", "tight" (part of the experts on the CPU: slower, untested) or "too
+     little memory". The estimate is the model's experts, plus the 7.3 GiB the measured IQ2_XS run used beside
+     them, plus the 1.3 GiB image encoder, against 81% of the memory: the share macOS gave the GPU on the 96 GB Mac,
+     77.8 GiB.
+   - The recommended model is the first measured one that fits.
+   - Without a terminal, or with `--yes`, setup takes the model used last, else the recommended one, and prints the
+     list. `--model` / `--family` choose without it.
+   - An installed model starts right away. A model that is not downloaded is downloaded after asking. A model with
+     too little memory is asked about first (with `--yes` alone it stops).
+3. **The settings** are data/mac-metal.json's measured ones: 32K context, FP16 KV, images on.
+   - `--context` and `--kv` are kept, with a note that they are not measured on a Mac. A setup again keeps the
+     context, KV, port, host, API key and any key you added to the config by hand.
+   - `--vision no` sets a model up without pictures. The speed projection, the GPU flags and the low-RAM mode are PC
+     features.
+4. **Installs** the Python packages into `.venv` (CMake and Ninja too) and gets llama.cpp (ggml, gguf-py).
+5. **Compiles** two programs. On the M2 Max: 113 build steps, 25 s, plus about 25 s for the encoder.
+   - The Metal engine, into `engine/strata`.
+   - The image encoder (`tools/vision`, llama.cpp's mtmd with ggml's Metal backend), into `engine/strata-vision`.
+   - `engine/BUILD.json` keeps a hash of both sources; after a `git pull` that changes one, the next start compiles
+     it again.
+6. **The model files**, into `Strata-data/models/<size>/`:
+   - A file of a gigabyte or more comes over four connections at once: hf-mirror serves about 3 MB/s per
+     connection, and four reached 14-44 MB/s here. A stopped download resumes from its `.part.plan`.
+   - Every file is checked against the SHA-256 Hugging Face publishes; a wrong file is deleted. The result is kept
+     in its `.done` mark, so a file is never checked or downloaded again.
+   - The original model's shard 2 is the same file for every size. With a checked copy already here, it is linked
+     (no space, no download): Q2_0 took only its 37.6 GB shard 1.
+   - The image encoder's weights (0.9 GB) go to `Strata-data/models/`.
+7. Writes the pack (seconds) and the MTP layer, then `strata-<size>.json` and `run-<size>.sh` (both relative to the
+   folder), and starts the server.
 
 Where the model files go:
 
@@ -184,12 +210,18 @@ Where the model files go:
 - `--data-dir DIR`: another place. Remembered for later runs.
 - `--gguf-dir DIR`: GGUFs you already have. Remembered for this model while all shards are still there; in the
   config they are absolute paths.
-- **`./download-model.sh`** is `./setup.sh --download-only`: steps 1 (without the compiler check), 3 and 5 plus the
-  MTP layer. It writes no engine and no config.
+- **`./download-model.sh`** is `./setup.sh --download-only`. It runs steps 1 (without the compiler check), 2, 4
+  (gguf-py only) and 6, plus the MTP layer. It writes no engine and no config.
 
-Later runs of `./setup.sh` start the installed model right away. `--setup` sets it up again. `--check` only checks
-the Mac. Measured result, the same output text and speed as the hand-built engine:
-[bench/results/2026-10-03-metal-setup](../bench/results/2026-10-03-metal-setup/README.md).
+`--setup` sets the chosen model up again. `--check` only checks the Mac and prints the list.
+
+Measured results:
+
+- Setup's install gives the same output text and speed as the hand-built engine
+  ([bench/results/2026-10-03-metal-setup](../bench/results/2026-10-03-metal-setup/README.md)).
+- IQ2_XS and Q2_0: [bench/results/2026-10-04-metal-models](../bench/results/2026-10-04-metal-models/README.md).
+- Pictures: [bench/results/2026-10-04-metal-vision](../bench/results/2026-10-04-metal-vision/README.md).
+- 128K context: [bench/results/2026-10-04-metal-128k](../bench/results/2026-10-04-metal-128k/README.md).
 
 ## How the build differs
 

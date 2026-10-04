@@ -38,11 +38,14 @@ def never(what):
     return mock.Mock(side_effect=AssertionError(f"{what} called on a Mac"))
 
 
-def install(ram, argv, answers=None, extra=(), machine="arm64"):
+def install(ram, argv, answers=None, extra=(), machine="arm64", tty=False, before=None):
     """setup.main() on a mocked Mac -> (exit code, printed text, the written config or None, questions asked, folder
-    files).  answers: None = --yes, "" = Enter for every question, {words of a question: answer}."""
+    files).  answers: None = --yes, "" = Enter for every question, {words of a question: answer}.  tty: a terminal
+    (the arrow-key list; its keys come from an arrow_menu patch).  before(folder): files to put there first."""
     with tempfile.TemporaryDirectory() as tmp:
         t = Path(tmp)
+        if before:
+            before(t)
         data = t / "Strata-data"
         (data / "mtp" / "rt").mkdir(parents=True)
         (data / "mtp" / "rt" / "experts.bin").write_bytes(b"")
@@ -81,6 +84,10 @@ def install(ram, argv, answers=None, extra=(), machine="arm64"):
             mock.patch.object(setup, "get_llama_cpp", lambda: t / "third_party" / "llama.cpp"),
             mock.patch.object(setup, "metal_probe", lambda: (True, "Apple metal version 32023.830", {})),
             mock.patch.object(setup, "build_engine_metal", lambda yes, llama: eng),
+            mock.patch.object(setup, "build_vision_metal", lambda llama: eng / "strata-vision"),
+            mock.patch.object(setup, "verify_hf", lambda s, url: None),
+            mock.patch.object(setup, "hf_sha256", lambda url: None),
+            mock.patch.object(setup, "menu_tty", lambda: tty),
             mock.patch.object(setup, "update_installed_engine", lambda *a, **k: None),
             mock.patch.object(setup, "download", fake_download),
             mock.patch.object(setup, "check_shards", lambda shards: None),
@@ -117,7 +124,10 @@ def measured_args() -> list:
     a = list(MEASURED["args"])
     for flag, p in paths.items():
         a[a.index(flag) + 1] = p
-    return a
+    return a + VISION_ARGS
+
+
+VISION_ARGS = ["--vision", "--vram-reserve-mib", "700"]   # images on (the default): the encoder's room, as on a PC
 
 
 class MeasuredConfig(unittest.TestCase):
@@ -132,6 +142,10 @@ class MeasuredConfig(unittest.TestCase):
                          ("engine/strata", ".", "Strata-data/packs/iq2_xs/tokenizer", "strata-iq2_xs.log", "metal"))
         self.assertNotIn("gpu", cfg)
         self.assertNotIn("lib_dirs", cfg)
+        self.assertEqual(cfg["vision"], {"exe": "engine/strata-vision",
+                                         "mmproj": "Strata-data/models/mmproj-Qwen3.8-Flash-Next-BF16.gguf",
+                                         "model": "Strata-data/models/IQ2_XS/" + SHARD.format(1), "gpu": True,
+                                         "max_tokens": 1024})
         self.assertEqual(asked, [])
         script = files["run-iq2_xs.sh"]
         self.assertIn('cd "$(dirname "$0")"', script)
@@ -142,7 +156,20 @@ class MeasuredConfig(unittest.TestCase):
         code, out, cfg, asked, _ = install(96.0, ["--no-start"], answers="")
         self.assertEqual(code, 0, out[-3000:])
         self.assertEqual(cfg["args"], measured_args())
-        self.assertEqual(asked, [])
+        self.assertEqual(len(asked), 1)                   # the only question: the 68 GB download (Enter = yes)
+        self.assertIn("download about 68 GB", asked[0])
+
+    def test_no_to_the_download_stops_before_it(self):
+        code, out, cfg, _, _ = install(96.0, ["--no-start"], answers={"download about": "n"},
+                                       extra=[mock.patch.object(setup, "download", never("a download"))])
+        self.assertNotEqual(code, 0)
+        self.assertIn("./download-model.sh downloads it alone", out)
+
+    def test_images_off_on_request(self):
+        code, out, cfg, _, _ = install(96.0, ["--no-start", "--vision", "no"])
+        self.assertEqual(code, 0, out[-3000:])
+        self.assertNotIn("vision", cfg)
+        self.assertEqual(cfg["args"], measured_args()[:-len(VISION_ARGS)])
 
     def test_the_profile_is_the_measured_one(self):
         p = setup.mac_profile()
@@ -154,22 +181,45 @@ class MeasuredConfig(unittest.TestCase):
 
 
 class Memory(unittest.TestCase):
-    def test_64gb_is_untested_but_goes_on(self):
+    def test_64gb_takes_the_measured_model(self):
         code, out, cfg, _, _ = install(64.0, ["--no-start"])
         self.assertEqual(code, 0, out[-3000:])
-        self.assertIn("untested", out)
         self.assertEqual(cfg["args"], measured_args())
 
-    def test_48gb_stops_with_yes_alone(self):
+    def test_48gb_is_recommended_the_coder(self):
         code, out, cfg, _, _ = install(48.0, ["--no-start"])
-        self.assertNotEqual(code, 0)
-        self.assertIn("too little", out)
-        self.assertIsNone(cfg)
+        self.assertEqual(code, 0, out[-3000:])
+        self.assertIn("Qwen3.8-Flash-Next-GSQ-RCO-IQ1_M-00001-of-00002.gguf", cfg["args"][cfg["args"].index("--native") + 1])
+        self.assertIn("not measured on a Mac yet", out)
 
-    def test_48gb_with_an_explicit_model_is_the_users_risk(self):
+    def test_48gb_with_the_bigger_model_is_tight(self):
         code, out, cfg, _, _ = install(48.0, ["--no-start", "--model", "IQ2_XS"])
         self.assertEqual(code, 0, out[-3000:])
+        self.assertIn("does not all fit the memory macOS gives the GPU", out)
+
+    def test_too_little_memory_stops_with_yes_alone(self):
+        code, out, cfg, _, _ = install(24.0, ["--no-start"])
+        self.assertNotEqual(code, 0)
+        self.assertIn("needs more memory than this Mac has", out)
+        code, out, cfg, _, _ = install(24.0, ["--no-start", "--model", "IQ2_XS"])     # named: the user's risk
+        self.assertEqual(code, 0, out[-3000:])
         self.assertIn("as you chose", out)
+
+    def test_16gb_is_not_supported(self):
+        for ram in (16.0, 18.0):
+            code, out, cfg, _, _ = install(ram, ["--no-start", "--model", "IQ2_XS"])
+            self.assertNotEqual(code, 0)
+            self.assertIn("is too little", out)
+            self.assertIn("24 GB of memory or more", out)
+
+
+def never_shards(url, dst, what=None):
+    """download() for a test where the model's GGUFs are there: the image encoder's file may come, a shard may not."""
+    if dst.name.endswith(".gguf") and "-of-" in dst.name:
+        raise AssertionError(f"downloaded {dst.name} again")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_bytes(b"")
+    setup.mark(dst)
 
 
 class TheMac(unittest.TestCase):
@@ -213,7 +263,8 @@ class DownloadOnly(unittest.TestCase):
             mock.patch.object(setup, "metal_probe", never("the Metal compiler check")),
             mock.patch.object(setup, "build_engine_metal", never("the build"))])
         self.assertEqual(code, 0, out[-3000:])
-        self.assertEqual([u.rsplit("/", 1)[1] for u in got], [SHARD.format(1), SHARD.format(2)])
+        self.assertEqual([u.rsplit("/", 1)[1] for u in got],
+                         [SHARD.format(1), SHARD.format(2), "mmproj-Qwen3.8-Flash-Next-BF16.gguf"])
         self.assertIsNone(cfg)                               # no config, no start script
         self.assertEqual(files, {})
         self.assertIn("Next:        ./setup.sh", out)
@@ -223,7 +274,7 @@ class DownloadOnly(unittest.TestCase):
             for i in (1, 2):
                 (Path(g) / SHARD.format(i)).write_bytes(b"")
             code, out, cfg, _, _ = install(96.0, ["--download-only", "--gguf-dir", g], extra=[
-                mock.patch.object(setup, "download", never("a download")),
+                mock.patch.object(setup, "download", never_shards),
                 mock.patch.object(setup, "whole_shard", lambda s: True)])
             self.assertEqual(code, 0, out[-3000:])
             self.assertIn("--gguf-dir " + str(Path(g).resolve()), out)
@@ -235,7 +286,7 @@ class DownloadOnly(unittest.TestCase):
                 (Path(g) / SHARD.format(i)).write_bytes(b"")
             keep = [mock.patch.object(setup, "load_settings", lambda: dict(saved)),
                     mock.patch.object(setup, "save_settings", lambda s: saved.update(s)),
-                    mock.patch.object(setup, "download", never("a download")),
+                    mock.patch.object(setup, "download", never_shards),
                     mock.patch.object(setup, "whole_shard", lambda s: True)]
             install(96.0, ["--download-only", "--gguf-dir", g], extra=keep)
             self.assertEqual(saved["gguf_dirs"]["IQ2_XS"], str(Path(g).resolve()))
@@ -274,10 +325,16 @@ class Choices(unittest.TestCase):
         self.assertEqual(a[a.index("--max-context") + 1], "65536")
         self.assertEqual(a[a.index("--kv") + 1], "int8")
 
-    def test_images_and_the_projection_stay_off(self):
+    def test_128k_is_measured(self):
+        code, out, cfg, _, _ = install(96.0, ["--no-start", "--context", "131072"])
+        self.assertEqual(code, 0, out[-3000:])
+        self.assertNotIn("not validated on a Mac", out)
+        self.assertEqual(cfg["args"][cfg["args"].index("--max-context") + 1], "131072")
+
+    def test_the_projection_stays_off(self):
         code, out, cfg, _, _ = install(96.0, ["--no-start", "--vision", "yes", "--experimental-speed-projection", "on"])
         self.assertEqual(code, 0, out[-3000:])
-        self.assertNotIn("vision", cfg)
+        self.assertIn("vision", cfg)
         self.assertNotIn("--control-vector-scaled", cfg["args"])
         self.assertEqual(cfg["args"], measured_args())
 
@@ -511,6 +568,191 @@ class Mirror(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()) as out:
                 self.assertFalse(setup.calibrate_config(p))
             self.assertIn("NVIDIA PCs", out.getvalue())
+
+
+def put_model(t: Path, tag: str, q: str, cfg: dict | None = None):
+    m = t / "Strata-data" / "models" / tag
+    m.mkdir(parents=True, exist_ok=True)
+    for i in (1, 2):
+        p = m / f"Qwen3.8-Flash-Next-GSQ-RCO-{q}-0000{i}-of-00002.gguf"
+        p.write_bytes(b"")
+        setup.mark(p)
+    if cfg is not None:
+        (t / f"strata-{tag.lower()}.json").write_text(json.dumps(cfg))
+
+
+class Menu(unittest.TestCase):
+    def pick(self, ram, index, before=None, argv=("--no-start",)):
+        seen = []
+
+        def menu(title, lines, default, keys=None):
+            seen.append((title, lines, default))
+            return index
+        res = install(ram, list(argv), answers="", tty=True, before=before,
+                      extra=[mock.patch.object(setup, "arrow_menu", menu)])
+        return res, seen[0] if seen else None
+
+    def test_every_run_lists_the_models_downloaded_first(self):
+        (code, out, cfg, _, _), (title, lines, default) = self.pick(96.0, 0, lambda t: put_model(t, "Q2_0", "Q2_0"))
+        self.assertEqual(code, 0, out[-3000:])
+        self.assertIn("96 GB Mac", title)
+        self.assertTrue(lines[0].startswith("Qwen3.8-Flash-Next Q2_0"), lines)
+        self.assertIn("(downloaded;", lines[0])
+        iq2 = next(x for x in lines if "IQ2_XS" in x and "Swift" not in x)
+        self.assertIn("not downloaded, 68 GB", iq2)
+        self.assertIn("recommended for this Mac", iq2)
+        self.assertIn("measured: 24 tok/s", iq2)
+        self.assertEqual(sum("recommended" in x for x in lines), 1)
+        self.assertEqual(len(lines), len(setup.mac_profile()["menu"]))
+        self.assertIn("Q2_0-00001-of-00002.gguf", cfg["args"][cfg["args"].index("--native") + 1])   # the pick
+
+    def test_the_memory_decides_the_brackets(self):
+        _, (_, lines, default) = self.pick(48.0, 0)
+        by = {x.split(" - ")[0].strip(): x for x in lines}
+        self.assertIn("recommended for this Mac", by["Qwen3.8-Flash-Next Coder IQ1_M"])
+        self.assertIn("tight: part of it on the CPU", by["Qwen3.8-Flash-Next IQ2_XS"])
+        self.assertIn("too little memory", by["Qwen3.8-Flash-Next IQ3_S"])
+        self.assertIn("Coder IQ1_M", lines[default])                  # nothing installed: the recommended one
+
+    def test_the_model_used_last_is_the_default(self):
+        _, (_, lines, default) = self.pick(96.0, 0, lambda t: put_model(t, "Q2_0", "Q2_0", {"args": []}))
+        self.assertIn("Q2_0", lines[default])
+        self.assertIn("downloaded, set up", lines[default])
+
+    def test_keys(self):
+        self.assertEqual(setup.menu_step("down", 2, 3), (0, False, False))     # wraps
+        self.assertEqual(setup.menu_step("up", 0, 3), (2, False, False))
+        self.assertEqual(setup.menu_step("k", 1, 3), (0, False, False))
+        self.assertEqual(setup.menu_step("3", 0, 3), (2, True, False))
+        self.assertEqual(setup.menu_step("enter", 1, 3), (1, True, False))
+        self.assertEqual(setup.menu_step("q", 1, 3), (1, False, True))
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(setup.arrow_menu("t", ["a", "b", "c"], 0, keys=iter(["down", "down", "enter"])), 2)
+            with self.assertRaises(SystemExit):
+                setup.arrow_menu("t", ["a", "b"], 0, keys=iter(["quit"]))
+
+
+class Installed(unittest.TestCase):
+    def test_a_set_up_model_starts_without_a_setup(self):
+        started = []
+        code, out, cfg, _, _ = install(96.0, [], before=lambda t: put_model(t, "IQ2_XS", "IQ2_XS", {"args": [], "port": 8090}),
+                                       extra=[mock.patch.object(setup, "start", lambda p, port, gpu, **k: started.append((p.name, port)) or 0),
+                                              mock.patch.object(setup, "build_engine_metal", never("a build"))])
+        self.assertEqual(code, 0, out[-3000:])
+        self.assertEqual(started, [("strata-iq2_xs.json", None)])
+
+    def test_a_setup_again_keeps_what_was_changed_by_hand(self):
+        old = {"args": ["--max-context", "65536", "--kv", "int8"], "port": 8090, "host": "0.0.0.0", "api_key": "k",
+               "sampling": {"temperature": 0.3}, "vision": {"exe": "old"}}
+        code, out, cfg, _, _ = install(96.0, ["--setup", "--no-start"], before=lambda t: put_model(t, "IQ2_XS", "IQ2_XS", old))
+        self.assertEqual(code, 0, out[-3000:])
+        self.assertEqual((cfg["port"], cfg["host"], cfg["api_key"], cfg["sampling"]), (8090, "0.0.0.0", "k", {"temperature": 0.3}))
+        a = cfg["args"]
+        self.assertEqual((a[a.index("--max-context") + 1], a[a.index("--kv") + 1]), ("65536", "int8"))
+        self.assertEqual(cfg["vision"]["exe"], "engine/strata-vision")   # setup's own keys are setup's
+
+
+class Response:
+    def __init__(self, body: bytes, status=200, headers=None):
+        self.body, self.status, self.headers, self.pos = body, status, headers or {}, 0
+
+    def read(self, n=-1):
+        b = self.body[self.pos:] if n < 0 else self.body[self.pos:self.pos + n]
+        self.pos += len(b)
+        return b
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+def ranged(data: bytes, served: list):
+    def urlopen(req, timeout=None):
+        r = req.headers.get("Range")
+        if not r:
+            return Response(data, 200, {"Content-Length": str(len(data))})
+        lo, hi = r[len("bytes="):].split("-")
+        lo, hi = int(lo), int(hi) if hi else len(data) - 1
+        served.append((lo, hi))
+        return Response(data[lo:hi + 1], 206, {"Content-Range": f"bytes {lo}-{hi}/{len(data)}"})
+    return urlopen
+
+
+class Downloads(unittest.TestCase):
+    def test_parallel_ranges_resume_and_keep_what_is_there(self):
+        data = bytes(range(256)) * 41
+        with tempfile.TemporaryDirectory() as d:
+            part = Path(d) / "m.gguf.part"
+            part.write_bytes(data[:1000])                    # a single-stream download stopped here
+            served = []
+            with mock.patch.object(setup.urllib.request, "urlopen", ranged(data, served)), \
+                    mock.patch.object(setup, "DOWNLOAD_RANGES", 3), contextlib.redirect_stdout(io.StringIO()):
+                self.assertTrue(setup.ranges_ok("https://x/m.gguf"))
+                setup.download_ranges("https://x/m.gguf", part, len(data), "m")
+            self.assertEqual(part.read_bytes(), data)
+            self.assertFalse(part.with_name(part.name + ".plan").exists())
+            self.assertGreaterEqual(min(lo for lo, hi in served if lo > 0), 1000)   # the first 1000 not again
+            # a plan from an interrupted run: only the rest of each range is fetched
+            part.write_bytes(data[:2000] + bytes(len(data) - 2000))
+            plan = {"total": len(data), "ranges": [{"start": 1000, "end": len(data), "at": 2000}]}
+            part.with_name(part.name + ".plan").write_text(json.dumps(plan))
+            served.clear()
+            with mock.patch.object(setup.urllib.request, "urlopen", ranged(data, served)), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                setup.download_ranges("https://x/m.gguf", part, len(data), "m")
+            self.assertEqual(part.read_bytes(), data)
+            self.assertEqual(served, [(2000, len(data) - 1)])
+
+    def test_a_server_that_ignores_ranges_is_not_used_for_them(self):
+        with mock.patch.object(setup.urllib.request, "urlopen", lambda req, timeout=None: Response(b"x" * 10, 200)):
+            self.assertFalse(setup.ranges_ok("https://x/m.gguf"))
+
+    def test_the_published_sha256_is_checked_once(self):
+        tree = [{"path": "IQ2_XS/a.gguf", "lfs": {"oid": "ab" * 32}}]
+        seen = []
+
+        def urlopen(req, timeout=None):
+            seen.append(req.full_url)
+            return Response(json.dumps(tree).encode())
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(setup.urllib.request, "urlopen", urlopen):
+            url = "https://hf-mirror.com/ISTA-DASLab/R/resolve/" + "c" * 40 + "/IQ2_XS/a.gguf"
+            self.assertEqual(setup.hf_sha256(url), "ab" * 32)
+            self.assertEqual(seen[-1], "https://hf-mirror.com/api/models/ISTA-DASLab/R/tree/" + "c" * 40 + "/IQ2_XS")
+            s = Path(d) / "a.gguf"
+            s.write_bytes(b"model")
+            with contextlib.redirect_stdout(io.StringIO()) as out, self.assertRaises(SystemExit):
+                setup.verify_hf(s, url)                     # wrong bytes: deleted, so the next run fetches it again
+            self.assertFalse(s.exists())
+            tree[0]["lfs"]["oid"] = setup.hashlib.sha256(b"model").hexdigest()
+            s.write_bytes(b"model")
+            with contextlib.redirect_stdout(io.StringIO()):
+                setup.verify_hf(s, url)
+            n = len(seen)
+            setup.verify_hf(s, url)                          # recorded in its finish mark: not asked again
+            self.assertEqual(len(seen), n)
+
+    def test_the_same_shard_is_linked_not_downloaded(self):
+        def before(t):
+            m = t / "Strata-data" / "models" / "IQ2_XS"
+            m.mkdir(parents=True)
+            (m / SHARD.format(2)).write_bytes(b"ple table")
+            setup.mark(m / SHARD.format(2), "sha256 " + "ee" * 32)
+        got = []
+
+        def dl(url, dst, what=None):
+            got.append(dst.name)
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_bytes(b"")
+            setup.mark(dst)
+        code, out, cfg, _, _ = install(96.0, ["--no-start", "--model", "Q2_0"], before=before,
+                                       extra=[mock.patch.object(setup, "hf_sha256", lambda url: "ee" * 32),
+                                              mock.patch.object(setup, "download", dl)])
+        self.assertEqual(code, 0, out[-3000:])
+        self.assertIn("shared with IQ2_XS", out)
+        self.assertNotIn("Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00002-of-00002.gguf", got)
+        self.assertIn("Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00001-of-00002.gguf", got)
 
 
 if __name__ == "__main__":

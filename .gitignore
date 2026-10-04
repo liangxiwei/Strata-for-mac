@@ -59,5 +59,7 @@ build-vision.bat
 !bench/results/2026-10-03-metal*/**/*.log
 bench/results/**/logits-*.bin
 bench/results/**/__pycache__/
+# 2026-10-04 (Mac: pictures, Q2_0, 128K): each run's raw output (run/) stays on the measuring machine
+bench/results/2026-10-04-metal*/run/
 # per-machine scratch of local tooling
 .claude/

@@ -1,0 +1,68 @@
+{
+ "config": "strata-q2_0.json",
+ "args": [
+  "--pack",
+  "Strata-data/packs/q2_0",
+  "--native",
+  "Strata-data/models/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00001-of-00002.gguf",
+  "--ple-gguf",
+  "Strata-data/models/Q2_0/Qwen3.8-Flash-Next-GSQ-RCO-Q2_0-00002-of-00002.gguf",
+  "--max-context",
+  "131072",
+  "--spec",
+  "4",
+  "--spec-min-p",
+  "0.5",
+  "--prefill",
+  "1024",
+  "--expert-profile",
+  "data/expert-profile.bin",
+  "--expert-cache",
+  "auto",
+  "--mtp",
+  "Strata-data/mtp/rt",
+  "--mtp-max-t",
+  "1",
+  "--suffix-draft",
+  "0",
+  "--mmap-experts",
+  "--no-prefill-borrow"
+ ],
+ "capacity": 131072,
+ "startup_s": 105.82769720900978,
+ "peak_footprint": "41.9G",
+ "runs": [
+  {
+   "kind": "128K prompt, fresh",
+   "prompt_tokens": 128000,
+   "reused": 0,
+   "generated": 26,
+   "prompt_ms": 897599.2,
+   "decode_ms": 1127.8,
+   "prefill_tok_s": 142.60262264048365,
+   "decode_tok_s": 23.05373293137081,
+   "first_token_s": 897.676726500009,
+   "fields_found": [
+    "银杏",
+    "10月18日",
+    "AX-7319"
+   ],
+   "answer": "项目代号为银杏，验收日期为10月18日，校验码为AX-7319。<|im_end|>"
+  },
+  {
+   "kind": "follow-up, same conversation",
+   "prompt_tokens": 128049,
+   "reused": 128025,
+   "generated": 7,
+   "prompt_ms": 844.8,
+   "decode_ms": 299.4,
+   "prefill_tok_s": 28.40909090909091,
+   "decode_tok_s": 23.380093520374082,
+   "first_token_s": 0.9131758330040611,
+   "fields_found": [
+    "AX-7319"
+   ],
+   "answer": "AX-7319<|im_end|>"
+  }
+ ]
+}

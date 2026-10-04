@@ -1,0 +1,186 @@
+{
+ "config": "strata-iq2_xs.json",
+ "ready_s": 126.5,
+ "health": {
+  "status": "ok",
+  "max_context": 32768,
+  "model": "qwen3.8-flash-next-iq2_xs",
+  "images": true,
+  "api_key": false,
+  "loaded": true,
+  "service": "strata"
+ },
+ "memory": {
+  "strata-vision": "1.1G",
+  "engine": "40.2G"
+ },
+ "engine": [
+  "strata generate: expert cache auto: 72.48 GiB free, 700 MiB reserved (+3 MiB for the draft head) -> 24576 slots",
+  "strata generate: expert cache 24576 slots, 33.02 GiB of VRAM; policy is",
+  "strata generate: token graph hit path: 24576 resident experts, decided on the device",
+  "strata serve: 39453 MiB of VRAM free with everything loaded",
+  "strata serve: decode expert cache hit rate: 100.0% (12000 hits / 12000 lookups)",
+  "strata serve: decode expert cache hit rate: 100.0% (37440 hits / 37440 lookups)",
+  "strata serve: decode expert cache hit rate: 100.0% (960 hits / 960 lookups)",
+  "strata serve: decode expert cache hit rate: 100.0% (2880 hits / 2880 lookups)",
+  "strata serve: decode expert cache hit rate: 100.0% (35040 hits / 35040 lookups)",
+  "strata serve: decode expert cache hit rate: 100.0% (1920 hits / 1920 lookups)",
+  "strata serve: decode expert cache hit rate: 100.0% (960 hits / 960 lookups)"
+ ],
+ "cases": [
+  {
+   "case": "receipt",
+   "answer": "这张小票上的店名是 **STRATA COFFEE**，总金额是 **12.60**。",
+   "checks": [
+    [
+     "STRATA"
+    ],
+    [
+     "COFFEE"
+    ],
+    [
+     "12.60"
+    ]
+   ],
+   "pass": true,
+   "seconds": 8.71,
+   "usage": {
+    "prompt_tokens": 424,
+    "completion_tokens": 25,
+    "total_tokens": 449,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  },
+  {
+   "case": "shapes",
+   "answer": "图中有三个形状，从左到右分别是：\n\n1. **红色圆形**（最左边）\n2. **蓝色正方形**（中间）\n3. **绿色三角形**（最右边）\n\n✅ 总结：\n- 形状：圆形、正方形、三角形\n- 颜色：红色、蓝色、绿色\n\n每个形状对应一种颜色，清晰可辨。",
+   "checks": [
+    [
+     "圆"
+    ],
+    [
+     "方",
+     "正方"
+    ],
+    [
+     "三角"
+    ],
+    [
+     "红"
+    ],
+    [
+     "蓝"
+    ],
+    [
+     "绿"
+    ]
+   ],
+   "pass": true,
+   "seconds": 5.93,
+   "usage": {
+    "prompt_tokens": 332,
+    "completion_tokens": 78,
+    "total_tokens": 410,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  },
+  {
+   "case": "dots",
+   "answer": "7",
+   "checks": [
+    [
+     "7",
+     "七"
+    ]
+   ],
+   "pass": true,
+   "seconds": 3.03,
+   "usage": {
+    "prompt_tokens": 350,
+    "completion_tokens": 2,
+    "total_tokens": 352,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  },
+  {
+   "case": "chinese",
+   "answer": "苹果电脑运行大模型",
+   "checks": [
+    [
+     "苹果电脑运行大模型"
+    ]
+   ],
+   "pass": true,
+   "seconds": 2.54,
+   "usage": {
+    "prompt_tokens": 248,
+    "completion_tokens": 6,
+    "total_tokens": 254,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  },
+  {
+   "case": "screenshot",
+   "answer": "This screenshot shows a dual-monitor setup with a Strata AI model monitoring dashboard on the left displaying real-time performance metrics (GPU load, VRAM, temperature, etc.) and recent request logs, while the right side shows a code editor with a detailed description of a Voxel Japanese Pagoda Garden project including HTML structure, animation logic, and a TODO list.",
+   "checks": [],
+   "pass": null,
+   "seconds": 9.79,
+   "usage": {
+    "prompt_tokens": 941,
+    "completion_tokens": 73,
+    "total_tokens": 1014,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  },
+  {
+   "case": "text only",
+   "answer": "391",
+   "checks": [
+    [
+     "391"
+    ]
+   ],
+   "pass": true,
+   "seconds": 1.31,
+   "usage": {
+    "prompt_tokens": 27,
+    "completion_tokens": 4,
+    "total_tokens": 31,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  },
+  {
+   "case": "follow-up (dots)",
+   "answer": "橙色",
+   "checks": [
+    [
+     "橙",
+     "orange",
+     "Orange"
+    ]
+   ],
+   "pass": true,
+   "seconds": 2.57,
+   "usage": {
+    "prompt_tokens": 371,
+    "completion_tokens": 2,
+    "total_tokens": 373,
+    "prompt_tokens_details": {
+     "cached_tokens": 0
+    }
+   }
+  }
+ ]
+}
