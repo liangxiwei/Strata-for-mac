@@ -49,12 +49,17 @@ Measured on an **Apple M2 Max (38-core GPU, 96 GB), macOS 26.5**, plugged in, En
   - The answers to the same inputs were word for word the same in all three modes.
 - **Pictures** are encoded on the Mac's GPU in 0.3-1.2 s. Turning them on changes nothing in text answers: the same
   output, the same speed.
+- **A small local code check (256K setup):** IQ2_XS and IQ3_S each produced a patch that passed the official
+  SWE-bench Verified harness for `matplotlib__matplotlib-20488`. On the same setup, a fixed, deterministic 10-problem
+  slice of LiveCodeBench v6 scored 5/10 and 6/10 single-answer pass@1. This slice is a local smoke test, not an
+  overall SWE-bench or LiveCodeBench score; its method, prompts, time and limits are recorded with the result.
 
 How these were measured, and every optimization behind them:
 
 - [bench/results/2026-10-04-metal-models](bench/results/2026-10-04-metal-models/README.md) (IQ2_XS, Q2_0);
 - [bench/results/2026-10-04-metal-128k](bench/results/2026-10-04-metal-128k/README.md) (128K context);
 - [bench/results/2026-10-04-metal-256k](bench/results/2026-10-04-metal-256k/README.md) (256K context);
+- [bench/results/2026-10-04-metal-code-evals](bench/results/2026-10-04-metal-code-evals/README.md) (256K local code checks);
 - [bench/results/2026-10-04-metal-vision](bench/results/2026-10-04-metal-vision/README.md) (pictures);
 - [docs/PORT_METAL/PROGRESS.md](docs/PORT_METAL/PROGRESS.md) (the optimizations).
 

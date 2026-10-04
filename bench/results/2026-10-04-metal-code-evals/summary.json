@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-04",
+  "strata_commit": "4d98709f7daad8cae978e19ce74a4f1931fd0c43",
+  "host": "Apple M2 Max (38-core GPU, 96 GB), macOS 26.5, Xcode 26.1",
+  "server": {
+    "max_context": 262144,
+    "vision": false,
+    "engine": "0.1.34"
+  },
+  "swebench_verified": {
+    "tooling": {
+      "swebench": "5.0.2",
+      "mini_swe_agent": "2.4.6",
+      "task_image": "swebench/sweb.eval.x86_64.matplotlib_1776_matplotlib-20488:latest",
+      "platform": "linux/amd64"
+    },
+    "scope": {
+      "instances": ["matplotlib__matplotlib-20488"],
+      "agent_step_limit": 40,
+      "temperature": 0,
+      "reasoning_effort": "medium",
+      "max_tokens": 2048
+    },
+    "iq2_xs": {
+      "agent_api_calls": 37,
+      "official_harness": {"completed": 1, "resolved": 1, "unresolved": 0, "infra_failures": 0, "errors": 0, "elapsed_seconds": 110.0}
+    },
+    "iq3_s": {
+      "agent_api_calls": 13,
+      "official_harness": {"completed": 1, "resolved": 1, "unresolved": 0, "infra_failures": 0, "errors": 0, "elapsed_seconds": 106.3}
+    }
+  },
+  "livecodebench_v6": {
+    "source_commit": "28fef95ea8c9f7a547c8329f2cd3d32b92c1fa24",
+    "release_problem_count": 1055,
+    "selection_seed": "strata-2026-10-04-livecodebench-v6",
+    "question_ids": ["3018", "3748", "abc359_c", "abc334_e", "3709", "3471", "3765", "3291", "abc370_a", "abc377_a"],
+    "generation": {"n": 1, "temperature": 0.2, "top_p": 0.95, "max_tokens": 2048},
+    "iq2_xs": {
+      "pass_at_1": 0.5,
+      "passed_question_ids": ["3018", "3471", "3709", "abc370_a", "abc377_a"],
+      "elapsed_seconds": 565.0,
+      "prompt_tokens": 6215,
+      "completion_tokens": 13349,
+      "prefill_seconds": 46.1,
+      "prefill_tokens_per_second": 134.7,
+      "decode_seconds": 518.8,
+      "decode_tokens_per_second": 25.7
+    },
+    "iq3_s": {
+      "pass_at_1": 0.6,
+      "passed_question_ids": ["3018", "3471", "3709", "3748", "abc370_a", "abc377_a"],
+      "elapsed_seconds": 625.6,
+      "prompt_tokens": 6215,
+      "completion_tokens": 12331,
+      "prefill_seconds": 64.8,
+      "prefill_tokens_per_second": 95.9,
+      "decode_seconds": 560.7,
+      "decode_tokens_per_second": 22.0
+    }
+  },
+  "limitation": "A one-instance SWE-bench run and a deterministic 10-of-1055 LiveCodeBench slice are local smoke tests, not official overall scores."
+}
