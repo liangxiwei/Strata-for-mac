@@ -392,7 +392,13 @@ void native_expert_resident(const NativeExpertLayout& L, const uint8_t* arena, c
     q.buf(h).buf(hq).scalar(nh);
     q.done();
     const bool direct = L.d_type == 42 && direct_dots();         // four rows per warp
-    if (direct) std::snprintf(name, sizeof name, "native_resident_down_direct_42_r4");
+    static const bool specialize_down = [] {
+        const char* e = std::getenv("STRATA_METAL_DECODE_DOWN_DIMS"); // =0: runtime-dimension kernel
+        return e == nullptr || std::atoi(e) != 0;
+    }();
+    const bool canonical_down = specialize_down && L.n_embd == 2560 && L.n_ff == 640;
+    if (direct) std::snprintf(name, sizeof name, canonical_down ? "native_resident_down_dim_42_r4"
+                                                               : "native_resident_down_direct_42_r4");
     else std::snprintf(name, sizeof name, "native_resident_down_%d", L.d_type);
     metal::Launch down(name, (unsigned) ((L.n_embd + (direct ? 31 : 7)) / (direct ? 32 : 8)), (unsigned) cap, 1, 256, 1, 1, 0,
                        stream);

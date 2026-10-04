@@ -1,0 +1,2439 @@
+{
+  "cb-timing": {
+    "config": {
+      "exe": "/Users/liangxw/src/xproject/petproject/Strata/engine/strata",
+      "sha256": "71cb4981fd68f439ba595a57f3b535ef4337ea50340d56ceca75bd315f899d97",
+      "args": [
+        "--pack",
+        "Strata-data/packs/iq2_xs",
+        "--native",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+        "--ple-gguf",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+        "--max-context",
+        "32768",
+        "--spec",
+        "4",
+        "--spec-min-p",
+        "0.5",
+        "--prefill",
+        "1024",
+        "--expert-profile",
+        "data/expert-profile.bin",
+        "--expert-cache",
+        "auto",
+        "--mtp",
+        "Strata-data/mtp/rt",
+        "--mtp-max-t",
+        "1",
+        "--suffix-draft",
+        "0",
+        "--mmap-experts",
+        "--no-prefill-borrow",
+        "--vision",
+        "--vram-reserve-mib",
+        "700"
+      ],
+      "config_path": "/Users/liangxw/src/xproject/petproject/Strata/strata-iq2_xs.json",
+      "config_sha256": "b7b2753c0ae68a63de292ea2c921c6e431e1c278b90c6b32a065dd6b2617db38",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_DECODE_TIMING": "1",
+        "STRATA_TRACE": "1",
+        "STRATA_METAL_CB_TIMING": "1"
+      },
+      "tokens": 128,
+      "repeats": 3,
+      "prompt_tokens": 10000,
+      "prompt_sha256": "96e2502f0bc4050f82025444bee48b655254eac9b176b732bbd61163a6a2af28"
+    },
+    "info": {
+      "version": "0.1.34",
+      "context": 32768,
+      "kv": "fp16",
+      "kv_resident": 0,
+      "expert_slots": 24576,
+      "expert_cache_mib": 33812,
+      "expert_slots_primary": 24576,
+      "expert_cache_primary_mib": 33812,
+      "spec": 4,
+      "mtp_max": 1,
+      "lookup": 0,
+      "vram_free_mib": 39453,
+      "cvec": 0,
+      "arena_mib": 0,
+      "pool_workers": 11,
+      "pcie_frac": "0.55",
+      "spec_min_p": "0.50",
+      "conversation_cache_mib": 0,
+      "conversation_cache_slots": 4,
+      "conversation_cache_min_free_mib": 2560,
+      "engine": "0.1.34"
+    },
+    "records": [
+      {
+        "run": 0,
+        "text": "根据您提供的资料，首先提取校验记录中的关键信息：\n\n**项目代号**：银杏\n**验收日期**：10月18日\n**校验码**：AX-7319\n\n---\n\n### 统一内存、混合专家模型（MoE）、Prefill 与 Decode 的深度解析\n\n在大型语言模型（LLM）的推理过程中，硬件资源的管理与计算流程的优化是决定性能的核心因素。结合 Strata 项目的技术细节，我们可以深入探讨统一内存（Unified Memory）、混合专家模型（Mixture of Experts, MoE）以及推理的两个主要阶段",
+        "timeline": [
+          {
+            "tokens": 1,
+            "elapsed_ms": 37235.90804199921
+          },
+          {
+            "tokens": 32,
+            "elapsed_ms": 38298.87716702069
+          },
+          {
+            "tokens": 64,
+            "elapsed_ms": 39392.97750001424
+          },
+          {
+            "tokens": 96,
+            "elapsed_ms": 40489.318042004015
+          },
+          {
+            "tokens": 128,
+            "elapsed_ms": 41587.34625001671
+          }
+        ],
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 37194.4,
+        "decode_ms": 4389.9,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 0,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      },
+      {
+        "run": 1,
+        "text": "根据您提供的资料，首先提取校验记录中的关键信息：\n\n**项目代号**：银杏\n**验收日期**：10月18日\n**校验码**：AX-7319\n\n---\n\n### 统一内存、混合专家模型（MoE）、Prefill 与 Decode 的深度解析\n\n在大型语言模型（LLM）的推理过程中，硬件资源的管理与计算流程的优化是决定性能的核心因素。结合 Strata 项目的技术细节，我们可以深入探讨统一内存（Unified Memory）、混合专家模型（Mixture of Experts, MoE）以及推理的两个主要阶段",
+        "timeline": [
+          {
+            "tokens": 1,
+            "elapsed_ms": 292.73558300337754
+          },
+          {
+            "tokens": 32,
+            "elapsed_ms": 1351.8984580005053
+          },
+          {
+            "tokens": 64,
+            "elapsed_ms": 2443.1939579953905
+          },
+          {
+            "tokens": 96,
+            "elapsed_ms": 3535.079124994809
+          },
+          {
+            "tokens": 128,
+            "elapsed_ms": 4626.898167014588
+          }
+        ],
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 256.3,
+        "decode_ms": 4368.8,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      },
+      {
+        "run": 2,
+        "text": "根据您提供的资料，首先提取校验记录中的关键信息：\n\n**项目代号**：银杏\n**验收日期**：10月18日\n**校验码**：AX-7319\n\n---\n\n### 统一内存、混合专家模型（MoE）、Prefill 与 Decode 的深度解析\n\n在大型语言模型（LLM）的推理过程中，硬件资源的管理与计算流程的优化是决定性能的核心因素。结合 Strata 项目的技术细节，我们可以深入探讨统一内存（Unified Memory）、混合专家模型（Mixture of Experts, MoE）以及推理的两个主要阶段",
+        "timeline": [
+          {
+            "tokens": 1,
+            "elapsed_ms": 281.4651250082534
+          },
+          {
+            "tokens": 32,
+            "elapsed_ms": 1339.719542011153
+          },
+          {
+            "tokens": 64,
+            "elapsed_ms": 2429.0644169959705
+          },
+          {
+            "tokens": 96,
+            "elapsed_ms": 3520.8434170053806
+          },
+          {
+            "tokens": 128,
+            "elapsed_ms": 4612.0882499963045
+          }
+        ],
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 245.8,
+        "decode_ms": 4364.5,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      }
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2427.38M  free = 1668.62M  (encrypted)",
+      "startup_seconds": 89.26733870798489,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2427.38M  free = 1668.62M  (encrypted)",
+      "child_peak_rss_bytes": 35157426176
+    }
+  },
+  "mixed-off-a": {
+    "config": {
+      "engine": "/tmp/strata-first-principles/strata-mixed-tiles",
+      "sha256": "9a30defe34a28600b4f32f11da3f0e23436ec8f02efc0d34a66d1b69e2ab49b0",
+      "args": [
+        "--pack",
+        "Strata-data/packs/iq2_xs",
+        "--native",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+        "--ple-gguf",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+        "--max-context",
+        "32768",
+        "--spec",
+        "4",
+        "--spec-min-p",
+        "0.5",
+        "--prefill",
+        "1024",
+        "--expert-profile",
+        "data/expert-profile.bin",
+        "--expert-cache",
+        "auto",
+        "--mtp",
+        "Strata-data/mtp/rt",
+        "--mtp-max-t",
+        "1",
+        "--suffix-draft",
+        "0",
+        "--mmap-experts",
+        "--no-prefill-borrow",
+        "--vision",
+        "--vram-reserve-mib",
+        "700"
+      ],
+      "cache_mib": 0,
+      "prompt_sha256": "96e2502f0bc4050f82025444bee48b655254eac9b176b732bbd61163a6a2af28",
+      "env": {
+        "STRATA_METAL_PREFILL_MIXED_TILES": "0",
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_DECODE_TIMING": "1",
+        "STRATA_TRACE": "1",
+        "STRATA_METAL_PREFILL_CACHE_MIB": "0"
+      }
+    },
+    "info": {
+      "version": "0.1.34",
+      "context": 32768,
+      "kv": "fp16",
+      "kv_resident": 0,
+      "expert_slots": 24576,
+      "expert_cache_mib": 33812,
+      "expert_slots_primary": 24576,
+      "expert_cache_primary_mib": 33812,
+      "spec": 4,
+      "mtp_max": 1,
+      "lookup": 0,
+      "vram_free_mib": 39453,
+      "cvec": 0,
+      "arena_mib": 0,
+      "pool_workers": 11,
+      "pcie_frac": "0.55",
+      "spec_min_p": "0.50",
+      "conversation_cache_mib": 0,
+      "conversation_cache_slots": 4,
+      "conversation_cache_min_free_mib": 2560,
+      "engine": "0.1.34"
+    },
+    "records": [
+      {
+        "run": 0,
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 38276.0,
+        "decode_ms": 4503.6,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 0,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      }
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2411.38M  free = 1684.62M  (encrypted)",
+      "memory_samples": [
+        [
+          "Physical footprint:         39.5G",
+          "Physical footprint (peak):  39.5G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.2G"
+        ]
+      ],
+      "startup_s": 94.60294083299232,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2411.38M  free = 1684.62M  (encrypted)"
+    }
+  },
+  "off-a": {
+    "config": {
+      "engine": "/tmp/strata-first-principles/strata-dense-cache",
+      "sha256": "507a7bd5857888f4ad716eed002a5cf546043b5d6a99fc8332a1289f30b90b95",
+      "args": [
+        "--pack",
+        "Strata-data/packs/iq2_xs",
+        "--native",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+        "--ple-gguf",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+        "--max-context",
+        "32768",
+        "--spec",
+        "4",
+        "--spec-min-p",
+        "0.5",
+        "--prefill",
+        "1024",
+        "--expert-profile",
+        "data/expert-profile.bin",
+        "--expert-cache",
+        "auto",
+        "--mtp",
+        "Strata-data/mtp/rt",
+        "--mtp-max-t",
+        "1",
+        "--suffix-draft",
+        "0",
+        "--mmap-experts",
+        "--no-prefill-borrow",
+        "--vision",
+        "--vram-reserve-mib",
+        "700"
+      ],
+      "cache_mib": 0,
+      "prompt_sha256": "96e2502f0bc4050f82025444bee48b655254eac9b176b732bbd61163a6a2af28"
+    },
+    "info": {
+      "version": "0.1.34",
+      "context": 32768,
+      "kv": "fp16",
+      "kv_resident": 0,
+      "expert_slots": 24576,
+      "expert_cache_mib": 33812,
+      "expert_slots_primary": 24576,
+      "expert_cache_primary_mib": 33812,
+      "spec": 4,
+      "mtp_max": 1,
+      "lookup": 0,
+      "vram_free_mib": 39453,
+      "cvec": 0,
+      "arena_mib": 0,
+      "pool_workers": 11,
+      "pcie_frac": "0.55",
+      "spec_min_p": "0.50",
+      "conversation_cache_mib": 0,
+      "conversation_cache_slots": 4,
+      "conversation_cache_min_free_mib": 2560,
+      "engine": "0.1.34"
+    },
+    "records": [
+      {
+        "run": 0,
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 38495.4,
+        "decode_ms": 4466.4,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 0,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      },
+      {
+        "run": 1,
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 939.0,
+        "decode_ms": 4452.9,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      },
+      {
+        "run": 2,
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 942.2,
+        "decode_ms": 4437.2,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      }
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2419.38M  free = 1676.62M  (encrypted)",
+      "memory_samples": [
+        [
+          "Physical footprint:         39.5G",
+          "Physical footprint (peak):  39.5G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.2G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ]
+      ],
+      "startup_s": 93.90149804198882,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2419.38M  free = 1676.62M  (encrypted)"
+    }
+  },
+  "off-b": {
+    "config": {
+      "engine": "/tmp/strata-first-principles/strata-dense-cache",
+      "sha256": "507a7bd5857888f4ad716eed002a5cf546043b5d6a99fc8332a1289f30b90b95",
+      "args": [
+        "--pack",
+        "Strata-data/packs/iq2_xs",
+        "--native",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+        "--ple-gguf",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+        "--max-context",
+        "32768",
+        "--spec",
+        "4",
+        "--spec-min-p",
+        "0.5",
+        "--prefill",
+        "1024",
+        "--expert-profile",
+        "data/expert-profile.bin",
+        "--expert-cache",
+        "auto",
+        "--mtp",
+        "Strata-data/mtp/rt",
+        "--mtp-max-t",
+        "1",
+        "--suffix-draft",
+        "0",
+        "--mmap-experts",
+        "--no-prefill-borrow",
+        "--vision",
+        "--vram-reserve-mib",
+        "700"
+      ],
+      "cache_mib": 0,
+      "prompt_sha256": "96e2502f0bc4050f82025444bee48b655254eac9b176b732bbd61163a6a2af28"
+    },
+    "info": {
+      "version": "0.1.34",
+      "context": 32768,
+      "kv": "fp16",
+      "kv_resident": 0,
+      "expert_slots": 24576,
+      "expert_cache_mib": 33812,
+      "expert_slots_primary": 24576,
+      "expert_cache_primary_mib": 33812,
+      "spec": 4,
+      "mtp_max": 1,
+      "lookup": 0,
+      "vram_free_mib": 39453,
+      "cvec": 0,
+      "arena_mib": 0,
+      "pool_workers": 11,
+      "pcie_frac": "0.55",
+      "spec_min_p": "0.50",
+      "conversation_cache_mib": 0,
+      "conversation_cache_slots": 4,
+      "conversation_cache_min_free_mib": 2560,
+      "engine": "0.1.34"
+    },
+    "records": [
+      {
+        "run": 0,
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 61874.2,
+        "decode_ms": 5028.9,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 0,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      },
+      {
+        "run": 1,
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 875.3,
+        "decode_ms": 4466.8,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      },
+      {
+        "run": 2,
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 882.2,
+        "decode_ms": 4526.2,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      }
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2419.38M  free = 1676.62M  (encrypted)",
+      "memory_samples": [
+        [
+          "Physical footprint:         39.5G",
+          "Physical footprint (peak):  39.5G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.2G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ]
+      ],
+      "startup_s": 91.78910783299943,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2419.38M  free = 1676.62M  (encrypted)"
+    }
+  },
+  "on-a": {
+    "config": {
+      "engine": "/tmp/strata-first-principles/strata-dense-cache",
+      "sha256": "507a7bd5857888f4ad716eed002a5cf546043b5d6a99fc8332a1289f30b90b95",
+      "args": [
+        "--pack",
+        "Strata-data/packs/iq2_xs",
+        "--native",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+        "--ple-gguf",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+        "--max-context",
+        "32768",
+        "--spec",
+        "4",
+        "--spec-min-p",
+        "0.5",
+        "--prefill",
+        "1024",
+        "--expert-profile",
+        "data/expert-profile.bin",
+        "--expert-cache",
+        "auto",
+        "--mtp",
+        "Strata-data/mtp/rt",
+        "--mtp-max-t",
+        "1",
+        "--suffix-draft",
+        "0",
+        "--mmap-experts",
+        "--no-prefill-borrow",
+        "--vision",
+        "--vram-reserve-mib",
+        "700"
+      ],
+      "cache_mib": 6144,
+      "prompt_sha256": "96e2502f0bc4050f82025444bee48b655254eac9b176b732bbd61163a6a2af28"
+    },
+    "info": {
+      "version": "0.1.34",
+      "context": 32768,
+      "kv": "fp16",
+      "kv_resident": 0,
+      "expert_slots": 24576,
+      "expert_cache_mib": 33812,
+      "expert_slots_primary": 24576,
+      "expert_cache_primary_mib": 33812,
+      "spec": 4,
+      "mtp_max": 1,
+      "lookup": 0,
+      "vram_free_mib": 39453,
+      "cvec": 0,
+      "arena_mib": 0,
+      "pool_workers": 11,
+      "pcie_frac": "0.55",
+      "spec_min_p": "0.50",
+      "conversation_cache_mib": 0,
+      "conversation_cache_slots": 4,
+      "conversation_cache_min_free_mib": 2560,
+      "engine": "0.1.34"
+    },
+    "records": [
+      {
+        "run": 0,
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 41154.0,
+        "decode_ms": 4628.8,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 0,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      },
+      {
+        "run": 1,
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 1027.4,
+        "decode_ms": 4584.9,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      },
+      {
+        "run": 2,
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 919.4,
+        "decode_ms": 4561.3,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      }
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2419.38M  free = 1676.62M  (encrypted)",
+      "memory_samples": [
+        [
+          "Physical footprint:         39.5G",
+          "Physical footprint (peak):  39.5G"
+        ],
+        [
+          "Physical footprint:         45.6G",
+          "Physical footprint (peak):  45.6G"
+        ],
+        [
+          "Physical footprint:         45.6G",
+          "Physical footprint (peak):  45.7G"
+        ],
+        [
+          "Physical footprint:         45.6G",
+          "Physical footprint (peak):  45.7G"
+        ]
+      ],
+      "startup_s": 93.44031358300708,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2419.38M  free = 1676.62M  (encrypted)"
+    }
+  },
+  "on-b": {
+    "config": {
+      "engine": "/tmp/strata-first-principles/strata-dense-cache",
+      "sha256": "507a7bd5857888f4ad716eed002a5cf546043b5d6a99fc8332a1289f30b90b95",
+      "args": [
+        "--pack",
+        "Strata-data/packs/iq2_xs",
+        "--native",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+        "--ple-gguf",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+        "--max-context",
+        "32768",
+        "--spec",
+        "4",
+        "--spec-min-p",
+        "0.5",
+        "--prefill",
+        "1024",
+        "--expert-profile",
+        "data/expert-profile.bin",
+        "--expert-cache",
+        "auto",
+        "--mtp",
+        "Strata-data/mtp/rt",
+        "--mtp-max-t",
+        "1",
+        "--suffix-draft",
+        "0",
+        "--mmap-experts",
+        "--no-prefill-borrow",
+        "--vision",
+        "--vram-reserve-mib",
+        "700"
+      ],
+      "cache_mib": 6144,
+      "prompt_sha256": "96e2502f0bc4050f82025444bee48b655254eac9b176b732bbd61163a6a2af28"
+    },
+    "info": {
+      "version": "0.1.34",
+      "context": 32768,
+      "kv": "fp16",
+      "kv_resident": 0,
+      "expert_slots": 24576,
+      "expert_cache_mib": 33812,
+      "expert_slots_primary": 24576,
+      "expert_cache_primary_mib": 33812,
+      "spec": 4,
+      "mtp_max": 1,
+      "lookup": 0,
+      "vram_free_mib": 39453,
+      "cvec": 0,
+      "arena_mib": 0,
+      "pool_workers": 11,
+      "pcie_frac": "0.55",
+      "spec_min_p": "0.50",
+      "conversation_cache_mib": 0,
+      "conversation_cache_slots": 4,
+      "conversation_cache_min_free_mib": 2560,
+      "engine": "0.1.34"
+    },
+    "records": [
+      {
+        "run": 0,
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 42102.2,
+        "decode_ms": 4507.7,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 0,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      },
+      {
+        "run": 1,
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 935.6,
+        "decode_ms": 4441.1,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      },
+      {
+        "run": 2,
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 893.8,
+        "decode_ms": 4436.7,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      }
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2419.38M  free = 1676.62M  (encrypted)",
+      "memory_samples": [
+        [
+          "Physical footprint:         39.5G",
+          "Physical footprint (peak):  39.5G"
+        ],
+        [
+          "Physical footprint:         45.6G",
+          "Physical footprint (peak):  45.6G"
+        ],
+        [
+          "Physical footprint:         45.6G",
+          "Physical footprint (peak):  45.7G"
+        ],
+        [
+          "Physical footprint:         45.6G",
+          "Physical footprint (peak):  45.7G"
+        ]
+      ],
+      "startup_s": 91.93209958300577,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2411.38M  free = 1684.62M  (encrypted)"
+    }
+  },
+  "profile": {
+    "config": {
+      "exe": "/Users/liangxw/src/xproject/petproject/Strata/engine/strata",
+      "sha256": "71cb4981fd68f439ba595a57f3b535ef4337ea50340d56ceca75bd315f899d97",
+      "args": [
+        "--pack",
+        "Strata-data/packs/iq2_xs",
+        "--native",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+        "--ple-gguf",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+        "--max-context",
+        "32768",
+        "--spec",
+        "4",
+        "--spec-min-p",
+        "0.5",
+        "--prefill",
+        "1024",
+        "--expert-profile",
+        "data/expert-profile.bin",
+        "--expert-cache",
+        "auto",
+        "--mtp",
+        "Strata-data/mtp/rt",
+        "--mtp-max-t",
+        "1",
+        "--suffix-draft",
+        "0",
+        "--mmap-experts",
+        "--no-prefill-borrow",
+        "--vision",
+        "--vram-reserve-mib",
+        "700"
+      ],
+      "config_path": "/Users/liangxw/src/xproject/petproject/Strata/strata-iq2_xs.json",
+      "config_sha256": "b7b2753c0ae68a63de292ea2c921c6e431e1c278b90c6b32a065dd6b2617db38",
+      "env": {
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_DECODE_TIMING": "1",
+        "STRATA_TRACE": "1",
+        "STRATA_METAL_KPROFILE": "bench/results/2026-10-04-metal-first-principles/run/profile/kernels.csv"
+      },
+      "tokens": 64,
+      "repeats": 2,
+      "prompt_tokens": 10000,
+      "prompt_sha256": "96e2502f0bc4050f82025444bee48b655254eac9b176b732bbd61163a6a2af28"
+    },
+    "info": {
+      "version": "0.1.34",
+      "context": 32768,
+      "kv": "fp16",
+      "kv_resident": 0,
+      "expert_slots": 24576,
+      "expert_cache_mib": 33812,
+      "expert_slots_primary": 24576,
+      "expert_cache_primary_mib": 33812,
+      "spec": 4,
+      "mtp_max": 1,
+      "lookup": 0,
+      "vram_free_mib": 39453,
+      "cvec": 0,
+      "arena_mib": 0,
+      "pool_workers": 11,
+      "pcie_frac": "0.55",
+      "spec_min_p": "0.50",
+      "conversation_cache_mib": 0,
+      "conversation_cache_slots": 4,
+      "conversation_cache_min_free_mib": 2560,
+      "engine": "0.1.34"
+    },
+    "records": [
+      {
+        "run": 0,
+        "text": "根据您提供的资料，首先提取校验记录中的关键信息：\n\n**项目代号**：银杏\n**验收日期**：10月18日\n**校验码**：AX-7319\n\n---\n\n### 统一内存、混合专家模型（MoE）、Prefill 与 Decode",
+        "timeline": [
+          {
+            "tokens": 1,
+            "elapsed_ms": 36740.24437498883
+          },
+          {
+            "tokens": 32,
+            "elapsed_ms": 38317.05612500082
+          },
+          {
+            "tokens": 64,
+            "elapsed_ms": 40016.70854201075
+          }
+        ],
+        "generated": 64,
+        "prompt_tokens": 10000,
+        "prompt_ms": 36697.6,
+        "decode_ms": 3316.9,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 0,
+        "hits": 30720,
+        "lookups": 30720,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 64,
+        "ids_sha256": "10faaf50964227f8f05b737781e78906c4569b9e287ff0c378274517bf641c09"
+      },
+      {
+        "run": 1,
+        "text": "根据您提供的资料，首先提取校验记录中的关键信息：\n\n**项目代号**：银杏\n**验收日期**：10月18日\n**校验码**：AX-7319\n\n---\n\n### 统一内存、混合专家模型（MoE）、Prefill 与 Decode",
+        "timeline": [
+          {
+            "tokens": 1,
+            "elapsed_ms": 323.20308400085196
+          },
+          {
+            "tokens": 32,
+            "elapsed_ms": 1968.0611249932554
+          },
+          {
+            "tokens": 64,
+            "elapsed_ms": 3667.521499999566
+          }
+        ],
+        "generated": 64,
+        "prompt_tokens": 10000,
+        "prompt_ms": 268.4,
+        "decode_ms": 3396.5,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 30720,
+        "lookups": 30720,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 64,
+        "ids_sha256": "10faaf50964227f8f05b737781e78906c4569b9e287ff0c378274517bf641c09"
+      }
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2419.38M  free = 1676.62M  (encrypted)",
+      "startup_seconds": 94.45211495901458,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2419.38M  free = 1676.62M  (encrypted)",
+      "child_peak_rss_bytes": 34615083008
+    }
+  },
+  "mixed-on-a": {
+    "config": {
+      "engine": "/tmp/strata-first-principles/strata-mixed-tiles",
+      "sha256": "9a30defe34a28600b4f32f11da3f0e23436ec8f02efc0d34a66d1b69e2ab49b0",
+      "args": [
+        "--pack",
+        "Strata-data/packs/iq2_xs",
+        "--native",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+        "--ple-gguf",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+        "--max-context",
+        "32768",
+        "--spec",
+        "4",
+        "--spec-min-p",
+        "0.5",
+        "--prefill",
+        "1024",
+        "--expert-profile",
+        "data/expert-profile.bin",
+        "--expert-cache",
+        "auto",
+        "--mtp",
+        "Strata-data/mtp/rt",
+        "--mtp-max-t",
+        "1",
+        "--suffix-draft",
+        "0",
+        "--mmap-experts",
+        "--no-prefill-borrow",
+        "--vision",
+        "--vram-reserve-mib",
+        "700"
+      ],
+      "cache_mib": 0,
+      "prompt_sha256": "96e2502f0bc4050f82025444bee48b655254eac9b176b732bbd61163a6a2af28",
+      "env": {
+        "STRATA_METAL_PREFILL_MIXED_TILES": "1",
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_DECODE_TIMING": "1",
+        "STRATA_TRACE": "1",
+        "STRATA_METAL_PREFILL_CACHE_MIB": "0"
+      }
+    },
+    "info": {
+      "version": "0.1.34",
+      "context": 32768,
+      "kv": "fp16",
+      "kv_resident": 0,
+      "expert_slots": 24576,
+      "expert_cache_mib": 33812,
+      "expert_slots_primary": 24576,
+      "expert_cache_primary_mib": 33812,
+      "spec": 4,
+      "mtp_max": 1,
+      "lookup": 0,
+      "vram_free_mib": 39453,
+      "cvec": 0,
+      "arena_mib": 0,
+      "pool_workers": 11,
+      "pcie_frac": "0.55",
+      "spec_min_p": "0.50",
+      "conversation_cache_mib": 0,
+      "conversation_cache_slots": 4,
+      "conversation_cache_min_free_mib": 2560,
+      "engine": "0.1.34"
+    },
+    "records": [
+      {
+        "run": 0,
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 52145.0,
+        "decode_ms": 4640.0,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 0,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      }
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2411.38M  free = 1684.62M  (encrypted)",
+      "memory_samples": [
+        [
+          "Physical footprint:         39.5G",
+          "Physical footprint (peak):  39.5G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.2G"
+        ]
+      ],
+      "startup_s": 67.94889716600301,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2449.81M  free = 1646.19M  (encrypted)"
+    }
+  },
+  "mixed-off-b": {
+    "config": {
+      "engine": "/tmp/strata-first-principles/strata-mixed-tiles",
+      "sha256": "9a30defe34a28600b4f32f11da3f0e23436ec8f02efc0d34a66d1b69e2ab49b0",
+      "args": [
+        "--pack",
+        "Strata-data/packs/iq2_xs",
+        "--native",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+        "--ple-gguf",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+        "--max-context",
+        "32768",
+        "--spec",
+        "4",
+        "--spec-min-p",
+        "0.5",
+        "--prefill",
+        "1024",
+        "--expert-profile",
+        "data/expert-profile.bin",
+        "--expert-cache",
+        "auto",
+        "--mtp",
+        "Strata-data/mtp/rt",
+        "--mtp-max-t",
+        "1",
+        "--suffix-draft",
+        "0",
+        "--mmap-experts",
+        "--no-prefill-borrow",
+        "--vision",
+        "--vram-reserve-mib",
+        "700"
+      ],
+      "cache_mib": 0,
+      "prompt_sha256": "96e2502f0bc4050f82025444bee48b655254eac9b176b732bbd61163a6a2af28",
+      "env": {
+        "STRATA_METAL_PREFILL_MIXED_TILES": "0",
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_DECODE_TIMING": "1",
+        "STRATA_TRACE": "1",
+        "STRATA_METAL_PREFILL_CACHE_MIB": "0"
+      }
+    },
+    "info": {
+      "version": "0.1.34",
+      "context": 32768,
+      "kv": "fp16",
+      "kv_resident": 0,
+      "expert_slots": 24576,
+      "expert_cache_mib": 33812,
+      "expert_slots_primary": 24576,
+      "expert_cache_primary_mib": 33812,
+      "spec": 4,
+      "mtp_max": 1,
+      "lookup": 0,
+      "vram_free_mib": 39453,
+      "cvec": 0,
+      "arena_mib": 0,
+      "pool_workers": 11,
+      "pcie_frac": "0.55",
+      "spec_min_p": "0.50",
+      "conversation_cache_mib": 0,
+      "conversation_cache_slots": 4,
+      "conversation_cache_min_free_mib": 2560,
+      "engine": "0.1.34"
+    },
+    "records": [
+      {
+        "run": 0,
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 87440.9,
+        "decode_ms": 5715.4,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 0,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      }
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2449.81M  free = 1646.19M  (encrypted)",
+      "memory_samples": [
+        [
+          "Physical footprint:         39.5G",
+          "Physical footprint (peak):  39.5G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.2G"
+        ]
+      ],
+      "startup_s": 63.37383958301507,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)"
+    }
+  },
+  "mixed-on-b": {
+    "config": {
+      "engine": "/tmp/strata-first-principles/strata-mixed-tiles",
+      "sha256": "9a30defe34a28600b4f32f11da3f0e23436ec8f02efc0d34a66d1b69e2ab49b0",
+      "args": [
+        "--pack",
+        "Strata-data/packs/iq2_xs",
+        "--native",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+        "--ple-gguf",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+        "--max-context",
+        "32768",
+        "--spec",
+        "4",
+        "--spec-min-p",
+        "0.5",
+        "--prefill",
+        "1024",
+        "--expert-profile",
+        "data/expert-profile.bin",
+        "--expert-cache",
+        "auto",
+        "--mtp",
+        "Strata-data/mtp/rt",
+        "--mtp-max-t",
+        "1",
+        "--suffix-draft",
+        "0",
+        "--mmap-experts",
+        "--no-prefill-borrow",
+        "--vision",
+        "--vram-reserve-mib",
+        "700"
+      ],
+      "cache_mib": 0,
+      "prompt_sha256": "96e2502f0bc4050f82025444bee48b655254eac9b176b732bbd61163a6a2af28",
+      "env": {
+        "STRATA_METAL_PREFILL_MIXED_TILES": "1",
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_DECODE_TIMING": "1",
+        "STRATA_TRACE": "1",
+        "STRATA_METAL_PREFILL_CACHE_MIB": "0"
+      }
+    },
+    "info": {
+      "version": "0.1.34",
+      "context": 32768,
+      "kv": "fp16",
+      "kv_resident": 0,
+      "expert_slots": 24576,
+      "expert_cache_mib": 33812,
+      "expert_slots_primary": 24576,
+      "expert_cache_primary_mib": 33812,
+      "spec": 4,
+      "mtp_max": 1,
+      "lookup": 0,
+      "vram_free_mib": 39453,
+      "cvec": 0,
+      "arena_mib": 0,
+      "pool_workers": 11,
+      "pcie_frac": "0.55",
+      "spec_min_p": "0.50",
+      "conversation_cache_mib": 0,
+      "conversation_cache_slots": 4,
+      "conversation_cache_min_free_mib": 2560,
+      "engine": "0.1.34"
+    },
+    "records": [
+      {
+        "run": 0,
+        "generated": 128,
+        "prompt_tokens": 10000,
+        "prompt_ms": 49654.9,
+        "decode_ms": 5896.7,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 0,
+        "hits": 61440,
+        "lookups": 61440,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 128,
+        "ids_sha256": "f2b5ec4b8909e99cdeb4fb4777183a0582e39eef53f8f01fd75f6bfce1253cd2"
+      }
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)",
+      "memory_samples": [
+        [
+          "Physical footprint:         39.5G",
+          "Physical footprint (peak):  39.5G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.2G"
+        ]
+      ],
+      "startup_s": 24.20190708298469,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)"
+    }
+  },
+  "decode-down-off-a": {
+    "config": {
+      "engine": "/tmp/strata-first-principles/decode/strata-down-dims",
+      "sha256": "a1ff389079df6b7a39012af2985a33d412e3d0db1bf9a92bf54e0e1f7666c0ce",
+      "args": [
+        "--pack",
+        "Strata-data/packs/iq2_xs",
+        "--native",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+        "--ple-gguf",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+        "--max-context",
+        "32768",
+        "--spec",
+        "4",
+        "--spec-min-p",
+        "0.5",
+        "--prefill",
+        "1024",
+        "--expert-profile",
+        "data/expert-profile.bin",
+        "--expert-cache",
+        "auto",
+        "--mtp",
+        "Strata-data/mtp/rt",
+        "--mtp-max-t",
+        "1",
+        "--suffix-draft",
+        "0",
+        "--mmap-experts",
+        "--no-prefill-borrow",
+        "--vision",
+        "--vram-reserve-mib",
+        "700"
+      ],
+      "cache_mib": 0,
+      "prompt_sha256": "96e2502f0bc4050f82025444bee48b655254eac9b176b732bbd61163a6a2af28",
+      "env": {
+        "STRATA_METAL_DECODE_DOWN_DIMS": "0",
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_DECODE_TIMING": "1",
+        "STRATA_TRACE": "1",
+        "STRATA_METAL_PREFILL_CACHE_MIB": "0"
+      }
+    },
+    "info": {
+      "version": "0.1.34",
+      "context": 32768,
+      "kv": "fp16",
+      "kv_resident": 0,
+      "expert_slots": 24576,
+      "expert_cache_mib": 33812,
+      "expert_slots_primary": 24576,
+      "expert_cache_primary_mib": 33812,
+      "spec": 4,
+      "mtp_max": 1,
+      "lookup": 0,
+      "vram_free_mib": 39453,
+      "cvec": 0,
+      "arena_mib": 0,
+      "pool_workers": 11,
+      "pcie_frac": "0.55",
+      "spec_min_p": "0.50",
+      "conversation_cache_mib": 0,
+      "conversation_cache_slots": 4,
+      "conversation_cache_min_free_mib": 2560,
+      "engine": "0.1.34"
+    },
+    "records": [
+      {
+        "run": 0,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 37861.9,
+        "decode_ms": 9195.2,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 0,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 1,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 887.2,
+        "decode_ms": 9061.5,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 2,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 861.4,
+        "decode_ms": 9060.9,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 3,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 844.4,
+        "decode_ms": 9105.7,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      }
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)",
+      "memory_samples": [
+        [
+          "Physical footprint:         39.5G",
+          "Physical footprint (peak):  39.5G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.2G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ]
+      ],
+      "startup_s": 25.85185062501114,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)"
+    }
+  },
+  "decode-down-on-a": {
+    "config": {
+      "engine": "/tmp/strata-first-principles/decode/strata-down-dims",
+      "sha256": "a1ff389079df6b7a39012af2985a33d412e3d0db1bf9a92bf54e0e1f7666c0ce",
+      "args": [
+        "--pack",
+        "Strata-data/packs/iq2_xs",
+        "--native",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+        "--ple-gguf",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+        "--max-context",
+        "32768",
+        "--spec",
+        "4",
+        "--spec-min-p",
+        "0.5",
+        "--prefill",
+        "1024",
+        "--expert-profile",
+        "data/expert-profile.bin",
+        "--expert-cache",
+        "auto",
+        "--mtp",
+        "Strata-data/mtp/rt",
+        "--mtp-max-t",
+        "1",
+        "--suffix-draft",
+        "0",
+        "--mmap-experts",
+        "--no-prefill-borrow",
+        "--vision",
+        "--vram-reserve-mib",
+        "700"
+      ],
+      "cache_mib": 0,
+      "prompt_sha256": "96e2502f0bc4050f82025444bee48b655254eac9b176b732bbd61163a6a2af28",
+      "env": {
+        "STRATA_METAL_DECODE_DOWN_DIMS": "1",
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_DECODE_TIMING": "1",
+        "STRATA_TRACE": "1",
+        "STRATA_METAL_PREFILL_CACHE_MIB": "0"
+      }
+    },
+    "info": {
+      "version": "0.1.34",
+      "context": 32768,
+      "kv": "fp16",
+      "kv_resident": 0,
+      "expert_slots": 24576,
+      "expert_cache_mib": 33812,
+      "expert_slots_primary": 24576,
+      "expert_cache_primary_mib": 33812,
+      "spec": 4,
+      "mtp_max": 1,
+      "lookup": 0,
+      "vram_free_mib": 39453,
+      "cvec": 0,
+      "arena_mib": 0,
+      "pool_workers": 11,
+      "pcie_frac": "0.55",
+      "spec_min_p": "0.50",
+      "conversation_cache_mib": 0,
+      "conversation_cache_slots": 4,
+      "conversation_cache_min_free_mib": 2560,
+      "engine": "0.1.34"
+    },
+    "records": [
+      {
+        "run": 0,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 36124.8,
+        "decode_ms": 8930.1,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 0,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 1,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 809.5,
+        "decode_ms": 8807.9,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 2,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 844.3,
+        "decode_ms": 8870.3,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 3,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 799.9,
+        "decode_ms": 8880.5,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      }
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)",
+      "memory_samples": [
+        [
+          "Physical footprint:         39.5G",
+          "Physical footprint (peak):  39.5G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.2G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ]
+      ],
+      "startup_s": 15.98680174999754,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)"
+    }
+  },
+  "decode-build-off": {
+    "config": {
+      "engine": "/Users/liangxw/src/xproject/petproject/Strata/build-metal/strata",
+      "sha256": "1c137ffcb7d0ebe324735e6c11409acedec94d5b9a8af68fba7e17a3dec94900",
+      "args": [
+        "--pack",
+        "Strata-data/packs/iq2_xs",
+        "--native",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+        "--ple-gguf",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+        "--max-context",
+        "32768",
+        "--spec",
+        "4",
+        "--spec-min-p",
+        "0.5",
+        "--prefill",
+        "1024",
+        "--expert-profile",
+        "data/expert-profile.bin",
+        "--expert-cache",
+        "auto",
+        "--mtp",
+        "Strata-data/mtp/rt",
+        "--mtp-max-t",
+        "1",
+        "--suffix-draft",
+        "0",
+        "--mmap-experts",
+        "--no-prefill-borrow",
+        "--vision",
+        "--vram-reserve-mib",
+        "700"
+      ],
+      "cache_mib": 0,
+      "prompt_sha256": "96e2502f0bc4050f82025444bee48b655254eac9b176b732bbd61163a6a2af28",
+      "env": {
+        "STRATA_METAL_DECODE_DOWN_DIMS": "0",
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_DECODE_TIMING": "1",
+        "STRATA_TRACE": "1",
+        "STRATA_METAL_PREFILL_CACHE_MIB": "0"
+      }
+    },
+    "info": {
+      "version": "0.1.34",
+      "context": 32768,
+      "kv": "fp16",
+      "kv_resident": 0,
+      "expert_slots": 24576,
+      "expert_cache_mib": 33812,
+      "expert_slots_primary": 24576,
+      "expert_cache_primary_mib": 33812,
+      "spec": 4,
+      "mtp_max": 1,
+      "lookup": 0,
+      "vram_free_mib": 39453,
+      "cvec": 0,
+      "arena_mib": 0,
+      "pool_workers": 11,
+      "pcie_frac": "0.55",
+      "spec_min_p": "0.50",
+      "conversation_cache_mib": 0,
+      "conversation_cache_slots": 4,
+      "conversation_cache_min_free_mib": 2560,
+      "engine": "0.1.34"
+    },
+    "records": [
+      {
+        "run": 0,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 35965.4,
+        "decode_ms": 9140.7,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 0,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 1,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 821.7,
+        "decode_ms": 9077.2,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 2,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 813.2,
+        "decode_ms": 9025.1,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 3,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 823.1,
+        "decode_ms": 9145.2,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 4,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 809.0,
+        "decode_ms": 9073.2,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 5,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 813.9,
+        "decode_ms": 9063.1,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      }
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)",
+      "memory_samples": [
+        [
+          "Physical footprint:         39.5G",
+          "Physical footprint (peak):  39.5G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.2G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ]
+      ],
+      "startup_s": 17.715943082992453,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)"
+    }
+  },
+  "decode-build-on": {
+    "config": {
+      "engine": "/Users/liangxw/src/xproject/petproject/Strata/build-metal/strata",
+      "sha256": "1c137ffcb7d0ebe324735e6c11409acedec94d5b9a8af68fba7e17a3dec94900",
+      "args": [
+        "--pack",
+        "Strata-data/packs/iq2_xs",
+        "--native",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+        "--ple-gguf",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+        "--max-context",
+        "32768",
+        "--spec",
+        "4",
+        "--spec-min-p",
+        "0.5",
+        "--prefill",
+        "1024",
+        "--expert-profile",
+        "data/expert-profile.bin",
+        "--expert-cache",
+        "auto",
+        "--mtp",
+        "Strata-data/mtp/rt",
+        "--mtp-max-t",
+        "1",
+        "--suffix-draft",
+        "0",
+        "--mmap-experts",
+        "--no-prefill-borrow",
+        "--vision",
+        "--vram-reserve-mib",
+        "700"
+      ],
+      "cache_mib": 0,
+      "prompt_sha256": "96e2502f0bc4050f82025444bee48b655254eac9b176b732bbd61163a6a2af28",
+      "env": {
+        "STRATA_METAL_DECODE_DOWN_DIMS": "1",
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_DECODE_TIMING": "1",
+        "STRATA_TRACE": "1",
+        "STRATA_METAL_PREFILL_CACHE_MIB": "0"
+      }
+    },
+    "info": {
+      "version": "0.1.34",
+      "context": 32768,
+      "kv": "fp16",
+      "kv_resident": 0,
+      "expert_slots": 24576,
+      "expert_cache_mib": 33812,
+      "expert_slots_primary": 24576,
+      "expert_cache_primary_mib": 33812,
+      "spec": 4,
+      "mtp_max": 1,
+      "lookup": 0,
+      "vram_free_mib": 39453,
+      "cvec": 0,
+      "arena_mib": 0,
+      "pool_workers": 11,
+      "pcie_frac": "0.55",
+      "spec_min_p": "0.50",
+      "conversation_cache_mib": 0,
+      "conversation_cache_slots": 4,
+      "conversation_cache_min_free_mib": 2560,
+      "engine": "0.1.34"
+    },
+    "records": [
+      {
+        "run": 0,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 36290.7,
+        "decode_ms": 9177.4,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 0,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 1,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 827.3,
+        "decode_ms": 8856.1,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 2,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 800.5,
+        "decode_ms": 8832.3,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 3,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 811.3,
+        "decode_ms": 8852.3,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 4,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 816.5,
+        "decode_ms": 8856.6,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 5,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 812.9,
+        "decode_ms": 9008.7,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      }
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)",
+      "memory_samples": [
+        [
+          "Physical footprint:         39.5G",
+          "Physical footprint (peak):  39.5G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.2G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ]
+      ],
+      "startup_s": 15.439287291985238,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)"
+    }
+  },
+  "decode-down-off-b": {
+    "config": {
+      "engine": "/tmp/strata-first-principles/decode/strata-down-dims",
+      "sha256": "a1ff389079df6b7a39012af2985a33d412e3d0db1bf9a92bf54e0e1f7666c0ce",
+      "args": [
+        "--pack",
+        "Strata-data/packs/iq2_xs",
+        "--native",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+        "--ple-gguf",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+        "--max-context",
+        "32768",
+        "--spec",
+        "4",
+        "--spec-min-p",
+        "0.5",
+        "--prefill",
+        "1024",
+        "--expert-profile",
+        "data/expert-profile.bin",
+        "--expert-cache",
+        "auto",
+        "--mtp",
+        "Strata-data/mtp/rt",
+        "--mtp-max-t",
+        "1",
+        "--suffix-draft",
+        "0",
+        "--mmap-experts",
+        "--no-prefill-borrow",
+        "--vision",
+        "--vram-reserve-mib",
+        "700"
+      ],
+      "cache_mib": 0,
+      "prompt_sha256": "96e2502f0bc4050f82025444bee48b655254eac9b176b732bbd61163a6a2af28",
+      "env": {
+        "STRATA_METAL_DECODE_DOWN_DIMS": "0",
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_DECODE_TIMING": "1",
+        "STRATA_TRACE": "1",
+        "STRATA_METAL_PREFILL_CACHE_MIB": "0"
+      }
+    },
+    "info": {
+      "version": "0.1.34",
+      "context": 32768,
+      "kv": "fp16",
+      "kv_resident": 0,
+      "expert_slots": 24576,
+      "expert_cache_mib": 33812,
+      "expert_slots_primary": 24576,
+      "expert_cache_primary_mib": 33812,
+      "spec": 4,
+      "mtp_max": 1,
+      "lookup": 0,
+      "vram_free_mib": 39453,
+      "cvec": 0,
+      "arena_mib": 0,
+      "pool_workers": 11,
+      "pcie_frac": "0.55",
+      "spec_min_p": "0.50",
+      "conversation_cache_mib": 0,
+      "conversation_cache_slots": 4,
+      "conversation_cache_min_free_mib": 2560,
+      "engine": "0.1.34"
+    },
+    "records": [
+      {
+        "run": 0,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 41216.6,
+        "decode_ms": 9193.7,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 0,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 1,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 810.5,
+        "decode_ms": 9003.8,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 2,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 815.6,
+        "decode_ms": 8910.0,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 3,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 795.6,
+        "decode_ms": 8909.8,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      }
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)",
+      "memory_samples": [
+        [
+          "Physical footprint:         39.5G",
+          "Physical footprint (peak):  39.5G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.2G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ]
+      ],
+      "startup_s": 15.096000042016385,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)"
+    }
+  },
+  "decode-down-on-b": {
+    "config": {
+      "engine": "/tmp/strata-first-principles/decode/strata-down-dims",
+      "sha256": "a1ff389079df6b7a39012af2985a33d412e3d0db1bf9a92bf54e0e1f7666c0ce",
+      "args": [
+        "--pack",
+        "Strata-data/packs/iq2_xs",
+        "--native",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00001-of-00002.gguf",
+        "--ple-gguf",
+        "Strata-data/models/IQ2_XS/Qwen3.8-Flash-Next-GSQ-RCO-IQ2_XS-00002-of-00002.gguf",
+        "--max-context",
+        "32768",
+        "--spec",
+        "4",
+        "--spec-min-p",
+        "0.5",
+        "--prefill",
+        "1024",
+        "--expert-profile",
+        "data/expert-profile.bin",
+        "--expert-cache",
+        "auto",
+        "--mtp",
+        "Strata-data/mtp/rt",
+        "--mtp-max-t",
+        "1",
+        "--suffix-draft",
+        "0",
+        "--mmap-experts",
+        "--no-prefill-borrow",
+        "--vision",
+        "--vram-reserve-mib",
+        "700"
+      ],
+      "cache_mib": 0,
+      "prompt_sha256": "96e2502f0bc4050f82025444bee48b655254eac9b176b732bbd61163a6a2af28",
+      "env": {
+        "STRATA_METAL_DECODE_DOWN_DIMS": "1",
+        "STRATA_METAL_IQ4_EXPAND": "0",
+        "STRATA_DECODE_TIMING": "1",
+        "STRATA_TRACE": "1",
+        "STRATA_METAL_PREFILL_CACHE_MIB": "0"
+      }
+    },
+    "info": {
+      "version": "0.1.34",
+      "context": 32768,
+      "kv": "fp16",
+      "kv_resident": 0,
+      "expert_slots": 24576,
+      "expert_cache_mib": 33812,
+      "expert_slots_primary": 24576,
+      "expert_cache_primary_mib": 33812,
+      "spec": 4,
+      "mtp_max": 1,
+      "lookup": 0,
+      "vram_free_mib": 39453,
+      "cvec": 0,
+      "arena_mib": 0,
+      "pool_workers": 11,
+      "pcie_frac": "0.55",
+      "spec_min_p": "0.50",
+      "conversation_cache_mib": 0,
+      "conversation_cache_slots": 4,
+      "conversation_cache_min_free_mib": 2560,
+      "engine": "0.1.34"
+    },
+    "records": [
+      {
+        "run": 0,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 35934.6,
+        "decode_ms": 8924.1,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 0,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 1,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 820.5,
+        "decode_ms": 8857.3,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 2,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 807.9,
+        "decode_ms": 8873.1,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      },
+      {
+        "run": 3,
+        "generated": 256,
+        "prompt_tokens": 10000,
+        "prompt_ms": 833.5,
+        "decode_ms": 8869.9,
+        "finish": "length",
+        "drafts_accepted": 0,
+        "drafts_offered": 0,
+        "reused": 9993,
+        "hits": 122880,
+        "lookups": 122880,
+        "ram_blobs": 0,
+        "file_blobs": 0,
+        "file_mb": 0.0,
+        "output_count": 256,
+        "ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b"
+      }
+    ],
+    "metrics": {
+      "swap_before": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)",
+      "memory_samples": [
+        [
+          "Physical footprint:         39.5G",
+          "Physical footprint (peak):  39.5G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.2G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ],
+        [
+          "Physical footprint:         40.2G",
+          "Physical footprint (peak):  40.3G"
+        ]
+      ],
+      "startup_s": 17.391862499993294,
+      "swap_after": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)"
+    }
+  }
+}

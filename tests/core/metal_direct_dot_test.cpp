@@ -159,24 +159,33 @@ void resident_down_case(long n_embd, long n_ff, int cap, bool offsets_table, int
     void* dh = upload(q8((int) n_ff * cap, mode));
     float* y0 = out_buffer((size_t) cap * n_embd, 0xAA);
     float* y1 = out_buffer((size_t) cap * n_embd, 0x55);
+    const bool canonical = n_embd == 2560 && n_ff == 640;
+    float* y2 = canonical ? out_buffer((size_t) cap * n_embd, 0x33) : nullptr;
     const int k = 10, has = offsets_table ? 1 : 0;
-    for (int v = 0; v < 2; ++v) {
-        const bool direct = v == 1;
-        Launch d(direct ? "native_resident_down_direct_42_r4" : "native_resident_down_42",
+    for (int v = 0; v < (canonical ? 3 : 2); ++v) {
+        const bool direct = v != 0;
+        const char* name = v == 0 ? "native_resident_down_42" : v == 1 ? "native_resident_down_direct_42_r4"
+                                                                 : "native_resident_down_dim_42_r4";
+        Launch d(name,
                  (unsigned) (direct ? (n_embd + 31) / 32 : (n_embd + 7) / 8), (unsigned) cap, 1, 256, 1, 1, 0, stream);
         d.buf(da).buf(offsets_table ? doff : nullptr).buf(di).buf(dr).buf(dh).scalar(n_embd).scalar(n_ff).scalar(d_row)
-         .scalar(down_off).scalar(slot_bytes).scalar(n_expert).scalar(k).scalar(has).buf(direct ? y1 : y0);
+         .scalar(down_off).scalar(slot_bytes).scalar(n_expert).scalar(k).scalar(has).buf(v == 0 ? y0 : v == 1 ? y1 : y2);
         d.done();
     }
     compare("Q2_0 resident down", std::to_string(n_embd) + "x" + std::to_string(n_ff) + " cap " + std::to_string(cap) +
             (offsets_table ? " offsets" : " uniform") + " mode " + std::to_string(mode),
             download(y0, (size_t) cap * n_embd), download(y1, (size_t) cap * n_embd));
+    if (canonical) {
+        compare("Q2_0 resident down dimensions", std::to_string(cap) + (offsets_table ? " offsets" : " uniform") +
+                " mode " + std::to_string(mode), download(y0, (size_t) cap * n_embd),
+                download(y2, (size_t) cap * n_embd));
+        cudaFree(y2);
+    }
     cudaFree(da); cudaFree(di); cudaFree(dr); cudaFree(doff); cudaFree(dh); cudaFree(y0); cudaFree(y1);
 }
 
 // native_expert_resident (gate/up, SwiGLU, Q8_1, down) against the same chain with the original down kernel.
-void resident_public_case(int n_tok) {
-    const long n_embd = 2560, n_ff = 640;
+void resident_public_case(int n_tok, long n_embd = 2560, long n_ff = 640) {
     const int n_expert = 6, k = 4, cap = n_tok * k;
     const auto L = strata::kernels::native_expert_layout(42, 42, n_embd, n_ff);
     std::vector<uint8_t> arena(L.bytes * n_expert);
@@ -521,10 +530,11 @@ int main() {
         for (auto [K, N] : nl) mmvq_case(20, K, N, mode);
         for (auto [K, N] : iq3) mmvq_case(21, K, N, mode);
         resident_down_case(2560, 640, 10, false, mode);
+        resident_down_case(2560, 640, 23, true, mode);
         resident_down_case(2563 - 3 + 36, 640, 23, true, mode);   // 2596 rows: a partial four-row warp
         resident_down_case(512, 128, 7, true, mode);
     }
-    for (int t : {1, 3}) resident_public_case(t);
+    for (int t : {1, 3}) { resident_public_case(t); resident_public_case(t, 512, 128); }
     for (int apply : {0, 1}) { gr_case(apply, false); gr_case(apply, true); }
     for (int T : {1, 2, 4, 8}) {
         gdn_case(T, -1, 0);                      // verify: state read, not written

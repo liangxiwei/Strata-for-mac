@@ -1661,6 +1661,17 @@ kernel void native_resident_down_direct_42_r4(IQK_RESIDENT_PARAMS, uint3 gp [[th
                                      slot_bytes, n_expert, has_offsets, out, gp, tid);
 }
 
+// The canonical 2560 x 640 product with compile-time dimensions. Every lane keeps its original call,
+// ascending float accumulation and XOR reduction; the compiler can eliminate runtime bounds/address math.
+// No expanded weights. M2 Max, same-binary 10K / 256-output warm decode: 9.062 -> 8.870 s (first pair);
+// bench/results/2026-10-04-metal-first-principles has the boundary and real-model bitwise comparisons.
+kernel void native_resident_down_dim_42_r4(IQK_RESIDENT_PARAMS,
+                                          uint3 gp [[threadgroup_position_in_grid]],
+                                          uint tid [[thread_index_in_threadgroup]]) {
+    iqk_resident_down_direct_q2_0<4>(arena, offsets, ids, residency, xq, 2560, 640, row_bytes,
+                                    weight_offset, slot_bytes, n_expert, has_offsets, out, gp, tid);
+}
+
 // IQ3_S single column (mmvq_multi_kernel_21_1's arithmetic), R rows per warp: grid x = ceil(n_out / (4R))
 template<int R>
 static inline void iqk_mmvq_direct_iq3_s(constant const uint8_t* w, ulong row_bytes, constant const block_q8_1* x,

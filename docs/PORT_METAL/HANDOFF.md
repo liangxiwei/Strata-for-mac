@@ -1,7 +1,7 @@
-# HANDOFF - the Strata Metal port, 2026-10-03 (updated after round 26)
+# HANDOFF - the Strata Metal port, 2026-10-04 (updated after round 27)
 
 For the agent continuing this work. Read AGENTS.md first (repo rules), then this file, then
-docs/PORT_METAL/PROGRESS.md rounds 9-26 (the platform rules with their measurements) and STATUS.md
+docs/PORT_METAL/PROGRESS.md rounds 9-27 (the platform rules with their measurements) and STATUS.md
 (the per-file state). PLAN.md is the original plan. Everything below is measured, not assumed.
 
 ## Quality constraint
@@ -17,7 +17,15 @@ pass for the tested short, 10K and cached-follow-up inputs; 100K still needs its
 
 The CUDA/HIP engine is ported to Metal (Apple M2 Max, macOS 26.5) end to end:
 
-* **Round 26 (latest): GDN commit without the second recurrence.** A one-token decode window writes its GDN state
+* **Round 27 (latest): canonical expert down dimensions.** The Q2_0 resident direct down helper receives
+  compile-time 2560 x 640 dimensions, retaining its lane arithmetic, original weights and four rows per warp.
+  M2 Max, Automatic: same-binary warm 10K / 256-output decode gains of 2.16%, 0.45% (reversed order), and 2.45%
+  (full build: median 9.0732 -> 8.8561 s). No extra weight or scratch memory. Cold first-request speedup was not
+  established. `STRATA_METAL_DECODE_DOWN_DIMS=0` restores; other shapes and types use the old path. 24,583,680
+  real-model logits / two committed states bitwise; four relevant CTests pass. `build-metal/strata` is rebuilt;
+  daily `engine/strata` and configs are not replaced. Dense K specialization and GR scheduling have no established
+  whole-model gain; norm/down fusion is slower. Evidence: `bench/results/2026-10-04-metal-first-principles/`.
+* **Round 26: GDN commit without the second recurrence.** A one-token decode window writes its GDN state
   back (n_keep = 1) and the commit skips the recurrence: commit GPU 2.43 -> 0.71 ms/token, warm decode median
   21.78 -> 22.55 tok/s, bitwise (`STRATA_METAL_GDN_INPLACE=0` restores). Binary `build-metal/strata-round26`.
 * **Round 25: prefill.** First-request prefill of the frozen 10K prompt 80.6-81.6 s -> 51.1-51.9 s
@@ -152,7 +160,8 @@ configure these switches and fail on unmatched inputs, missing states, or numeri
 
 Rounds 22-23 kernels, each on by default and `=0` restores the original (bitwise the same outputs either way):
 `STRATA_METAL_IQ4_DIRECT`, `STRATA_METAL_IQ4_SG`, `STRATA_METAL_EXPERT_DIRECT`, `STRATA_METAL_GR_NORM1`,
-`STRATA_METAL_GDN_TAIL`, `STRATA_METAL_TOPK_SCAN`. Order-preserving diagnostics: `STRATA_METAL_CB_TIMING=1`
+`STRATA_METAL_GDN_TAIL`, `STRATA_METAL_TOPK_SCAN`; round 27 adds `STRATA_METAL_DECODE_DOWN_DIMS` for the canonical
+Q2_0 expert down shape. Order-preserving diagnostics: `STRATA_METAL_CB_TIMING=1`
 (GPU busy vs wall per command buffer) and `STRATA_METAL_KPROFILE=<csv>` (+ `STRATA_METAL_KPROFILE_SKIP=N`): one
 timestamped pass per tape entry, relative numbers only (each pass adds 2-3 us); aggregate with
 `bench/results/2026-10-03-metal-decode-opt2/micro/agg.py <csv> <entries>`. Run real-model tests one engine at a

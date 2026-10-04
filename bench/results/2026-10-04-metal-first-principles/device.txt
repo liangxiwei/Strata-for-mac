@@ -1,0 +1,14 @@
+device 0: Apple M2 Max
+  compute capability  10.0   (sm_100)
+  multiprocessors     1499
+  VRAM total / free   77.760 GiB (83494174720 B) / 77.760 GiB (83494109184 B)
+  driver / runtime    0 / 0
+
+memory plan  --max-context 20480
+  KV + indexer keys   0.267387 GB
+  recurrent state     0.000000 GB  (GDN recurrence + conv history, NOT evictable)
+  expert cache        5.675613 GB  (4105 slots of 1,382,400 B)
+  VRAM pool           5.943000 GB
+  expert arena (DRAM) 0.000000 GB
+  card free           77.760 GiB (83494109184 B)
+  plan + KV vs free   FITS

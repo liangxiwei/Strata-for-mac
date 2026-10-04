@@ -884,3 +884,45 @@ tok/s (two runs; Automatic 28.60), 30K prefill 271.7 (276.8); Q2_0 27.03 (26.68)
 193.7 / 200.5 (202.6 / 204.4); the image encoder within 4%, the picture checks all pass. No measurable gain. The
 output is the same, and so is the memory. Chrome, WindowServer and Spotlight were running in the background.
 `--mtp-max-t 2` is still slower there: 21.57 tok/s. The README keeps the Automatic numbers.
+
+## 2026-10-04 (round 27): compile-time dimensions for resident expert down
+
+Evidence: `bench/results/2026-10-04-metal-first-principles/`. M2 Max, 38 GPU cores, 96 GiB unified RAM,
+Automatic, AC, current IQ2_XS, FP16 KV. Sampled decode kernel time: dense quantized projections 28.7%,
+expert gate/up and down 25.0%, hyper-connection 19.0%. The profiler adds pass boundaries, so speed gains
+below use full decode timing without it; the distribution is diagnostic, not a complete wall-time ledger.
+
+Q2_0 resident down uses the original direct helper with compile-time 2560 x 640 dimensions, still four rows
+per warp. Same lane-to-call mapping, float accumulation, scales, XOR reduction and original quantized
+weights; no added weight or scratch allocations. Other shapes/types retain the original kernel.
+`STRATA_METAL_DECODE_DOWN_DIMS=0` restores runtime dimensions (default on). Rotating-expert microbenchmarks:
+65.89/66.06 -> 50.02/50.33 us per dispatch; whole-decode gains are much smaller.
+
+Frozen 10K input, 256 output tokens, no drafts, all experts resident; each process first prefills the whole
+input, then repeats it. Same binary per pair, every warm sample retained:
+
+| Pair | Off warm decode median | On warm decode median | tok/s gain |
+| --- | ---: | ---: | ---: |
+| Private binary, off then on, three warm requests each | 9.0615 s | 8.8703 s | 2.16% |
+| Private binary, on then off, three warm requests each | 8.9100 s | 8.8699 s | 0.45% |
+| Production build, off then on, five warm requests each | 9.0732 s | 8.8561 s | 2.45% |
+
+This range describes observed session variation, not a confidence interval. The production build's cold
+request is 35.9654 + 9.1407 s off versus 36.2907 + 9.1774 s on (prefill + decode): no established gain for
+the whole first request. All 28 requests have the same 256 output ids. Footprint about 40.2G, peak 40.3G;
+swap remains 2464.88 MiB. Daily `engine/strata` and configuration are not replaced. Tested production binary
+`build-metal/strata`, SHA-256 `1c137ffcb7d0ebe324735e6c11409acedec94d5b9a8af68fba7e17a3dec94900`.
+
+Independent original-kernel boundary comparisons: 1,424,820 outputs, zero bit differences, including
+scale extremes/nonfinite values, routing/offset edge cases, multi-token capacities and shape fallback.
+Matched-input real-model audit: 99 positions / 24,583,680 finite logits / two committed request states
+(GDN, KV and PLE included) bitwise, same ids and cached follow-up. Tested 10K; no new 128K/vision audit.
+Production build passes `metal_direct_dot_test` (51,516,951 outputs bitwise), `metal_mmvq_decode_test`,
+`iq_parity` and `iq_multi_parity`.
+
+Rejected this round: dense IQ4 fixed-K specialization (0.5-1.7% micro gains only), expert gate/up dimensions
+(about 1%), GR scheduling (down unchanged, up at most about 2.9%, no whole-model proof). Exact GR norm/down
+fusion duplicates norm per down group, staging two 20-KiB halves within the 32-KiB limit: norm/down
+33.50 -> 62.18 us, full chain 58.85 -> 85.69 us, 93,464 intermediate/output values bitwise. Prefill FP16
+expert and dense views, IQ2 signed-nibble views and mixed expert tiles also remain out of defaults; see
+the evidence for memory budgets, negative results and noisy whole-prefill pairs.

@@ -1,0 +1,301 @@
+{
+  "method": "Record 0 is cold; median uses every subsequent request. Timing excludes model load, tokenizer and HTTP.",
+  "pairs": [
+    {
+      "label": "private-off-on",
+      "off": "decode-down-off-a",
+      "on": "decode-down-on-a",
+      "engine_sha256": "a1ff389079df6b7a39012af2985a33d412e3d0db1bf9a92bf54e0e1f7666c0ce",
+      "warm_decode_ms_off": [
+        9061.5,
+        9060.9,
+        9105.7
+      ],
+      "warm_decode_ms_on": [
+        8807.9,
+        8870.3,
+        8880.5
+      ],
+      "median_ms_off": 9061.5,
+      "median_ms_on": 8870.3,
+      "decode_time_reduction_percent": 2.1100259338961647,
+      "decode_tok_s_increase_percent": 2.1555077054891125,
+      "median_tok_s_off": 28.251393257187,
+      "median_tok_s_on": 28.8603542157537,
+      "saved_ms_per_token": 0.7468750000000028,
+      "cold_off": {
+        "prompt_ms": 37861.9,
+        "decode_ms": 9195.2
+      },
+      "cold_on": {
+        "prompt_ms": 36124.8,
+        "decode_ms": 8930.1
+      },
+      "warm_prompt_plus_decode_median_ms_off": 9948.7,
+      "warm_prompt_plus_decode_median_ms_on": 9680.4,
+      "metrics_off": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)",
+        "memory_samples": [
+          [
+            "Physical footprint:         39.5G",
+            "Physical footprint (peak):  39.5G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.2G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ]
+        ],
+        "startup_s": 25.85185062501114,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)"
+      },
+      "metrics_on": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)",
+        "memory_samples": [
+          [
+            "Physical footprint:         39.5G",
+            "Physical footprint (peak):  39.5G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.2G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ]
+        ],
+        "startup_s": 15.98680174999754,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)"
+      }
+    },
+    {
+      "label": "private-on-off",
+      "off": "decode-down-off-b",
+      "on": "decode-down-on-b",
+      "engine_sha256": "a1ff389079df6b7a39012af2985a33d412e3d0db1bf9a92bf54e0e1f7666c0ce",
+      "warm_decode_ms_off": [
+        9003.8,
+        8910.0,
+        8909.8
+      ],
+      "warm_decode_ms_on": [
+        8857.3,
+        8873.1,
+        8869.9
+      ],
+      "median_ms_off": 8910.0,
+      "median_ms_on": 8869.9,
+      "decode_time_reduction_percent": 0.45005611672278567,
+      "decode_tok_s_increase_percent": 0.45209077892649496,
+      "median_tok_s_off": 28.7317620650954,
+      "median_tok_s_on": 28.861655712014795,
+      "saved_ms_per_token": 0.15664062500000142,
+      "cold_off": {
+        "prompt_ms": 41216.6,
+        "decode_ms": 9193.7
+      },
+      "cold_on": {
+        "prompt_ms": 35934.6,
+        "decode_ms": 8924.1
+      },
+      "warm_prompt_plus_decode_median_ms_off": 9725.6,
+      "warm_prompt_plus_decode_median_ms_on": 9681.0,
+      "metrics_off": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)",
+        "memory_samples": [
+          [
+            "Physical footprint:         39.5G",
+            "Physical footprint (peak):  39.5G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.2G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ]
+        ],
+        "startup_s": 15.096000042016385,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)"
+      },
+      "metrics_on": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)",
+        "memory_samples": [
+          [
+            "Physical footprint:         39.5G",
+            "Physical footprint (peak):  39.5G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.2G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ]
+        ],
+        "startup_s": 17.391862499993294,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)"
+      }
+    },
+    {
+      "label": "production-build-off-on",
+      "off": "decode-build-off",
+      "on": "decode-build-on",
+      "engine_sha256": "1c137ffcb7d0ebe324735e6c11409acedec94d5b9a8af68fba7e17a3dec94900",
+      "warm_decode_ms_off": [
+        9077.2,
+        9025.1,
+        9145.2,
+        9073.2,
+        9063.1
+      ],
+      "warm_decode_ms_on": [
+        8856.1,
+        8832.3,
+        8852.3,
+        8856.6,
+        9008.7
+      ],
+      "median_ms_off": 9073.2,
+      "median_ms_on": 8856.1,
+      "decode_time_reduction_percent": 2.392761098620111,
+      "decode_tok_s_increase_percent": 2.4514176669188537,
+      "median_tok_s_off": 28.214962747431994,
+      "median_tok_s_on": 28.906629328937115,
+      "saved_ms_per_token": 0.8480468750000014,
+      "cold_off": {
+        "prompt_ms": 35965.4,
+        "decode_ms": 9140.7
+      },
+      "cold_on": {
+        "prompt_ms": 36290.7,
+        "decode_ms": 9177.4
+      },
+      "warm_prompt_plus_decode_median_ms_off": 9882.2,
+      "warm_prompt_plus_decode_median_ms_on": 9673.1,
+      "metrics_off": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)",
+        "memory_samples": [
+          [
+            "Physical footprint:         39.5G",
+            "Physical footprint (peak):  39.5G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.2G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ]
+        ],
+        "startup_s": 17.715943082992453,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)"
+      },
+      "metrics_on": {
+        "swap_before": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)",
+        "memory_samples": [
+          [
+            "Physical footprint:         39.5G",
+            "Physical footprint (peak):  39.5G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.2G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ],
+          [
+            "Physical footprint:         40.2G",
+            "Physical footprint (peak):  40.3G"
+          ]
+        ],
+        "startup_s": 15.439287291985238,
+        "swap_after": "vm.swapusage: total = 4096.00M  used = 2464.88M  free = 1631.12M  (encrypted)"
+      }
+    }
+  ],
+  "weight_cache_bytes_added": 0,
+  "scratch_bytes_added": 0,
+  "same_256_output_ids_all_runs": true,
+  "output_ids_sha256": "b892214a8e9236b9fe472f27f2075bd353a0f6ef3040a3cb4af218266fe3991b",
+  "audit": {
+    "same_requests": true,
+    "same_output_ids": true,
+    "same_committed_states": true,
+    "same_model_settings": true,
+    "no_drafts": true,
+    "rows": 99,
+    "values": 24583680,
+    "different": 0,
+    "bitwise_pass": true
+  }
+}

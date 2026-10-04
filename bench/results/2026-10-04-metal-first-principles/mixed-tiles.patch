@@ -1,0 +1,53 @@
+--- a/src/prefill/prefill.cpp
++++ b/src/prefill/prefill.cpp
+@@ -1709,6 +1709,42 @@
+                         const int tile_rows = strata::kernels::native_expert_gemm_rows(
+                             order.empty() ? 0.0 : (double) (T * K) / (double) order.size());
+                         const int step = tile_rows > 0 ? tile_rows : 16;
++                        static const bool mixed_tiles = [] {
++                            const char* e = std::getenv("STRATA_METAL_PREFILL_MIXED_TILES");
++                            return e && std::atoi(e) != 0;
++                        }();
++                        if (mixed_tiles && tile_rows > 0) {
++                            std::vector<int32_t> tiles16, tiles32;
++                            for (const int32_t e : order) {
++                                const int slot = m.host_res[(size_t) l * m.g->n_expert + e];
++                                const uint64_t offset = (uint64_t) (m.cache->device_slot(slot) - base);
++                                for (int32_t r = 0; r < m.cnt[(size_t) e]; ) {
++                                    const int32_t remain = m.cnt[(size_t) e] - r;
++                                    const int bm = remain > 16 && (tile_rows == 32 || m.cnt[(size_t) e] >= 32) ? 32 : 16;
++                                    auto& tiles = bm == 16 ? tiles16 : tiles32;
++                                    tiles.push_back((int32_t) (uint32_t) offset);
++                                    tiles.push_back(m.off[(size_t) e] + r);
++                                    tiles.push_back(std::min(bm, remain));
++                                    tiles.push_back((int32_t) (uint32_t) (offset >> 32));
++                                    r += bm;
++                                }
++                            }
++                            const size_t split = tiles16.size();
++                            tiles16.insert(tiles16.end(), tiles32.begin(), tiles32.end());
++                            cudaMemcpyAsync(m.metal_tiles, tiles16.data(), tiles16.size() * sizeof(int32_t),
++                                            cudaMemcpyHostToDevice, m.cs);
++                            auto product = [&](const uint16_t* x, float* y, bool down) {
++                                if (split) strata::kernels::native_expert_gemm(native_tile_layout, x, base,
++                                    m.metal_tiles, y, split / 4, down, m.cs, 16);
++                                if (!tiles32.empty()) strata::kernels::native_expert_gemm(native_tile_layout, x, base,
++                                    m.metal_tiles + split, y, tiles32.size() / 4, down, m.cs, 32);
++                            };
++                            pt.mark(kPfGemmGU, cs);
++                            product(m.Xs, m.GU, false);
++                            swiglu_interleaved(m.GU, m.Hh, T * K, m.cs);
++                            pt.mark(kPfGemmD, cs);
++                            product(m.Hh, m.Dm, true);
++                        } else {
+                         std::vector<int32_t> tiles;
+                         for (const int32_t e : order) {
+                             const int slot = m.host_res[(size_t) l * m.g->n_expert + e];
+@@ -1729,6 +1765,7 @@
+                         pt.mark(kPfGemmD, cs);
+                         strata::kernels::native_expert_gemm(native_tile_layout, m.Hh, base, m.metal_tiles,
+                                                             m.Dm, tiles.size() / 4, true, m.cs, tile_rows);
++                        }
+                         stats_.experts_resident += order.size();
+                     } else
+                     if (m.cache && m.cache->shared() && !lay.native && !use_mmq &&

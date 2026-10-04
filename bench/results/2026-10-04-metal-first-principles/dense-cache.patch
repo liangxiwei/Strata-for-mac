@@ -1,0 +1,81 @@
+--- a/src/prefill/gemm.mm
++++ b/src/prefill/gemm.mm
+@@ -18,6 +18,9 @@
+ #include <cstring>
+ #include <map>
+ #include <mutex>
++#include <algorithm>
++#include <cstdint>
++#include <tuple>
+
+ namespace strata::prefill {
+ namespace {
+@@ -28,7 +31,21 @@
+     float* x = nullptr;     // X's f32 image (T*K floats, grown on demand)
+     float* w = nullptr;     // W's f32 image (N*K floats)
+     size_t x_elems = 0, w_elems = 0;
+-    ~WidenScratch() { if (x) cudaFree(x); if (w) cudaFree(w); }
++    // Research only: the source weights are immutable for this Gemm's lifetime.
++    using CacheKey = std::tuple<uintptr_t, int, int64_t, int64_t>;
++    std::map<CacheKey, uint16_t*> cache;
++    size_t cache_budget = 0, cache_used = 0;
++    uint64_t cache_hits = 0, cache_misses = 0;
++    bool cache_initialized = false;
++    ~WidenScratch() {
++        if (cache_initialized)
++            std::fprintf(stderr, "prefill cache: used=%zu MiB budget=%zu MiB matrices=%zu hits=%llu misses=%llu\n",
++                         cache_used >> 20, cache_budget >> 20, cache.size(),
++                         (unsigned long long) cache_hits, (unsigned long long) cache_misses);
++        for (auto& item : cache) cudaFree(item.second);
++        if (x) cudaFree(x);
++        if (w) cudaFree(w);
++    }
+ };
+
+ // MPSMatrixMultiplication objects bake M, N, K, alpha, beta and the input dtype at init; they also
+@@ -259,6 +276,45 @@
+
+ void Gemm::native(const uint16_t* X, int ggml_type, const void* W_blocks, float* Y, int64_t T, int64_t N,
+                   int64_t K, int64_t ldy, float beta) {
++    static const uint64_t requested_mib = [] {
++        const char* e = std::getenv("STRATA_METAL_PREFILL_CACHE_MIB");
++        return e ? std::strtoull(e, nullptr, 10) : 0ull;
++    }();
++    if (requested_mib > 0 && N > 0 && K > 0 && N * K <= scratch_elems_) {
++        auto* s = static_cast<WidenScratch*>(hipblaslt_state_);
++        if (!s->cache_initialized) {
++            size_t free_bytes = 0, total_bytes = 0;
++            if (cudaMemGetInfo(&free_bytes, &total_bytes) == cudaSuccess) {
++                // Bound this prototype by both the device budget and post-prefill-allocation headroom.
++                const size_t requested = size_t(std::min<uint64_t>(requested_mib, 1ull << 20)) << 20;
++                s->cache_budget = std::min({requested, total_bytes / 12, free_bytes / 4});
++            }
++            s->cache_initialized = true;
++            std::fprintf(stderr, "prefill cache: initial budget=%zu MiB\n", s->cache_budget >> 20);
++        }
++        const WidenScratch::CacheKey key{reinterpret_cast<uintptr_t>(W_blocks), ggml_type, N, K};
++        if (const auto it = s->cache.find(key); it != s->cache.end()) {
++            ++s->cache_hits;
++            f16(X, it->second, Y, T, N, K, ldy, beta);
++            return;
++        }
++        const size_t bytes = size_t(N * K) * 2;
++        const size_t charged = (bytes + 16383) & ~size_t(16383);
++        if (charged <= s->cache_budget - s->cache_used) {
++            void* ptr = nullptr;
++            if (cudaMalloc(&ptr, bytes) == cudaSuccess) {
++                auto* weight = static_cast<uint16_t*>(ptr);
++                strata::kernels::dequant_f16(ggml_type, W_blocks, 0, N, K, weight, stream_);
++                s->cache.emplace(key, weight);
++                s->cache_used += charged;
++                ++s->cache_misses;
++                // The same dequantized bits, shape, tile and accumulation order as the original path.
++                f16(X, weight, Y, T, N, K, ldy, beta);
++                return;
++            }
++            cudaGetLastError();
++        }
++    }
+     if (N * K > scratch_elems_) {
+         // Too large for the scratch at once: in row slices.
+         const int64_t rows = scratch_elems_ / K;
