@@ -9,6 +9,10 @@ with a 30,000-token prompt:
 | IQ2_XS | 29 tokens/s | 277 tokens/s |
 | Q2_0 | 27 tokens/s | 276 tokens/s |
 
+At 256K with the fixed long-context prompt, IQ3_S read 168.1 tokens/s and decoded 21.13 tokens/s after reading;
+its physical footprint peaked at 61.6G and all three planted fields were returned. The exact run is in
+[bench/results/2026-10-04-metal-256k](../bench/results/2026-10-04-metal-256k/README.md).
+
 In Low Power Mode the same Mac writes 15-16% and reads 26-30% slower. High Power Mode measured no faster than
 Automatic (within 5%)
 ([bench/results/2026-10-04-metal-models](../bench/results/2026-10-04-metal-models/README.md)).
@@ -120,8 +124,9 @@ The config `./setup.sh` writes, `strata-iq2_xs.json`, names the engine and model
 folder. Its arguments use the context selected in [data/mac-metal.json](../data/mac-metal.json), plus the measured
 engine switches:
 
-- 128K or 256K context (256K is the default; both are measured on this Mac's IQ2_XS and Q2_0 text paths), FP16 KV,
-  1,024-token prefill chunks;
+- 128K or 256K context (both are measured on this Mac's IQ2_XS and Q2_0 text paths), FP16 KV, 1,024-token prefill
+  chunks. The selector accounts for the 2,677MiB / 6,248MiB of extra shared memory they used beyond 32K and takes
+  256K by default only when that model-and-memory estimate fits;
 - `--spec 4 --mtp-max-t 1 --suffix-draft 0`, which makes zero drafts in practice;
 - `--mmap-experts --no-prefill-borrow`;
 - `STRATA_METAL_IQ4_EXPAND=0`.
@@ -186,8 +191,8 @@ when it is already done.
    - The recommended model is the first measured one that fits.
    - Without a terminal, or with `--yes`, setup takes the model used last, else the recommended one, and prints the
      list. `--model` / `--family` choose without it.
-   - It next offers the measured 128K and 256K contexts; Enter selects 256K. 256K is inside the model's trained
-     context, so it needs no RoPE extension.
+   - It next offers the measured 128K and 256K contexts, showing the extra shared-memory estimate. Enter selects
+     256K when it fits, otherwise 128K. 256K is inside the model's trained context, so it needs no RoPE extension.
    - An installed model starts right away when its selected context is unchanged. A model that is not downloaded is
      downloaded after asking. A model with too little memory is asked about first (with `--yes` alone it stops).
 3. **The settings** are the selected context, FP16 KV, and images on; the remaining engine switches are

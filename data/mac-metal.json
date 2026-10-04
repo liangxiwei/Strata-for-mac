@@ -8,6 +8,7 @@
  "contexts_measured": [32768, 131072, 262144],
  "context_options": [131072, 262144],
  "context_default": 262144,
+ "context_extra_mib": {"131072": 2677, "262144": 6248},
  "ram_gb": 96,
  "footprint_gb": 40.3,
  "overhead_gib": 7.3,
@@ -28,6 +29,6 @@
   {"family": "coder", "model": "IQ1_M", "note": "the Coder: half the experts, for code", "measured": null},
   {"family": "swift", "model": "IQ2_XS", "note": "a fine-tune that thinks shorter", "measured": null},
   {"family": "qwen", "model": "IQ3_XXS", "note": "the original model, 3-bit", "measured": null},
-  {"family": "qwen", "model": "IQ3_S", "note": "the original model, 3.5-bit, the best quality", "measured": null}
+  {"family": "qwen", "model": "IQ3_S", "note": "the original model, 3.5-bit, the best quality", "measured": {"context_tokens": 262144, "prefill_tok_s": 168, "decode_tok_s": 21, "peak_footprint": "61.6G"}}
  ]
 }

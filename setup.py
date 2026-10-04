@@ -2009,17 +2009,35 @@ def measured_names(prof: dict) -> str:
     return ", ".join(f"{FAMILIES[m['family']]['title']} {m['model']}" for m in prof["menu"] if m["measured"])
 
 
-def mac_need_gib(prof: dict, model: str, vision: bool) -> float:
+def mac_context_extra_gib(prof: dict, context: int) -> float:
+    """The FP16 context's shared-memory cost beyond the profile's 32K baseline.  On the measured M2 Max, loading
+    the same text model at 128K / 256K reduced free GPU memory by 2,677 / 6,248 MiB respectively (both IQ2_XS and
+    Q2_0).  The architecture and KV format are the same for the sizes in the Mac menu, so use the largest measured
+    rate for an explicit intermediate or larger context too; that is deliberately a safe estimate."""
+    base = int(prof["context"])
+    if context <= base:
+        return 0.0
+    points = [(int(c), float(mib)) for c, mib in prof.get("context_extra_mib", {}).items()
+              if int(c) > base and float(mib) >= 0]
+    if not points:
+        return 0.0
+    end, extra = max(points, key=lambda p: p[0])
+    return (context - base) * extra / (end - base) / 1024
+
+
+def mac_need_gib(prof: dict, model: str, vision: bool, context: int | None = None) -> float:
     """The memory a model takes on a Mac with every expert resident: its experts, plus what the measured IQ2_XS run
-    used beside them (dense weights, KV, MTP layer, buffers: 40.3 GiB - 33.06 GiB), plus the image encoder."""
+    used beside them (dense weights, KV, MTP layer, buffers: 40.3 GiB - 33.06 GiB), plus the image encoder and the
+    selected context's measured extra KV memory."""
+    context = prof["context"] if context is None else context
     return MODELS[model]["arena_gb"] / 1.073741824 + prof["overhead_gib"] + (
-        prof["vision"]["footprint_gib"] if vision else 0)
+        prof["vision"]["footprint_gib"] if vision else 0) + mac_context_extra_gib(prof, context)
 
 
-def mac_fit(prof: dict, model: str, ram: float, vision: bool) -> str:
+def mac_fit(prof: dict, model: str, ram: float, vision: bool, context: int | None = None) -> str:
     """"fits": every expert in the share of the memory macOS gives the GPU (77.8 of 96 GiB on the measured Mac);
     "tight": in the memory, but not all on the GPU (the rest computed on the CPU: slower, untested); else "short"."""
-    need = mac_need_gib(prof, model, vision)
+    need = mac_need_gib(prof, model, vision, context)
     if need <= ram * prof["gpu_share"] - prof["vision"]["reserve_mib"] / 1024:
         return "fits"
     return "tight" if need <= ram - 4 else "short"
@@ -2204,7 +2222,13 @@ def menu_label(r: dict, recommended: bool) -> str:
         "fits": "fits this Mac", "tight": "tight: part of it on the CPU, slower",
         "short": "too little memory"}[r["fit"]]
     m = r["measured"]
-    speed = f"measured: {m['write_tok_s']} tok/s" if m else "untested on a Mac"
+    if not m:
+        speed = "untested on a Mac"
+    elif "write_tok_s" in m:
+        speed = f"measured: {m['write_tok_s']} tok/s"
+    else:
+        speed = (f"measured: {m['context_tokens'] // 1024}K prefill {m['prefill_tok_s']} tok/s, "
+                 f"decode {m['decode_tok_s']} tok/s")
     return f"{r['title']} {r['model']:7s} - {r['note']}  ({state}; {fit}; {speed})"
 
 
@@ -2218,20 +2242,31 @@ def mac_context_options(prof: dict) -> tuple[list[int], int]:
     return options, default
 
 
-def mac_context_label(prof: dict, context: int) -> str:
+def mac_context_label(prof: dict, context: int, model: str | None = None, ram: float | None = None,
+                      vision: bool = False) -> str:
     measured = context in prof.get("contexts_measured", [prof["context"]])
     note = "measured on this Mac" if measured else "the model's native context; not benchmarked on this Mac"
+    extra = mac_context_extra_gib(prof, context)
+    if extra:
+        note += f"; adds {extra:.1f} GiB beyond {prof['context'] // 1024}K"
+    if model is not None and ram is not None:
+        need = mac_need_gib(prof, model, vision, context)
+        fit = mac_fit(prof, model, ram, vision, context)
+        fit_text = {"fits": "fits this Mac", "tight": "part of it runs on the CPU", "short": "too little memory"}[fit]
+        note += f"; ~{need:.0f} GiB, {fit_text}"
     return f"{context // 1024}K tokens  ({note})"
 
 
-def choose_mac_context(a, prof: dict) -> int:
+def choose_mac_context(a, prof: dict, model: str, ram: float, vision: bool) -> int:
     """Pick a context after the model for a configuration that is about to be written.  --context is the scriptable
     override; no terminal and --yes take the profile's default without asking."""
     if a.context is not None:
         return a.context
     options, default_context = mac_context_options(prof)
+    safe = [context for context in options if mac_fit(prof, model, ram, vision, context) != "short"]
+    default_context = default_context if default_context in safe else max(safe, default=min(options))
     default = options.index(default_context)
-    lines = [mac_context_label(prof, context) for context in options]
+    lines = [mac_context_label(prof, context, model, ram, vision) for context in options]
     if menu_tty() and not a.yes:
         say()
         return options[arrow_menu("  Context length?", lines, default)]
@@ -2378,7 +2413,7 @@ def mac_main(a, data, roots) -> int:
     old = json.loads(cfg_path.read_text(encoding="utf-8-sig")) if cfg_path.exists() else {}
     port = a.port or old.get("port") or 8080
     was = choices_from_config(cfg_path) if old else {}
-    context = None if a.download_only else choose_mac_context(a, prof)
+    context = None if a.download_only else choose_mac_context(a, prof, model, ram, vision and fam.get("vision") is not False)
     changed = ((context is not None and context != was.get("context")) or a.kv or
                (a.vision is not None and bool(old.get("vision")) != vision))
     if old and not (a.setup or a.no_start or a.download_only or changed):
@@ -2402,19 +2437,25 @@ def install_mac(a, data, roots, port, family, model, ram, vision, source="defaul
         fail(f"{model} is not set up on a Mac: it reads most of its experts from the SSD (a PC mode)",
              f"use the measured --model {prof['model']}")
     entry = next((m for m in prof["menu"] if (m["family"], m["model"]) == (family, model)), {"measured": None})
-    fit = mac_fit(prof, model, ram, vision)
-    need = mac_need_gib(prof, model, vision)
+    old_cfg = ROOT / f"strata-{(fam['tag'] + model).lower()}.json"
+    old = json.loads(old_cfg.read_text(encoding="utf-8-sig")) if old_cfg.exists() else {}
+    was = choices_from_config(old_cfg) if old else {}
+    a.kv = a.kv or was.get("kv")                        # a setup again keeps the KV type it had
+    ctx = context if context is not None else a.context if a.context is not None else \
+        was.get("context") or prof.get("context_default", prof["context"])
+    fit = mac_fit(prof, model, ram, vision, ctx)
+    need = mac_need_gib(prof, model, vision, ctx)
     # source: "menu" (picked from the list), "flag" (--model / --family) or "default" (--yes or no terminal).  A pick,
     # or a flag with --yes, is the user's choice; --yes alone keeps the stops (the owner's rule)
     picked = source == "menu" or (source == "flag" and a.yes)
     if fit == "short":
-        confirm_risk(f"{fam['title']} {model} needs about {need:.0f} GiB with every expert in memory; this Mac has "
+        confirm_risk(f"{fam['title']} {model} with {ctx // 1024}K context needs about {need:.0f} GiB with every expert in memory; this Mac has "
                      f"{ram:.0f} GB: it would swap, or not start", picked, a.yes,
                      f"{fam['title']} {model} needs more memory than this Mac has",
                      f"choose a smaller model, or --model {model} --yes to set it up anyway")
         warn(f"setting up {fam['title']} {model} with {ram:.0f} GB of memory, as you chose")
     elif fit == "tight":
-        warn(f"{fam['title']} {model} (~{need:.0f} GiB) does not all fit the memory macOS gives the GPU: the rest of its "
+        warn(f"{fam['title']} {model} at {ctx // 1024}K (~{need:.0f} GiB) does not all fit the memory macOS gives the GPU: the rest of its "
              "experts run on the CPU - slower, and untested on a Mac")
     if not entry["measured"]:
         if source != "flag":                           # the list says "untested on a Mac" beside it
@@ -2426,12 +2467,6 @@ def install_mac(a, data, roots, port, family, model, ram, vision, source="defaul
                          f"{fam['title']} {model} is not measured on a Mac", f"--model {model} --yes sets it up anyway")
             warn(f"setting up {fam['title']} {model} on a Mac, as you chose (please report how it runs)")
     ok(f"model: {fam['title']} {model}")
-    old_cfg = ROOT / f"strata-{(fam['tag'] + model).lower()}.json"
-    old = json.loads(old_cfg.read_text(encoding="utf-8-sig")) if old_cfg.exists() else {}
-    was = choices_from_config(old_cfg) if old else {}
-    a.kv = a.kv or was.get("kv")                        # a setup again keeps the KV type it had
-    ctx = context if context is not None else a.context if a.context is not None else \
-        was.get("context") or prof.get("context_default", prof["context"])
     options, _ = mac_context_options(prof)
     if ctx not in prof.get("contexts_measured", [prof["context"]]) and ctx not in options:
         warn(f"{ctx} tokens of context is not validated on a Mac (measured: "

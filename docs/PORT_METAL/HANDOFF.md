@@ -71,8 +71,9 @@ The CUDA/HIP engine is ported to Metal (Apple M2 Max, macOS 26.5) end to end:
     measurements were in Low Power Mode, so the absolute tok/s in rounds 9-26 and the 2026-10-03 bench READMEs are
     Low Power Mode numbers; each round's before/after pair ran in the same mode.
   - **setup.** It shows the model list and then the 128K / 256K context list every run (arrow keys;
-    data/mac-metal.json), puts images on by default, downloads a big file over four connections and checks each
-    file's published SHA-256.
+    data/mac-metal.json). The 128K / 256K context reservation measured 2,677 / 6,248 MiB beyond 32K, so the default
+    is 256K only where model plus context fits the detected shared memory. It puts images on by default, downloads a
+    big file over four connections and checks each file's published SHA-256.
 * **Installed by setup now (2026-10-03, after round 26):** `./download-model.sh` + `./setup.sh` compile the Metal
   engine into `engine/strata` and write `strata-iq2_xs.json` from `data/mac-metal.json` (the settings below, paths
   relative to the repo); the model files live in the repo's git-ignored `Strata-data/` (models/IQ2_XS, packs/iq2_xs,

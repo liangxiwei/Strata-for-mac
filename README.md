@@ -35,10 +35,11 @@ Measured on an **Apple M2 Max (38-core GPU, 96 GB), macOS 26.5**, plugged in, En
 - **Reading:** a long prompt is read once. The follow-up reused all 128,026 tokens already read and read only the
   24 new ones. Reading gets slower as the text grows: 277 tokens/s at 30,000 tokens, 203-204 at 128,000.
 - **Writing:** 27-29 tokens/s in a short chat, about 25 after 128,000 tokens.
-- **Context:** after choosing a model, setup offers the measured 128K and 256K contexts, with 256K selected by
-  default. On the 256,000-token text test, the measured IQ2_XS and Q2_0 models read 159.8 and 164.5 tokens/s; both
-  found all three planted facts. `./setup.sh --setup --context 131072` selects 128K explicitly. The 256K text-path
-  footprint peaked at 47.0G with IQ2_XS and 45.4G with Q2_0.
+- **Context:** after choosing a model, setup offers the measured 128K and 256K contexts. It selects 256K when that
+  model and context fit its memory estimate; otherwise it selects 128K and says why. On the measured M2 Max, 128K
+  and 256K reserve 2,677MiB and 6,248MiB more shared memory than 32K. On the 256,000-token text test, IQ2_XS,
+  Q2_0 and IQ3_S read 159.8, 164.5 and 168.1 tokens/s; all found the three planted facts. `./setup.sh --setup
+  --context 131072` selects 128K explicitly. The 256K text-path footprint peaked at 47.0G, 45.4G and 61.6G.
 - **Energy Mode** (System Settings → Battery), measured on the same Mac with the same engine and inputs:
   - **Low Power Mode** makes it slower. It wrote 15-16% slower (24 / 23 tokens/s) and read 26-30% slower (202-205
     tokens/s at 30,000 tokens, 141-143 at 128,000).
@@ -98,8 +99,8 @@ Setup follows the model menu with the context menu:
 
 ```text
   Context length?   (up/down, Enter; q to stop)
-  1) 128K tokens  (measured on this Mac)
-> 2) 256K tokens  (measured on this Mac)
+  1) 128K tokens  (measured on this Mac; adds 2.6 GiB beyond 32K; ~44 GiB, fits this Mac)
+> 2) 256K tokens  (measured on this Mac; adds 6.1 GiB beyond 32K; ~48 GiB, fits this Mac)
 ```
 
 **`./download-model.sh`** downloads the chosen model's files only:
@@ -136,9 +137,9 @@ Ctrl+C stops it. **Next time,** `./setup.sh` shows both lists again. An installe
 when its selected context is unchanged; a different context rewrites its config. A model that is not downloaded yet
 is downloaded first, after asking.
 
-Without a terminal, or with `--yes`, setup takes the model used last, else the recommended one, then takes 256K.
-`--model Q2_0` (and `--family coder` / `swift`) chooses without the model list; `--context N` chooses the context
-without its list.
+Without a terminal, or with `--yes`, setup takes the model used last, else the recommended one, then takes 256K if
+it fits the model-and-memory estimate (128K otherwise). `--model Q2_0` (and `--family coder` / `swift`) chooses
+without the model list; `--context N` chooses the context without its list.
 
 ### Let your AI set it up
 
@@ -160,7 +161,7 @@ gives the GPU (77.8 of 96 GiB on the measured Mac), plus the rest the measured r
 | Qwen3.8-Flash-Next Coder IQ1_M | 58 GB | ~30 GiB | untested; for code (91% of the full model's SWE-bench Verified, by its authors) |
 | Swift 1.5 IQ2_XS | 68 GB | ~42 GiB | untested; a fine-tune that thinks shorter |
 | Qwen3.8-Flash-Next IQ3_XXS | 76 GB | ~49 GiB | untested; 3-bit |
-| Qwen3.8-Flash-Next IQ3_S | 84 GB | ~55 GiB | untested; 3.5-bit, the closest to the full model |
+| Qwen3.8-Flash-Next IQ3_S | 84 GB | ~55 GiB at 32K; ~62 GiB at 256K | measured at 256K: 168 tok/s prefill, 21 tok/s decode; 3.5-bit, the closest to the full model |
 
 By this estimate:
 

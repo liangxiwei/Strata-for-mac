@@ -11,23 +11,24 @@ Apple M2 Max（38 核 GPU、96 GB），macOS 26.5，Xcode 26.1，接电源、Ene
 `44c53fdefffe8d78051852804152d1de508a5a541ea385778a3d460889dc4bbd`。提示中间有三个字段：项目代号“银杏”、验收日期
 “10月18日”、校验码“AX-7319”。temperature 为 0。
 
-首次完整读入后要求模型答出三项，再在同一会话追问校验码。`iq2_xs.json` 和 `q2_0.json` 保存了实际引擎参数、时间和回答。
+首次完整读入后要求模型答出三项，再在同一会话追问校验码。三个 JSON 保存了实际引擎参数、时间和回答。
 
 ## 结果
 
-| | IQ2_XS | Q2_0 |
-| --- | ---: | ---: |
-| 读入 256,000 token | 1,602.5 s，**159.8 tok/s** | 1,556.5 s，**164.5 tok/s** |
-| 首个 token | 1,602.6 s | 1,556.7 s |
-| 读完后写回答 | 24.35 tok/s（26 token） | 21.48 tok/s（26 token） |
-| 三个字段 | **3/3** | **3/3** |
-| 追问：复用 / 新读 | 256,025 / 24 token，0.919 s | 256,025 / 24 token，0.819 s |
-| 追问首个 token | 1.02 s | 0.92 s |
-| physical footprint 峰值 | **47.0G** | **45.4G** |
-| 启动 | 38.6 s | 93.1 s |
+| | IQ2_XS | Q2_0 | IQ3_S |
+| --- | ---: | ---: | ---: |
+| 读入 256,000 token | 1,602.5 s，**159.8 tok/s** | 1,556.5 s，**164.5 tok/s** | 1,522.7 s，**168.1 tok/s** |
+| 首个 token | 1,602.6 s | 1,556.7 s | 1,522.8 s |
+| 读完后写回答 | 24.35 tok/s（26 token） | 21.48 tok/s（26 token） | 21.13 tok/s（26 token） |
+| 三个字段 | **3/3** | **3/3** | **3/3** |
+| 追问：复用 / 新读 | 256,025 / 24 token，0.919 s | 256,025 / 24 token，0.819 s | 256,025 / 24 token，1.994 s |
+| 追问首个 token | 1.02 s | 0.92 s | 6.69 s |
+| physical footprint 峰值 | **47.0G** | **45.4G** | **61.6G** |
+| 启动 | 38.6 s | 93.1 s | 129.6 s |
 
 这只是每个模型一条固定长提示，证明该提示的三项能被读回，不能代表一般长上下文质量。首个回答只有 26 token，decode
-也只是小样本。256K 在模型训练上下文内，两个运行都没有 RoPE 扩展、内存不足或专家回退。
+也只是小样本。256K 在模型训练上下文内，三个运行都没有 RoPE 扩展、内存不足或专家回退。IQ3_S 的引擎日志显示
+24,576 个专家全在 GPU cache，decode 100% 命中 GPU expert tier，CPU expert 为 0。
 
 ## 复现
 
@@ -36,6 +37,7 @@ Apple M2 Max（38 核 GPU、96 GB），macOS 26.5，Xcode 26.1，接电源、Ene
 ```sh
 caffeinate -dimsu .venv/bin/python bench/results/2026-10-04-metal-256k/long_context.py --config strata-iq2_xs.json
 caffeinate -dimsu .venv/bin/python bench/results/2026-10-04-metal-256k/long_context.py --config strata-q2_0.json
+caffeinate -dimsu .venv/bin/python bench/results/2026-10-04-metal-256k/long_context.py --config strata-iq3_s.json
 ```
 
 每个模型约 27 分钟。

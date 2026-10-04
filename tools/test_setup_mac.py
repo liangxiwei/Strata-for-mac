@@ -180,6 +180,7 @@ class ContextConfig(unittest.TestCase):
         self.assertEqual(str(p["context"]), MEASURED["args"][MEASURED["args"].index("--max-context") + 1])
         self.assertEqual((p["context_options"], p["context_default"]), ([131072, 262144], 262144))
         self.assertEqual(p["contexts_measured"], [32768, 131072, 262144])
+        self.assertEqual(p["context_extra_mib"], {"131072": 2677, "262144": 6248})
         for flag in ("--mmap-experts", "--no-prefill-borrow"):
             self.assertIn(flag, p["args"])
         self.assertNotIn("--kv", p["args"])                      # FP16 KV, the engine's default
@@ -200,7 +201,14 @@ class Memory(unittest.TestCase):
     def test_48gb_with_the_bigger_model_is_tight(self):
         code, out, cfg, _, _ = install(48.0, ["--no-start", "--model", "IQ2_XS"])
         self.assertEqual(code, 0, out[-3000:])
-        self.assertIn("does not all fit the memory macOS gives the GPU", out)
+        self.assertIn("it would swap, or not start", out)
+        self.assertEqual(cfg["args"][cfg["args"].index("--max-context") + 1], "131072")
+
+    def test_64gb_iq3_s_defaults_to_128k(self):
+        code, out, cfg, _, _ = install(64.0, ["--no-start", "--model", "IQ3_S"])
+        self.assertEqual(code, 0, out[-3000:])
+        self.assertIn("or --yes: 128K", out)
+        self.assertEqual(cfg["args"][cfg["args"].index("--max-context") + 1], "131072")
 
     def test_too_little_memory_stops_with_yes_alone(self):
         code, out, cfg, _, _ = install(24.0, ["--no-start"])
@@ -309,12 +317,10 @@ class DownloadOnly(unittest.TestCase):
 
 
 class Choices(unittest.TestCase):
-    def test_an_unmeasured_size_is_asked(self):
+    def test_iq3_s_is_measured(self):
         code, out, cfg, _, _ = install(96.0, ["--no-start", "--model", "IQ3_S"], answers={"Go on anyway": "n"})
-        self.assertNotEqual(code, 0)
-        self.assertIn("not measured on a Mac", out)
-        code, out, cfg, _, _ = install(96.0, ["--no-start", "--model", "IQ3_S"])      # --yes + explicit: consent
         self.assertEqual(code, 0, out[-3000:])
+        self.assertNotIn("not measured on a Mac", out)
         self.assertIn("Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S-00001-of-00002.gguf", cfg["args"][cfg["args"].index("--native") + 1])
 
     def test_the_unsloth_budget_mode_is_a_pc_mode(self):
@@ -627,14 +633,23 @@ class Menu(unittest.TestCase):
         self.assertIn("Q2_0", lines[default])
         self.assertIn("downloaded, set up", lines[default])
 
+    def test_iq3_s_reports_its_256k_measurement(self):
+        p = setup.mac_profile()
+        entry = next(x for x in p["menu"] if x["model"] == "IQ3_S")
+        self.assertEqual(entry["measured"], {"context_tokens": 262144, "prefill_tok_s": 168,
+                                               "decode_tok_s": 21, "peak_footprint": "61.6G"})
+        label = setup.menu_label({**entry, "state": "not", "have_gb": 0, "total_gb": 83.6,
+                                  "title": "Qwen3.8-Flash-Next", "fit": "fits"}, False)
+        self.assertIn("measured: 256K prefill 168 tok/s, decode 21 tok/s", label)
+
     def test_the_model_is_followed_by_two_context_choices(self):
         (code, out, cfg, _, _), seen = self.pick(96.0, 0)
         self.assertEqual(code, 0, out[-3000:])
         self.assertEqual(len(seen), 2)
         title, lines, default = seen[1]
         self.assertEqual(title, "  Context length?")
-        self.assertEqual(lines, ["128K tokens  (measured on this Mac)",
-                                 "256K tokens  (measured on this Mac)"])
+        self.assertTrue(lines[0].startswith("128K tokens  (measured on this Mac; adds 2.6 GiB beyond 32K; ~44 GiB"))
+        self.assertTrue(lines[1].startswith("256K tokens  (measured on this Mac; adds 6.1 GiB beyond 32K; ~48 GiB"))
         self.assertEqual(default, 1)
         args = cfg["args"]
         self.assertEqual(args[args.index("--max-context") + 1], "262144")
