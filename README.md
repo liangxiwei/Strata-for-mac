@@ -53,10 +53,6 @@ Measured on an **Apple M2 Max (38-core GPU, 96 GB), macOS 26.5**, plugged in, En
   SWE-bench Verified harness for `matplotlib__matplotlib-20488`. On the same setup, a fixed, deterministic 10-problem
   slice of LiveCodeBench v6 scored 5/10 and 6/10 single-answer pass@1. This slice is a local smoke test, not an
   overall SWE-bench or LiveCodeBench score; its method, prompts, time and limits are recorded with the result.
-- **SWE-bench Verified sample (256K, IQ3_S):** a fixed, deterministic 40-task sample, split into two 20-task
-  rounds, produced 10 patches. The official harness resolved 9 of the 40 tasks (22.5%); one patch was unresolved and
-  30 tasks had an empty patch. This is a local sample, not a 500-task SWE-bench score or a comparison with public
-  leaderboard results. The selection, agent limits and per-round harness result are recorded with the result.
 
 How these were measured, and every optimization behind them:
 
@@ -64,8 +60,6 @@ How these were measured, and every optimization behind them:
 - [bench/results/2026-10-04-metal-128k](bench/results/2026-10-04-metal-128k/README.md) (128K context);
 - [bench/results/2026-10-04-metal-256k](bench/results/2026-10-04-metal-256k/README.md) (256K context);
 - [bench/results/2026-10-04-metal-code-evals](bench/results/2026-10-04-metal-code-evals/README.md) (256K local code checks);
-- [bench/results/2026-10-05-metal-swebench-iq3s-256k](bench/results/2026-10-05-metal-swebench-iq3s-256k/README.md)
-  (256K IQ3_S SWE-bench Verified sample);
 - [bench/results/2026-10-04-metal-vision](bench/results/2026-10-04-metal-vision/README.md) (pictures);
 - [docs/PORT_METAL/PROGRESS.md](docs/PORT_METAL/PROGRESS.md) (the optimizations).
 
