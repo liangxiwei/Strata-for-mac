@@ -32,6 +32,17 @@ Measured on an **Apple M2 Max (38-core GPU, 96 GB), macOS 26.5**, plugged in, En
 | **IQ2_XS** | 203 tokens/s (10.5 min) | 25.3 tokens/s | first word after 0.94 s | 3 of 3 |
 | **Q2_0** | 204 tokens/s (10.5 min) | 24.5 tokens/s | first word after 0.88 s | 3 of 3 |
 
+**Full 256K context (IQ3_S).** On the fixed 256,000-token text, IQ3_S read the whole prompt, answered the three
+facts placed in it, then answered a follow-up in the same conversation:
+
+| Size | Reads 256,000 tokens | Writes after it | Found the 3 facts planted in the text | Follow-up: reused / newly read | Follow-up first word | Peak physical footprint |
+| --- | ---: | ---: | :---: | ---: | ---: | ---: |
+| **IQ3_S** | 168.1 tokens/s (25.4 min) | 21.13 tokens/s | 3 of 3 | 256,025 / 24 tokens, 1.994 s | 6.69 s | 61.6G |
+
+This is one fixed long-context run, not a general quality score. Its 26-token first answer makes the decode figure a
+small sample. The exact inputs, engine settings, output and timings are in
+[the 256K measurement](bench/results/2026-10-04-metal-256k/README.md).
+
 - **Reading:** a long prompt is read once. The follow-up reused all 128,026 tokens already read and read only the
   24 new ones. Reading gets slower as the text grows: 277 tokens/s at 30,000 tokens, 203-204 at 128,000.
 - **Writing:** 27-29 tokens/s in a short chat, about 25 after 128,000 tokens.
