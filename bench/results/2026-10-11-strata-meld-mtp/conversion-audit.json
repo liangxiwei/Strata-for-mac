@@ -1,0 +1,321 @@
+{
+  "source": "/Users/liangxw/.meld-turbo/models/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf",
+  "source_sha256": "5ff54097406a905cf3a724c709124ceb0e3e10235ee862298969e91c96fa96e6",
+  "expert_format": "q8_0",
+  "expert_bytes": 2673868800,
+  "strata_forward_algorithm_retained": true,
+  "norms_already_effective_gamma": true,
+  "tensors": [
+    {
+      "name": "fc_embedding.weight",
+      "source_name": "blk.48.nextn.eh_proj.weight",
+      "kind": "q8_0",
+      "rows": 2560,
+      "cols": 2560,
+      "sha256": "c6e8924f9400f2e894c7041c6a129f901ba64aa5a072b300583e18676846d595",
+      "bf16_rounding": null
+    },
+    {
+      "name": "fc_hidden.weight",
+      "source_name": "blk.48.nextn.eh_proj.weight",
+      "kind": "q8_0",
+      "rows": 2560,
+      "cols": 2560,
+      "sha256": "5671a69d2255a658f14f1645f83fed5f93e896b2d8cd90c715626bde1837f651",
+      "bf16_rounding": null
+    },
+    {
+      "name": "self_attn.q_proj.weight",
+      "source_name": "blk.48.attn_q.weight",
+      "kind": "q8_0",
+      "rows": 12288,
+      "cols": 2560,
+      "sha256": "47057495809a7961b21b3ac5f16e2e4cd19d72cf2fdef1a39bb587d64675b3f1",
+      "bf16_rounding": null
+    },
+    {
+      "name": "self_attn.k_proj.weight",
+      "source_name": "blk.48.attn_k.weight",
+      "kind": "q8_0",
+      "rows": 512,
+      "cols": 2560,
+      "sha256": "9bab07b29f374a2870a849d02e65e4e5c694e707aaa732ab1951f29899028d92",
+      "bf16_rounding": null
+    },
+    {
+      "name": "self_attn.v_proj.weight",
+      "source_name": "blk.48.attn_v.weight",
+      "kind": "q8_0",
+      "rows": 512,
+      "cols": 2560,
+      "sha256": "6348235faab5c24f9286770812efd6030553ed21951771fda39f3cb28586e585",
+      "bf16_rounding": null
+    },
+    {
+      "name": "self_attn.o_proj.weight",
+      "source_name": "blk.48.attn_output.weight",
+      "kind": "q8_0",
+      "rows": 2560,
+      "cols": 6144,
+      "sha256": "a217ef3a03deb1ad0c08a24d7bcfba7c30daaea5d8119ec8d156b6513e9c6fb2",
+      "bf16_rounding": null
+    },
+    {
+      "name": "self_attn.q_norm.weight",
+      "source_name": "blk.48.attn_q_norm.weight",
+      "kind": "f32",
+      "rows": 1,
+      "cols": 256,
+      "sha256": "da931831c943ac990032b359594ae1a918cec65b8806cbd1ba0f866f81703eaa",
+      "bf16_rounding": null,
+      "identical_to_original_strata_norm": true
+    },
+    {
+      "name": "self_attn.k_norm.weight",
+      "source_name": "blk.48.attn_k_norm.weight",
+      "kind": "f32",
+      "rows": 1,
+      "cols": 256,
+      "sha256": "9b7532bbe6fdabcc1f9141714c1a49995888d2aa952852ede3aa119bf5fa59cc",
+      "bf16_rounding": null,
+      "identical_to_original_strata_norm": true
+    },
+    {
+      "name": "mlp.shared_expert.gate_proj.weight",
+      "source_name": "blk.48.ffn_gate_shexp.weight",
+      "kind": "q8_0",
+      "rows": 640,
+      "cols": 2560,
+      "sha256": "7f66d0861aacb5acb493705c5bdaef6f75cf847093e92d5427639d24ae67f2b3",
+      "bf16_rounding": null
+    },
+    {
+      "name": "mlp.shared_expert.up_proj.weight",
+      "source_name": "blk.48.ffn_up_shexp.weight",
+      "kind": "q8_0",
+      "rows": 640,
+      "cols": 2560,
+      "sha256": "463cd886a49f0144ea0b5851b324ac748bb83fceacef66eff505bdfc942a40e0",
+      "bf16_rounding": null
+    },
+    {
+      "name": "mlp.shared_expert.down_proj.weight",
+      "source_name": "blk.48.ffn_down_shexp.weight",
+      "kind": "q8_0",
+      "rows": 2560,
+      "cols": 640,
+      "sha256": "2aad75936608bf1141a9d2bc3265c33424b3ed8bb90328c1b79ac667b450104b",
+      "bf16_rounding": null
+    },
+    {
+      "name": "mlp.gate.weight",
+      "source_name": "blk.48.ffn_gate_inp.weight",
+      "kind": "bf16",
+      "rows": 512,
+      "cols": 2560,
+      "sha256": "f0d35fa41b360a08bc0c5b1e5766aa42df960291716ee189208b5d2599462c20",
+      "bf16_rounding": {
+        "source_type": 0,
+        "max_abs": 0.0,
+        "relative_l2": 0.0,
+        "exact_values": 1310720,
+        "total_values": 1310720
+      }
+    },
+    {
+      "name": "mlp.shared_expert_gate.weight",
+      "source_name": "blk.48.ffn_gate_inp_shexp.weight",
+      "kind": "bf16",
+      "rows": 1,
+      "cols": 2560,
+      "sha256": "acdd306d9996d356e4667a16ff63af6fef086fc7f570f1bc00bbe882a2a93f6e",
+      "bf16_rounding": {
+        "source_type": 0,
+        "max_abs": 0.0,
+        "relative_l2": 0.0,
+        "exact_values": 2560,
+        "total_values": 2560
+      }
+    },
+    {
+      "name": "attn_hyper_connection.hc_norm.weight",
+      "source_name": "blk.48.hc_attn_norm.weight",
+      "kind": "f32",
+      "rows": 1,
+      "cols": 10240,
+      "sha256": "366f56c1fbd1b34af1fa51c489c562d7ea25c67f4af8c2f923e179a4882595ab",
+      "bf16_rounding": null,
+      "identical_to_original_strata_norm": true
+    },
+    {
+      "name": "attn_hyper_connection.input_mix_weight_down.weight",
+      "source_name": "blk.48.hc_attn_down.weight",
+      "kind": "bf16",
+      "rows": 320,
+      "cols": 10240,
+      "sha256": "d812e8149c73ad1ff037fdcf976f5ec3b4ee81df18b0519fd76e650b9897d1e4",
+      "bf16_rounding": {
+        "source_type": 8,
+        "max_abs": 0.001953125,
+        "relative_l2": 0.0014626901829615235,
+        "exact_values": 121969,
+        "total_values": 3276800
+      }
+    },
+    {
+      "name": "attn_hyper_connection.input_mix_weight_up.weight",
+      "source_name": "blk.48.hc_attn_up.weight",
+      "kind": "bf16",
+      "rows": 10240,
+      "cols": 320,
+      "sha256": "8b3891012563e8ffa3381457146f9a3bc72324e447806b9085b964769ba59888",
+      "bf16_rounding": {
+        "source_type": 8,
+        "max_abs": 0.00762939453125,
+        "relative_l2": 0.0014383622910827398,
+        "exact_values": 127931,
+        "total_values": 3276800
+      }
+    },
+    {
+      "name": "attn_hyper_connection.block_inject_weight.weight",
+      "source_name": "blk.48.hc_attn_inject.weight",
+      "kind": "bf16",
+      "rows": 4,
+      "cols": 10240,
+      "sha256": "92bd721b31357cc7fb0e0a9261da3df60bd571cfa6884de82239fb12fe2af88c",
+      "bf16_rounding": {
+        "source_type": 8,
+        "max_abs": 0.000484466552734375,
+        "relative_l2": 0.001454885583370924,
+        "exact_values": 1395,
+        "total_values": 40960
+      }
+    },
+    {
+      "name": "mlp_hyper_connection.hc_norm.weight",
+      "source_name": "blk.48.hc_ffn_norm.weight",
+      "kind": "f32",
+      "rows": 1,
+      "cols": 10240,
+      "sha256": "7b597d627e9f5428a229e122988b6b328ba24e951ebecdd176ff2ce0459cd0f3",
+      "bf16_rounding": null,
+      "identical_to_original_strata_norm": true
+    },
+    {
+      "name": "mlp_hyper_connection.input_mix_weight_down.weight",
+      "source_name": "blk.48.hc_ffn_down.weight",
+      "kind": "bf16",
+      "rows": 320,
+      "cols": 10240,
+      "sha256": "0778cc720705debd80326315b479714acbfc0776718e5b85daf1411ff4aaeab2",
+      "bf16_rounding": {
+        "source_type": 8,
+        "max_abs": 0.00193023681640625,
+        "relative_l2": 0.0014366249088197947,
+        "exact_values": 125829,
+        "total_values": 3276800
+      }
+    },
+    {
+      "name": "mlp_hyper_connection.input_mix_weight_up.weight",
+      "source_name": "blk.48.hc_ffn_up.weight",
+      "kind": "bf16",
+      "rows": 10240,
+      "cols": 320,
+      "sha256": "3c80b936ba2692001ccfdea1a43a09c45c9391373f75de46242508587069c029",
+      "bf16_rounding": {
+        "source_type": 8,
+        "max_abs": 0.0038604736328125,
+        "relative_l2": 0.0012477390700951219,
+        "exact_values": 162558,
+        "total_values": 3276800
+      }
+    },
+    {
+      "name": "mlp_hyper_connection.block_inject_weight.weight",
+      "source_name": "blk.48.hc_ffn_inject.weight",
+      "kind": "bf16",
+      "rows": 4,
+      "cols": 10240,
+      "sha256": "69fe20aaab3c5775cb202360122da1e479c01f2ecb78750d75bea083f4383b70",
+      "bf16_rounding": {
+        "source_type": 8,
+        "max_abs": 0.00047588348388671875,
+        "relative_l2": 0.0013961148215457797,
+        "exact_values": 1696,
+        "total_values": 40960
+      }
+    },
+    {
+      "name": "pre_fc_norm_embedding.weight",
+      "source_name": "blk.48.nextn.enorm.weight",
+      "kind": "f32",
+      "rows": 1,
+      "cols": 2560,
+      "sha256": "7998063101bbbf95d048a16cb451f7a01ef66f82ed3f90bf3a9b261cc3bb97b6",
+      "bf16_rounding": null,
+      "identical_to_original_strata_norm": true
+    },
+    {
+      "name": "pre_fc_norm_hidden.weight",
+      "source_name": "blk.48.nextn.hnorm.weight",
+      "kind": "f32",
+      "rows": 1,
+      "cols": 10240,
+      "sha256": "f15ffb42ab46852238807c43e176a725fe988f02140e15f7aa7785b8960c6eee",
+      "bf16_rounding": null,
+      "identical_to_original_strata_norm": true
+    },
+    {
+      "name": "hyper_connection_mixer.hc_norm.weight",
+      "source_name": "blk.48.nextn.hc_head_norm.weight",
+      "kind": "f32",
+      "rows": 1,
+      "cols": 10240,
+      "sha256": "bd6582a9a39dcfc7910af76f1d3c43cd4521104a52db5af7eee62ebf52774335",
+      "bf16_rounding": null,
+      "identical_to_original_strata_norm": true
+    },
+    {
+      "name": "hyper_connection_mixer.input_mix_weight_down.weight",
+      "source_name": "blk.48.nextn.hc_head_down.weight",
+      "kind": "bf16",
+      "rows": 320,
+      "cols": 10240,
+      "sha256": "c527d899cdd4a51f37eaa4915275c1ef90ad38f5368bfbd39f96cb45a8844013",
+      "bf16_rounding": {
+        "source_type": 8,
+        "max_abs": 0.0023193359375,
+        "relative_l2": 0.0014334237203001976,
+        "exact_values": 117509,
+        "total_values": 3276800
+      }
+    },
+    {
+      "name": "hyper_connection_mixer.input_mix_weight_up.weight",
+      "source_name": "blk.48.nextn.hc_head_up.weight",
+      "kind": "bf16",
+      "rows": 10240,
+      "cols": 320,
+      "sha256": "3f53d56e0261078f9cd38b67e67bc963e9c08fb8dd7f146e58ed16ad1d330b18",
+      "bf16_rounding": {
+        "source_type": 8,
+        "max_abs": 0.012451171875,
+        "relative_l2": 0.0012445439351722598,
+        "exact_values": 272122,
+        "total_values": 3276800
+      }
+    }
+  ],
+  "unused_tensors": [
+    "indexer.k_norm.weight",
+    "indexer.k_proj.weight",
+    "indexer.q_norm.weight",
+    "indexer.q_proj.weight"
+  ],
+  "all_expert_blocks_byte_identical": true,
+  "unused_reason": "Strata's MTP uses dense attention and never reads indexer tensors.",
+  "dense_bytes": 114357248,
+  "experts_sha256": "f6e91f5a496214b78e020fc33449cabc545360ab544962ad9f47230a73f416c6"
+}

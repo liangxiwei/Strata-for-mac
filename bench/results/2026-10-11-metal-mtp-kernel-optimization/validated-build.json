@@ -1,0 +1,167 @@
+{
+  "engine_sha256": "3aa4e5972b0a9a56180a6e13a5b1f8ffa00112c2686003ba149d6071f0cac099",
+  "source_hash": "73efdd2b9343705a",
+  "macos": "ProductName:\t\tmacOS\nProductVersion:\t\t26.5\nBuildVersion:\t\t25F71\n",
+  "quality": {
+    "reference": "bench/results/2026-10-11-metal-mtp-kernel-optimization/quality/legacy",
+    "candidate": "bench/results/2026-10-11-metal-mtp-kernel-optimization/quality/optimized",
+    "trace_files": [
+      132,
+      132
+    ],
+    "same_requests": true,
+    "same_output_ids": true,
+    "same_committed_states": true,
+    "same_model_settings": true,
+    "same_draft_counts": true,
+    "rows": 474,
+    "values": 117703680,
+    "different": 0,
+    "bitwise_pass": true
+  },
+  "micro": [
+    {
+      "file": "batch-bench.csv",
+      "F": 0,
+      "K": 2560,
+      "N": 10240,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 463.0435,
+      "new_us": 364.2085,
+      "reduction_pct": 21.344646885227846
+    },
+    {
+      "file": "batch-bench.csv",
+      "F": 0,
+      "K": 6144,
+      "N": 2560,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 251.6855,
+      "new_us": 215.9405,
+      "reduction_pct": 14.202248441010711
+    },
+    {
+      "file": "batch-bench.csv",
+      "F": 1,
+      "K": 2560,
+      "N": 10240,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 411.478,
+      "new_us": 357.877,
+      "reduction_pct": 13.02645584940143
+    },
+    {
+      "file": "batch-bench.csv",
+      "F": 1,
+      "K": 6144,
+      "N": 2560,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 238.094,
+      "new_us": 207.3655,
+      "reduction_pct": 12.906037111392976
+    },
+    {
+      "file": "batch-bench.csv",
+      "F": 5,
+      "K": 2560,
+      "N": 10240,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 322.01649999999995,
+      "new_us": 249.68599999999998,
+      "reduction_pct": 22.46173720911816
+    },
+    {
+      "file": "batch-bench.csv",
+      "F": 5,
+      "K": 6144,
+      "N": 2560,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 160.748,
+      "new_us": 131.6125,
+      "reduction_pct": 18.124953343120897
+    },
+    {
+      "file": "batch-bench.csv",
+      "F": 9,
+      "K": 2560,
+      "N": 10240,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 337.5985,
+      "new_us": 245.4035,
+      "reduction_pct": 27.309066835308805
+    },
+    {
+      "file": "batch-bench.csv",
+      "F": 9,
+      "K": 6144,
+      "N": 2560,
+      "T": 4,
+      "variant": "r2",
+      "old_us": 181.78,
+      "new_us": 123.501,
+      "reduction_pct": 32.06018263835405
+    },
+    {
+      "file": "batch-actual-bench.csv",
+      "F": 0,
+      "K": 2560,
+      "N": 640,
+      "T": 4,
+      "variant": "r2",
+      "old_us": 30.4935,
+      "new_us": 26.368000000000002,
+      "reduction_pct": 13.529112761736107
+    },
+    {
+      "file": "batch-actual-bench.csv",
+      "F": 1,
+      "K": 2560,
+      "N": 640,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 29.1585,
+      "new_us": 21.75,
+      "reduction_pct": 25.40768558053398
+    },
+    {
+      "file": "batch-actual-bench.csv",
+      "F": 5,
+      "K": 2560,
+      "N": 640,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 30.3115,
+      "new_us": 18.1855,
+      "reduction_pct": 40.004618709070805
+    },
+    {
+      "file": "batch-actual-bench.csv",
+      "F": 9,
+      "K": 640,
+      "N": 2560,
+      "T": 4,
+      "variant": "r2",
+      "old_us": 35.355999999999995,
+      "new_us": 24.1115,
+      "reduction_pct": 31.803654259531612
+    },
+    {
+      "file": "batch-q5-r1.csv",
+      "F": 0,
+      "K": 2560,
+      "N": 640,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 32.769999999999996,
+      "new_us": 22.8445,
+      "reduction_pct": 30.288373512358856
+    }
+  ]
+}

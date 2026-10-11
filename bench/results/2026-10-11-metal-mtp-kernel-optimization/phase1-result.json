@@ -1,0 +1,45 @@
+{
+  "selected": {
+    "window": 2,
+    "spec_min_p": 0.5,
+    "screen_scores": [
+      {
+        "window": 2,
+        "spec_min_p": 0.5,
+        "geometric_mean_tps": 21.00531355073819
+      },
+      {
+        "window": 3,
+        "spec_min_p": 0.5,
+        "geometric_mean_tps": 20.652000582666627
+      },
+      {
+        "window": 4,
+        "spec_min_p": 0.0,
+        "geometric_mean_tps": 19.035868256885
+      },
+      {
+        "window": 4,
+        "spec_min_p": 0.5,
+        "geometric_mean_tps": 20.645872903008296
+      }
+    ],
+    "criterion": "geometric mean of both input-length decode rates"
+  },
+  "paired_results": [
+    {
+      "prompt_budget": 1000,
+      "off_tps": 18.589814815807976,
+      "mtp_tps": 20.789509174275256,
+      "gain_pct": 11.832793280957032
+    },
+    {
+      "prompt_budget": 4000,
+      "off_tps": 18.47985039928662,
+      "mtp_tps": 20.910833377251844,
+      "gain_pct": 13.154776285738045
+    }
+  ],
+  "requests": 18,
+  "all_texts_equal": true
+}

@@ -1,0 +1,42 @@
+Strata / Meld Turbo IQ3_S comparison, 2026-10-11
+
+Apple M2 Max, 38-core GPU, 96 GiB RAM, AC power, Low Power Mode kept enabled.
+Existing IQ3_S GGUF model weights were reused without requantization.
+Strata: installed engine/strata and current strata-iq3_s.json settings,
+except context capacity set to 131072 and prompt cache disabled in temporary configs.
+Strata uses prefill chunk 2048, mtp-max-t 1, suffix-draft 0 (no speculative drafts).
+Meld: patched llama.cpp, MTP shared-Q8_0 head, 106K draft vocabulary, 3 drafts maximum.
+Meld also uses 131072 context capacity and one slot.
+Both: identical source-code chat prompts, temperature 0, thinking off, 512 output tokens.
+Three alternating pairs; order Strata/Meld, Meld/Strata, Strata/Meld.
+Only one engine was loaded at a time. A 64-token warmup followed each model load.
+All measured prompts were uncached. Each decode run lasted over 10 seconds.
+Startup and warmup were excluded. Background user apps remained open.
+Decode uses client time from first to last streamed content; prefill uses server timing.
+All values below are medians across three runs.
+
+Input: 1139 tokens; output: 512 tokens
+  strata  : decode 18.45 tok/s; prefill 203.2 tok/s; TTFT 5.75 s; total 33.45 s
+  meld_mtp: decode 24.17 tok/s; prefill 182.8 tok/s; TTFT 6.26 s; total 27.62 s
+  Meld vs Strata: decode +31.0%; prefill -10.0%
+  Total request wall time reduction with Meld: 17.4%
+
+Input: 4289 tokens; output: 512 tokens
+  strata  : decode 18.19 tok/s; prefill 220.6 tok/s; TTFT 19.54 s; total 47.80 s
+  meld_mtp: decode 24.00 tok/s; prefill 190.4 tok/s; TTFT 22.59 s; total 43.88 s
+  Meld vs Strata: decode +31.9%; prefill -13.7%
+  Total request wall time reduction with Meld: 8.2%
+
+Exact paired output text match: 0/6.
+This is a throughput test; no task-quality assessment was performed.
+Actual input lengths tested were 1139 and 4289 tokens; 128K capacity was not filled.
+The engines differ in implementation and draft settings; this does not isolate the engine from MTP.
+RSS samples are preserved but are not a comparable total physical-memory/GPU-footprint metric.
+All test engines were stopped after the comparison; no model server was left resident.
+
+Repeated model load to healthy API, median: Strata 134.27 s; Meld 24.06 s.
+These are repeated loads in the current cache/background-load conditions, not cold-boot measurements.
+
+Reproduce from the Strata checkout with ports 8081 and 8082 free:
+  python3 bench/results/2026-10-11-meld-comparison/compare_api.py
+  python3 bench/results/2026-10-11-meld-comparison/format_report.py

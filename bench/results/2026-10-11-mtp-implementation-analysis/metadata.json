@@ -1,0 +1,17 @@
+{
+  "purpose": "diagnostic per-round wall times, not a replacement for the three-round performance benchmarks",
+  "strata_engine": "/Users/liangxw/src/xproject/petproject/Strata/engine/strata",
+  "strata_mtp_experts": "original Q2_0",
+  "subset_tokens": 106299,
+  "request_tokens": 512,
+  "strata_stage_counter_profiler_disabled": "Metal gpu_stamp counts launches rather than nanoseconds",
+  "meld_trace_caveat": "LLAMA_DECODE_TRACE forces synchronization; trace times are diagnostic",
+  "power": "Battery Power:\n Sleep On Power Button 1\n powermode            1\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         5\n womp                 1\n networkoversleep     0\n sleep                1\n lessbright           1\n tcpkeepalive         1\n disksleep            0\nAC Power:\n Sleep On Power Button 1\n powermode            1\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         5\n womp                 1\n networkoversleep     0\n sleep                0\n tcpkeepalive         1\n disksleep            0\n",
+  "ambient_overrides": {
+    "MELD_HC_MIX": null,
+    "MELD_DRAFT_VOCAB": null,
+    "STRATA_COMMIT_SYNC": null,
+    "STRATA_MULTI_EXACT": null,
+    "STRATA_METAL_KPROFILE": null
+  }
+}

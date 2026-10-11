@@ -2005,6 +2005,31 @@ def mac_profile() -> dict:
     return json.loads(MAC_PROFILE.read_text(encoding="utf-8"))
 
 
+def refresh_mac_profile_defaults(cfg_path: Path, cfg: dict, prof: dict) -> dict:
+    """Migrate the old no-draft Mac default once; subsequent hand edits are kept."""
+    revision = prof.get("revision")
+    if cfg.get("backend") != "metal" or not revision or cfg.get("metal_profile_revision") == revision:
+        return cfg
+    args = cfg.get("args", [])
+
+    def value(flag, default):
+        return args[args.index(flag) + 1] if flag in args[:-1] else default
+
+    try:
+        spec = int(value("--spec", "1"))
+    except (ValueError, TypeError):
+        spec = 1
+    if (not cfg.get("metal_profile_revision") and "--mtp" in args[:-1] and spec > 1 and
+            value("--mtp-max-t", "0") == "1"):
+        args[args.index("--mtp-max-t") + 1] = prof["args"][prof["args"].index("--mtp-max-t") + 1]
+    env = cfg.setdefault("env", {})
+    for key, value_ in prof.get("env", {}).items():
+        env.setdefault(key, value_)
+    cfg["metal_profile_revision"] = revision
+    cfg_path.write_text(json.dumps(cfg, indent=1), encoding="utf-8")
+    return cfg
+
+
 def measured_names(prof: dict) -> str:
     return ", ".join(f"{FAMILIES[m['family']]['title']} {m['model']}" for m in prof["menu"] if m["measured"])
 
@@ -2418,6 +2443,7 @@ def mac_main(a, data, roots) -> int:
                (a.vision is not None and bool(old.get("vision")) != vision))
     if old and not (a.setup or a.no_start or a.download_only or changed):
         update_installed_engine(a.prebuilt)            # a git pull: the engine (and the encoder) compiled again
+        refresh_mac_profile_defaults(cfg_path, old, prof)
         return start(cfg_path, a.port, None, yes=a.yes, keep={"host": a.host, "api_key": a.api_key})
     return install_mac(a, data, roots, port, family, model, ram, vision and fam.get("vision") is not False, source,
                        context)
@@ -2585,7 +2611,7 @@ def install_mac(a, data, roots, port, family, model, ram, vision, source="defaul
         warn("some MTP tensors are not the checkpoint's (a download mirror that ignored range requests, #327): "
              "fetching them again and rebuilding the draft layer")
     if corrupt or not (rt / "experts.bin").exists():
-        say("  The server loads the MTP draft layer (on a Mac it drafts nothing: docs/MAC.md); it comes from the")
+        say("  The server uses the MTP draft layer (enabled on a Mac: docs/MAC.md); it comes from the")
         say("  original Qwen checkpoint: only its ~5 GB of MTP tensors are downloaded.")
         run([sys.executable, str(ROOT / "tools" / "mtp_fetch.py"), "fetch", "--out", str(mtp)], env=env)
         run([sys.executable, str(ROOT / "tools" / "mtp_pack.py"), "--src", str(mtp), "--experts", "q2_0",
@@ -2631,7 +2657,8 @@ def install_mac(a, data, roots, port, family, model, ram, vision, source="defaul
         args += ["--vision", "--vram-reserve-mib", str(prof["vision"]["reserve_mib"])]
     cfg = {"exe": rel(eng / EXE), "args": args, "cwd": ".", "tokenizer": rel(pack / "tokenizer"),
            "model_name": f"{fam['name']}-{model.lower()}", "log": f"strata-{tag.lower()}.log",
-           "port": port, "backend": "metal", "env": dict(prof["env"])}
+           "port": port, "backend": "metal", "env": dict(prof["env"]),
+           "metal_profile_revision": prof.get("revision")}
     if vision:
         cfg["vision"] = {"exe": rel(vexe), "mmproj": rel(mmproj), "model": rel(shards[0]), "gpu": True,
                          "max_tokens": prof["vision"]["max_tokens"]}
@@ -2644,6 +2671,7 @@ def install_mac(a, data, roots, port, family, model, ram, vision, source="defaul
         cfg["api_key"] = a.api_key
     cfg_path = ROOT / f"strata-{tag.lower()}.json"
     cfg_path.write_text(json.dumps(cfg, indent=1), encoding="utf-8")
+    refresh_config_draft_vocab(cfg_path, cfg)           # direct run-*.sh also needs the installed subset
     script = write_run_script(tag, cfg_path, port)
     ok(f"start script: {script.name}")
 
@@ -3150,9 +3178,7 @@ def start(cfg_path: Path, port: int | None, gpu: int | list | None = None, open_
                                                 for k, v in keep.items()))
     cfg_path.touch()                                     # the most recently used model
     metal = cfg.get("backend") == "metal"
-    # the draft subset changes the draft head's memory; on a Mac no drafts are made, so the measured MTP folder stays
-    if "--mtp" in cfg["args"][:-1] and not metal:
-        refresh_draft_vocab(Path(cfg["args"][cfg["args"].index("--mtp") + 1]), cfg.get("draft_vocab", "cjk"))
+    refresh_config_draft_vocab(cfg_path, cfg)
     cmd = [sys.executable, str(ROOT / "serve" / "server.py"), "--engine", "strata", "--config", str(cfg_path),
            "--port", str(port or cfg.get("port", 8080))]
     if metal:                                          # one GPU, sharing the Mac's memory: nothing to pick or check
@@ -3271,6 +3297,25 @@ def mtp_corrupt(mtp: Path, env=None) -> bool:
     r = subprocess.run([sys.executable, str(ROOT / "tools" / "mtp_fetch.py"), "verify", "--out", str(mtp)], env=env,
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     return r.returncode == 3
+
+
+def refresh_config_draft_vocab(cfg_path: Path, cfg: dict) -> None:
+    """Install the subset for a Mac making MTP drafts; retain the measured memory use when drafts are off."""
+    args = cfg.get("args", [])
+    if "--mtp" not in args[:-1]:
+        return
+    if cfg.get("backend") == "metal":
+        def integer(flag, default):
+            try:
+                return int(args[args.index(flag) + 1]) if flag in args else default
+            except (ValueError, IndexError):
+                return default
+        spec = integer("--spec", 1)
+        cap = integer("--mtp-max-t", 0)
+        if spec < 2 or cap == 1:
+            return
+    rt = cfg_file(cfg_path, cfg, args[args.index("--mtp") + 1])
+    refresh_draft_vocab(rt, cfg.get("draft_vocab", "cjk"))
 
 
 def refresh_draft_vocab(rt: Path, choice: str = "cjk") -> None:

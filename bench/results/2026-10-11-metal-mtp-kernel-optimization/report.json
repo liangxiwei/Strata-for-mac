@@ -1,0 +1,274 @@
+{
+  "selected": {
+    "window": 4,
+    "spec_min_p": 0.5,
+    "screen_scores": [
+      {
+        "window": 2,
+        "spec_min_p": 0.5,
+        "median_tps": [
+          21.261207440127748,
+          20.43419294323389
+        ],
+        "geometric_mean_tps": 20.843598898407404
+      },
+      {
+        "window": 4,
+        "spec_min_p": 0.5,
+        "median_tps": [
+          21.497162295640297,
+          21.322970268081672
+        ],
+        "geometric_mean_tps": 21.409889128112372
+      }
+    ],
+    "criterion": "geometric mean of three-round throughput medians for both input lengths; T2 and T4 confirmed across all three prompt variants"
+  },
+  "paired_results": [
+    {
+      "prompt_budget": 1000,
+      "off_tps": 18.57161943651122,
+      "mtp_tps": 21.497162295640297,
+      "gain_pct": 15.752761190968357,
+      "off_rates": [
+        18.720659442018984,
+        18.234010265559185,
+        18.57161943651122
+      ],
+      "mtp_rates": [
+        21.950620483294486,
+        21.497162295640297,
+        19.14334089554522
+      ]
+    },
+    {
+      "prompt_budget": 4000,
+      "off_tps": 18.535521783926338,
+      "mtp_tps": 21.322970268081672,
+      "gain_pct": 15.038413898725844,
+      "off_rates": [
+        18.550073861982593,
+        18.535521783926338,
+        18.13605566907108
+      ],
+      "mtp_rates": [
+        23.305609988551044,
+        21.140359134525152,
+        21.322970268081672
+      ]
+    }
+  ],
+  "requests": 26,
+  "all_texts_equal": true,
+  "quality": {
+    "reference": "bench/results/2026-10-11-metal-mtp-kernel-optimization/quality/legacy",
+    "candidate": "bench/results/2026-10-11-metal-mtp-kernel-optimization/quality/optimized",
+    "trace_files": [
+      132,
+      132
+    ],
+    "same_requests": true,
+    "same_output_ids": true,
+    "same_committed_states": true,
+    "same_model_settings": true,
+    "same_draft_counts": true,
+    "rows": 474,
+    "values": 117703680,
+    "different": 0,
+    "bitwise_pass": true
+  },
+  "micro": [
+    {
+      "file": "batch-bench.csv",
+      "F": 0,
+      "K": 2560,
+      "N": 10240,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 463.0435,
+      "new_us": 364.2085,
+      "reduction_pct": 21.344646885227846
+    },
+    {
+      "file": "batch-bench.csv",
+      "F": 0,
+      "K": 6144,
+      "N": 2560,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 251.6855,
+      "new_us": 215.9405,
+      "reduction_pct": 14.202248441010711
+    },
+    {
+      "file": "batch-bench.csv",
+      "F": 1,
+      "K": 2560,
+      "N": 10240,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 411.478,
+      "new_us": 357.877,
+      "reduction_pct": 13.02645584940143
+    },
+    {
+      "file": "batch-bench.csv",
+      "F": 1,
+      "K": 6144,
+      "N": 2560,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 238.094,
+      "new_us": 207.3655,
+      "reduction_pct": 12.906037111392976
+    },
+    {
+      "file": "batch-bench.csv",
+      "F": 5,
+      "K": 2560,
+      "N": 10240,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 322.01649999999995,
+      "new_us": 249.68599999999998,
+      "reduction_pct": 22.46173720911816
+    },
+    {
+      "file": "batch-bench.csv",
+      "F": 5,
+      "K": 6144,
+      "N": 2560,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 160.748,
+      "new_us": 131.6125,
+      "reduction_pct": 18.124953343120897
+    },
+    {
+      "file": "batch-bench.csv",
+      "F": 9,
+      "K": 2560,
+      "N": 10240,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 337.5985,
+      "new_us": 245.4035,
+      "reduction_pct": 27.309066835308805
+    },
+    {
+      "file": "batch-bench.csv",
+      "F": 9,
+      "K": 6144,
+      "N": 2560,
+      "T": 4,
+      "variant": "r2",
+      "old_us": 181.78,
+      "new_us": 123.501,
+      "reduction_pct": 32.06018263835405
+    },
+    {
+      "file": "batch-actual-bench.csv",
+      "F": 0,
+      "K": 2560,
+      "N": 640,
+      "T": 4,
+      "variant": "r2",
+      "old_us": 30.4935,
+      "new_us": 26.368000000000002,
+      "reduction_pct": 13.529112761736107
+    },
+    {
+      "file": "batch-actual-bench.csv",
+      "F": 1,
+      "K": 2560,
+      "N": 640,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 29.1585,
+      "new_us": 21.75,
+      "reduction_pct": 25.40768558053398
+    },
+    {
+      "file": "batch-actual-bench.csv",
+      "F": 5,
+      "K": 2560,
+      "N": 640,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 30.3115,
+      "new_us": 18.1855,
+      "reduction_pct": 40.004618709070805
+    },
+    {
+      "file": "batch-actual-bench.csv",
+      "F": 9,
+      "K": 640,
+      "N": 2560,
+      "T": 4,
+      "variant": "r2",
+      "old_us": 35.355999999999995,
+      "new_us": 24.1115,
+      "reduction_pct": 31.803654259531612
+    },
+    {
+      "file": "batch-q5-r1.csv",
+      "F": 0,
+      "K": 2560,
+      "N": 640,
+      "T": 4,
+      "variant": "r1",
+      "old_us": 32.769999999999996,
+      "new_us": 22.8445,
+      "reduction_pct": 30.288373512358856
+    }
+  ],
+  "validated_build": {
+    "engine_sha256": "3aa4e5972b0a9a56180a6e13a5b1f8ffa00112c2686003ba149d6071f0cac099",
+    "source_hash": "73efdd2b9343705a",
+    "macos": "ProductName:\t\tmacOS\nProductVersion:\t\t26.5\nBuildVersion:\t\t25F71\n"
+  },
+  "additional_aba": [
+    {
+      "prompt_budget": 1000,
+      "before_new_tps": 19.14334089554522,
+      "stage1_tps": 18.695427974598466,
+      "after_new_tps": 20.08316490300556,
+      "mean_new_tps": 19.613252899275388,
+      "gain_pct": 4.90935498199867
+    },
+    {
+      "prompt_budget": 4000,
+      "before_new_tps": 21.322970268081672,
+      "stage1_tps": 18.29212551335965,
+      "after_new_tps": 22.372364266096984,
+      "mean_new_tps": 21.847667267089328,
+      "gain_pct": 19.437553886960202
+    }
+  ],
+  "installed": {
+    "binary": "/Users/liangxw/src/xproject/petproject/Strata/engine/strata",
+    "sha256": "3aa4e5972b0a9a56180a6e13a5b1f8ffa00112c2686003ba149d6071f0cac099",
+    "metadata": {
+      "vision": "gpu",
+      "vision_src": "4d89409b228a1daa",
+      "source": "local",
+      "backend": "metal",
+      "version": "0.1.34",
+      "src": "73efdd2b9343705a"
+    },
+    "mtp_max_t": 4,
+    "spec_min_p": 0.5,
+    "context_capacity": 262144,
+    "draft_vocab_sha256": "b1e1d3a7a9e4bf862dcd5923ce661fb59bbd07907e594df5cf86a62ac235cb91",
+    "metal_profile_revision": "2026-10-12-mtp-kernels",
+    "env": {
+      "STRATA_METAL_IQ4_EXPAND": "0",
+      "STRATA_METAL_HC_BATCH": "1",
+      "STRATA_METAL_Q6_MULTI": "1",
+      "STRATA_METAL_K_MULTI": "1",
+      "STRATA_METAL_IQ4_MULTI": "2",
+      "STRATA_METAL_EXPERT_IQ4_DIRECT": "1",
+      "STRATA_METAL_GDN_SNAPSHOT": "0"
+    }
+  }
+}

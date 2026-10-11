@@ -116,7 +116,7 @@ The model files come from `./download-model.sh` (or `./setup.sh`), in `Strata-da
 
 - the two IQ2_XS GGUF shards (68.03 GB);
 - the native pack built by `tools/iq_pack.py` (1.43 GiB);
-- the MTP runtime files, which the serve interface requires even with drafts disabled.
+- the MTP runtime files and the CJK draft vocabulary used by the default MTP path.
 
 Sources and checksums: [PROGRESS round 19](PORT_METAL/PROGRESS.md).
 
@@ -127,9 +127,17 @@ engine switches:
 - 128K or 256K context (both are measured on this Mac's IQ2_XS and Q2_0 text paths), FP16 KV, 1,024-token prefill
   chunks. The selector accounts for the 2,677MiB / 6,248MiB of extra shared memory they used beyond 32K and takes
   256K by default only when that model-and-memory estimate fits;
-- `--spec 4 --mtp-max-t 1 --suffix-draft 0`, which makes zero drafts in practice;
+- `--spec 4 --mtp-max-t 4 --spec-min-p 0.5 --suffix-draft 0`, enabling up to three MTP drafts per window;
 - `--mmap-experts --no-prefill-borrow`;
-- `STRATA_METAL_IQ4_EXPAND=0`.
+- `STRATA_METAL_IQ4_EXPAND=0`, `STRATA_METAL_HC_BATCH=1`, `STRATA_METAL_Q6_MULTI=1`,
+  `STRATA_METAL_K_MULTI=1`, `STRATA_METAL_IQ4_MULTI=2`, `STRATA_METAL_EXPERT_IQ4_DIRECT=1`;
+- `STRATA_METAL_GDN_SNAPSHOT=0`: snapshots did not show a consistent whole-model benefit.
+
+Setup prepares the selected draft vocabulary even with `--no-start`, so the generated run script is ready for
+MTP. A plain `./setup.sh` rebuilds a locally compiled Metal engine when its source fingerprint changes. It also
+updates the old `--mtp-max-t 1` default once when `--spec` is greater than one, recording the profile revision
+in the config. A custom window greater than one and existing environment overrides are kept; after that
+migration, later manual changes are kept too.
 
 To run your own build with it, point `"exe"` at `build-metal/strata`, then:
 
@@ -140,10 +148,17 @@ To run your own build with it, point `"exe"` at `build-metal/strata`, then:
 `--open` opens the browser once the model is ready; `http://127.0.0.1:8080/v1/chat/completions` and `/v1/messages`
 work directly. As everywhere, do not expose the server beyond `127.0.0.1` without `--api-key`.
 
-Measured on the frozen 10,000-token prompt: prefill 192.7-195.7 tokens/s, warm decode median 22.55 tokens/s, outputs
+Historical IQ2_XS measurement on the frozen 10,000-token prompt: prefill 192.7-195.7 tokens/s, warm decode median 22.55 tokens/s, outputs
 bitwise equal to the reference. Per-round numbers, switches and numerical audits:
-[PORT_METAL/PROGRESS.md](PORT_METAL/PROGRESS.md) and `bench/results/2026-10-03-metal-*/`. 100K context and MTP
-enabled are not validated yet.
+[PORT_METAL/PROGRESS.md](PORT_METAL/PROGRESS.md) and `bench/results/2026-10-03-metal-*/`.
+
+Current IQ3_S MTP measurements on this M2 Max in Low Power Mode: median 21.50 / 21.32 tokens/s for approximately
+1K / 4K fresh prompts and 512 greedy output tokens, 128K capacity, prefill 2048, no prefix reuse. The exact batch
+and expert kernels pass the short, 10K and cached-follow-up audit at 256K capacity: 117,703,680 finite logits,
+generated IDs and all six committed state fingerprints are bitwise equal to the previous kernels with MTP
+enabled on both sides. Evidence: `bench/results/2026-10-11-metal-mtp-kernel-optimization/`.
+Kernels are selected by tensor format and shape, so other supported models can use them; whole-model MTP gains
+still require a separate measurement for each model. This does not establish MTP quality at 100K input length.
 
 ## The Python side
 

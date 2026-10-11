@@ -43,6 +43,18 @@ This is one fixed long-context run, not a general quality score. Its 26-token fi
 small sample. The exact inputs, engine settings, output and timings are in
 [the 256K measurement](bench/results/2026-10-04-metal-256k/README.md).
 
+**IQ3_S, 30K in Low Power Mode.** With 256K capacity, increasing the prefill chunk from 1,024 to 2,048 read two
+fresh 30,000-token prompts in 149.6 / 133.1 s, versus 172.1 / 152.0 s: **14–15% higher throughput** for about
+**465 MiB** more GPU allocation (peak footprint 61.4G → 61.8G). On the fixed numerical audit, all 7,946,240
+logits and active context-state fingerprints matched. A 4,096-token chunk was faster on the second prompt but
+slower than 2,048 on the first; both runs together took almost the same time and used more memory. Inputs,
+timing method and rejected cache experiments are in [the 30K Low Power measurement](bench/results/2026-10-09-metal-iq3-s-30k/README.md).
+
+Metal prefill now chooses 8/16/24/32-row expert tail tiles by valid row count, with the same GPU scratch
+allocation. The fixed audit matches all 7,946,240 logits and active states. With other jobs running,
+whole-prefill gains did not repeat consistently; the tested 2 GiB dense cache was removed.
+See [the follow-up measurements and rollback switch](bench/results/2026-10-09-metal-iq3-s-30k-followup/README.md).
+
 - **Reading:** a long prompt is read once. The follow-up reused all 128,026 tokens already read and read only the
   24 new ones. Reading gets slower as the text grows: 277 tokens/s at 30,000 tokens, 203-204 at 128,000.
 - **Writing:** 27-29 tokens/s in a short chat, about 25 after 128,000 tokens.
@@ -70,6 +82,8 @@ How these were measured, and every optimization behind them:
 - [bench/results/2026-10-04-metal-models](bench/results/2026-10-04-metal-models/README.md) (IQ2_XS, Q2_0);
 - [bench/results/2026-10-04-metal-128k](bench/results/2026-10-04-metal-128k/README.md) (128K context);
 - [bench/results/2026-10-04-metal-256k](bench/results/2026-10-04-metal-256k/README.md) (256K context);
+- [bench/results/2026-10-09-metal-iq3-s-30k](bench/results/2026-10-09-metal-iq3-s-30k/README.md) (IQ3_S, 30K in Low Power Mode);
+- [bench/results/2026-10-09-metal-iq3-s-30k-followup](bench/results/2026-10-09-metal-iq3-s-30k-followup/README.md) (fine expert tails, current-load comparisons);
 - [bench/results/2026-10-04-metal-code-evals](bench/results/2026-10-04-metal-code-evals/README.md) (256K local code checks);
 - [bench/results/2026-10-04-metal-vision](bench/results/2026-10-04-metal-vision/README.md) (pictures);
 - [docs/PORT_METAL/PROGRESS.md](docs/PORT_METAL/PROGRESS.md) (the optimizations).

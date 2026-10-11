@@ -1,0 +1,160 @@
+Post-optimization MTP implementation comparison (2026-10-11)
+
+Finding
+The remaining slowdown is a measured Metal verification-kernel performance gap.
+The previous changes improved HC, draft vocabulary selection and window control,
+but did not change native_mmvq.mm or native_mmvq.metal. Those files contain the two
+confirmed small-batch inefficiencies below. This is evidence of a performance
+problem; the tests do not indicate an incorrect MTP accept/reject algorithm.
+
+Hardware and scope
+Apple M2 Max, 38 GPU cores, 96 GiB unified memory, existing Low Power Mode.
+Installed optimized Strata engine SHA256:
+1f3d63b3427edbb6361d4e1fca2a344cad2ef30a6a5ef5f819051627953c2763
+Meld sources: /Users/liangxw/.meld-turbo/llama.cpp (the installed patched engine).
+Existing IQ3_S model weights were not changed. No model was downloaded.
+Native projection formats vary across layers; IQ3_S is the file name, not the
+encoding of every tensor. In particular, output.weight is Q6_K, [2560, 248320].
+Strata's startup message says Q5_K because the label is hard-coded.
+
+1. Q6_K: the largest measured verification-kernel family
+Current Strata: native_mmvq.mm launch_multi_n(), lines 162-187;
+native_mmvq.metal nmv_multi_body(), lines 668-710.
+The exact-layout path uses 128 threads and one output row per threadgroup for
+these Q6_K dimensions. The 248320-row head dispatches 248320 threadgroups.
+Each thread emulates CUDA packed-byte dot products. Column count is a runtime
+argument and the accumulator reserves eight columns even when T=4.
+
+Meld: ggml-metal-ops.cpp lines 2613-2715;
+kernels/mul_mv.metal lines 689-783 and 893-896.
+At four tokens Q6_K selects kernel_mul_mv_ext_q6_K_f32_r1_4: 64 threads,
+eight output rows per threadgroup for K divisible by 128. The head dispatches
+31040 threadgroups. It dequantizes float4x4 weights once and reuses them for the
+four input columns, using FP32 dot products. The four-column count is specialized.
+This is a kernel arithmetic and launch-layout difference, not just fewer launches.
+
+Independent GPU A/B, same weight bytes and same represented activation values:
+Shape K x N                    Strata T4       Meld T4       ratio
+Q6_K 2560 x 248320 (head)       14.9117 ms      6.2433 ms     2.388x
+Q6_K 6144 x 2560 (SSM output)    0.3608 ms      0.1544 ms     2.337x
+ABBA order, >=10 seconds per point; paired medians from micro.csv.
+Inputs passed to Meld are the exact FP32 dequantization of Strata's Q8_1 input,
+removing activation quantization as an explanation for the timing difference.
+For varied positive/negative weight scales and varied activation scales, relative
+L2 errors were 1.88e-7 and 2.82e-7. The outputs are not bitwise identical.
+Actual whole-model Meld uses raw FP32 activations and a different reduction order;
+replacing Strata's kernel therefore needs numerical and generation validation.
+
+2. IQ4: switching from one token to several bypasses the existing fast kernels
+Current Strata: native_mmvq.mm launch_single(), lines 111-156, versus
+launch_multi_n(), lines 162-187, and mmvq_common(), lines 207-220.
+The T=1 path selects native_iq4_xs_direct_sg4 / direct_r4 and
+native_iq4_nl_direct_r4. The T>1 branch selects the packed-codebook generic
+nmv_multi_body instead. It never uses those optimized direct-codebook kernels.
+Thus 'batched' can mean more work than four independent fast single-token calls.
+
+Independent GPU A/B, identical inputs and bitwise-identical outputs:
+Shape K x N                    current T4      four fast T1 calls    ratio
+IQ4_XS 2560 x 12288              666.507 us      409.697 us          1.627x
+IQ4_NL 640 x 2560                 87.456 us       34.685 us          2.521x
+These are comparisons within current Strata, not Meld timing claims.
+All four columns are distinct. Fixed-scale and varied-scale checks both passed.
+Four separate calls are a measured reference candidate, not yet installed.
+Meld's IQ4_XS keeps its native floating-point matvec path at T=4; its IQ4_NL uses
+the specialized small-batch path. It does not suffer this particular dispatcher
+switch from an optimized direct kernel back to the heavier packed implementation.
+
+3. What the previous optimization covered, and what it did not
+HC: contiguous multi-token norm/down/up is active in the installed engine.
+At T=4, each layer's HC read goes from 12 launches to 6. The complete verifier
+has 2157 tape entries instead of the previous 2733, a reduction of 576 entries
+(96 HC reads * 6 saved launches). This optimization is running, not bypassed.
+Meld uses its small-batch BF16 kernels and split-K short-wide projections.
+The previous HC change did not alter quantized dense projections or the head.
+
+Draft vocabulary: the profile uses the same 106299-entry subset as Meld. The
+previous production setup change prepares it when starting MTP through setup.
+Direct serve/server.py startup does not itself prepare the subset; tests pass
+the prepared RT directory explicitly. This cannot explain the measured verifier
+kernel gap, and using Meld's Q8 draft weights previously did not remove it.
+
+GDN state: Meld retains rollback snapshots; Strata's measured default still
+recomputes the accepted recurrence during commit. The new Strata snapshot path
+exists and is opt-in. Its earlier full-model and isolated tests did not justify
+enabling it by default. It can remove some replay work but cannot explain the
+Q6_K or IQ4 kernel gaps above.
+
+Expert batching: both engines use one routed expert-entry matvec at T=4.
+Meld's ggml_metal_op_mul_mat_id_use_mm() requires >=32 input tokens to group rows
+into the matrix-matrix path (ggml-metal-common.cpp lines 37-42). Strata's grid_y
+is n_tok*k. It would be incorrect to credit expert grouping as the demonstrated
+reason Meld is faster in these four-token tests. Their arithmetic kernels still
+differ. Resident IQ4_NL down is another significant Strata hotspot; its cross-
+engine performance gap has not been measured in this investigation.
+
+Real installed-engine GPU sampling
+STRATA_METAL_KPROFILE sampled the actual optimized engine, all experts resident,
+HC batch on, draft subset on, snapshot off. Requests used the same 1139-token
+prompt and 160 generated tokens, with request windows 1 and 4. Greedy texts match.
+At T=4, sampled kernel-family busy time:
+Q6_K (129 calls including head): 49.038 ms, 30.13% of sampled kernel busy time.
+Resident IQ4_NL expert down:      17.985 ms, 11.05%.
+IQ4_XS dense:                     8.261 ms,  5.08%.
+IQ4_NL dense:                     5.476 ms,  3.36%.
+Full T4 tape busy sum:           162.778 ms.
+These are relative diagnostic costs. The profiler adds a compute-encoder
+boundary to each tape entry and changes execution overhead; its generated
+tokens/second is not a new throughput benchmark. Commit GPU work is asynchronous
+and may be included in the next verify wait; CPU commit time is not its GPU cost.
+See kernels.csv and kernel-summary.json for every sampled entry and tape.
+
+Why MTP still loses in the previous clean whole-model measurements
+MTP wins only if (verification + draft + state/other costs) / emitted tokens
+per round is below the single-token decode cost. Confidence and acceptance do
+not remove the expensive verification arithmetic for each proposed token.
+The earlier optimized T4 / p_min=0.5 diagnostic had 3.13 verified rows,
+2.61 emitted tokens/round, verify 133.60 ms and draft 12.45 ms, for 146.27 ms
+total/round, about 56.0 ms/emitted token. Meld's earlier four-token trace had
+about 103.5 ms target decode and 10.84 ms draft catch-up/chain per target round,
+with 2.91 emitted tokens/round. Those trace measurements are diagnostic and
+their average window lengths differ, but they locate the deficit in verification.
+The prior clean, three-round results remain the throughput evidence:
+Strata off: 19.11 / 18.85 tokens/s at 1139 / 4289 input tokens.
+Strata optimized MTP T2: 17.66 / 17.99 tokens/s.
+Meld MTP: 24.17 / 24.00 tokens/s (prior comparison, not remeasured this turn).
+The new micro results identify concrete kernel gaps; they are not a claimed
+end-to-end speed-up from a patch that has not been tested in the full model.
+
+Next implementation order supported by these measurements
+1. Repair IQ4 multi-token dispatch: preserve the direct-codebook arithmetic in
+   a specialized batch kernel. Use four existing fast single-token calls as a
+   validated fallback/reference. Keep exact output parity with T=1.
+2. Replace Q6_K's runtime eight-column generic layout with a Metal-specific
+   small-batch implementation. Use Meld's row packing and dequantize-once layout
+   as a performance reference. Distinguish mathematical correctness from bitwise
+   CUDA reduction parity; measure quality if the latter is relaxed.
+3. Then profile resident IQ4_NL expert down and the other quantized projections,
+   followed by GDN commit. Repeat clean off/MTP A/B only after a measured kernel
+   change. More threshold/window tuning alone does not fix these paths.
+
+Artifacts / reproduction
+profile.py runs the installed engine once and always shuts down its process group.
+micro.mm builds against Meld's local ggml-metal-impl.h. Build commands:
+xcrun -sdk macosx metal -fno-fast-math -ffp-contract=off -I src/kernels/metal \
+  src/kernels/metal/native_mmvq.metal -o /tmp/strata-mtp-post-analysis/strata.metallib
+xcrun -sdk macosx metal -I /Users/liangxw/.meld-turbo/llama.cpp/ggml/src \
+  -I /Users/liangxw/.meld-turbo/llama.cpp/ggml/src/ggml-metal \
+  /Users/liangxw/.meld-turbo/llama.cpp/ggml/src/ggml-metal/kernels/mul_mv.metal \
+  -o /tmp/strata-mtp-post-analysis/meld.metallib
+clang++ -std=c++20 -O2 -fobjc-arc \
+  -I /Users/liangxw/.meld-turbo/llama.cpp/ggml/src/ggml-metal \
+  bench/results/2026-10-11-mtp-post-optimization-analysis/micro.mm \
+  -framework Metal -framework Foundation -o /tmp/strata-mtp-post-analysis/micro
+Run with the two metallib paths. Adding a fourth argument performs the varied-
+scale correctness-only checks. Without it, timings alternate ABBA for >=10 s.
+single1 rows are a short diagnostic sample and are not used for speed-up claims.
+source-manifest.json records the installed binary and reviewed file hashes.
+
+Production source, binary and daily configuration were not changed this turn.
+All inference and microbenchmark processes were closed. Final system-wide free
+memory reported 90%. See cleanup.json, report.json and raw CSV/logs.

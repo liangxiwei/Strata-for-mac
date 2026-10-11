@@ -11,11 +11,12 @@
 #include <random>
 #include <vector>
 #include <cstring>
+#include <cstdlib>
 
 // Same native blocks as the independent IQ dequant parity fixtures: random legal codes with small,
 // finite scales. Compare tiled products with the validated full FP16 dequantizer + ordinary GEMM.
 int native_gemm_case(int gu_type, int down_type, int H, int FF, strata::prefill::Gemm& gemm,
-                     cudaStream_t stream, std::mt19937& rng) {
+                     cudaStream_t stream, std::mt19937& rng, int short_rows = 3) {
     namespace k = strata::kernels;
     const auto L = k::native_expert_layout(gu_type, down_type, H, FF);
     const size_t offset = L.bytes + 128;
@@ -38,19 +39,24 @@ int native_gemm_case(int gu_type, int down_type, int H, int FF, strata::prefill:
         matrix(at, gu_type, 2 * FF, H);
         matrix(at + L.down_off, down_type, H, FF);
     }
-    constexpr int rows = 37;
-    const int32_t desc[] = {0, 1, 3, 0, (int32_t)offset, 4, 16, 0,
-                           (int32_t)offset, 20, 16, 0, 0, 36, 1, 0};
+    const int rows = short_rows + 34;
+    std::vector<int32_t> desc;
+    for (int r = 0; r < short_rows; r += 16)
+        desc.insert(desc.end(), {0, 1 + r, std::min(16, short_rows - r), 0});
+    desc.insert(desc.end(), {(int32_t)offset, short_rows + 1, 16, 0,
+                            (int32_t)offset, short_rows + 17, 16, 0, 0, rows - 1, 1, 0});
+    const int32_t desc32[] = {0, 1, short_rows, 0, (int32_t)offset, short_rows + 1, 32, 0,
+                             0, rows - 1, 1, 0};
     uint8_t* arena = nullptr;
     uint16_t *x = nullptr, *w = nullptr;
     int32_t* tiles = nullptr;
     float *actual = nullptr, *expected = nullptr;
-    cudaMalloc(&arena, blobs.size()); cudaMalloc(&tiles, sizeof desc);
+    cudaMalloc(&arena, blobs.size()); cudaMalloc(&tiles, desc.size() * 4);
     cudaMalloc(&x, rows * H * 2); cudaMalloc(&w, 2 * FF * H * 2);
     const size_t out_cap = (size_t) rows * std::max(H, 2 * FF) + 16;
     cudaMalloc(&actual, out_cap * 4); cudaMalloc(&expected, out_cap * 4);
     cudaMemcpyAsync(arena, blobs.data(), blobs.size(), cudaMemcpyHostToDevice, stream);
-    cudaMemcpyAsync(tiles, desc, sizeof desc, cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(tiles, desc.data(), desc.size() * 4, cudaMemcpyHostToDevice, stream);
     int failures = 0;
     for (bool down : {false, true}) {
         const int inner = down ? FF : H, cols = down ? H : 2 * FF;
@@ -64,19 +70,26 @@ int native_gemm_case(int gu_type, int down_type, int H, int FF, strata::prefill:
             auto* blob = arena + expert * offset;
             if (down) k::iq_dequant_f16(down_type, blob + L.down_off, (int64_t) H * FF, w, stream);
             else k::iq_dequant_gu_f16(gu_type, blob, blob + L.up_off, FF, H, w, stream);
-            const int first = expert ? 4 : 1, count = expert ? 32 : 3;
+            const int first = expert ? short_rows + 1 : 1, count = expert ? 32 : short_rows;
             gemm.f16(x + first * inner, w, expected + first * cols, count, cols, inner);
-            if (!expert) gemm.f16(x + 36 * inner, w, expected + 36 * cols, 1, cols, inner);
+            if (!expert) gemm.f16(x + (rows - 1) * inner, w, expected + (rows - 1) * cols, 1, cols, inner);
         }
-        k::native_expert_gemm(L, x, arena, tiles, actual, 4, down, stream);
-        cudaStreamSynchronize(stream);
-        cudaMemcpy(got.data(), actual, got.size() * 4, cudaMemcpyDeviceToHost);
-        cudaMemcpy(want.data(), expected, want.size() * 4, cudaMemcpyDeviceToHost);
-        size_t diff = 0;
-        for (size_t i = 0; i < got.size(); ++i) diff += std::memcmp(&got[i], &want[i], 4) != 0;
-        std::printf("Native tiled %d/%d %dx%d %s, offsets/tails/guards: %zu differences\n",
-                    gu_type, down_type, H, FF, down ? "down" : "gate/up", diff);
-        failures += diff != 0;
+        for (int tile_rows : {0, 16, 32}) {
+            std::fill(got.begin(), got.end(), -987.f);
+            cudaMemcpyAsync(actual, got.data(), got.size() * 4, cudaMemcpyHostToDevice, stream);
+            cudaMemcpyAsync(tiles, tile_rows == 32 ? desc32 : desc.data(),
+                            tile_rows == 32 ? sizeof desc32 : desc.size() * 4, cudaMemcpyHostToDevice, stream);
+            k::native_expert_gemm(L, x, arena, tiles, actual, tile_rows == 32 ? 3 : desc.size() / 4,
+                                  down, stream, tile_rows);
+            cudaStreamSynchronize(stream);
+            cudaMemcpy(got.data(), actual, got.size() * 4, cudaMemcpyDeviceToHost);
+            cudaMemcpy(want.data(), expected, want.size() * 4, cudaMemcpyDeviceToHost);
+            size_t diff = 0;
+            for (size_t i = 0; i < got.size(); ++i) diff += std::memcmp(&got[i], &want[i], 4) != 0;
+            std::printf("Native tiled %d/%d %dx%d %s, tile rows %d, offsets/tails/guards: %zu differences\n",
+                        gu_type, down_type, H, FF, down ? "down" : "gate/up", tile_rows, diff);
+            failures += diff != 0;
+        }
     }
     cudaFree(arena); cudaFree(tiles); cudaFree(x); cudaFree(w); cudaFree(actual); cudaFree(expected);
     return failures;
@@ -93,6 +106,8 @@ int main() {
     for (int gu : {16, 17, 18, 21, 22, 23, 29, 42})
         for (int dt : {20, 23, 42}) fail += native_gemm_case(gu, dt, 512, 256, gemm, stream, rng);
     for (int gu : {16, 22, 29}) fail += native_gemm_case(gu, 42, 2560, 640, gemm, stream, rng);
+    for (int gu : {18, 21, 22, 23}) for (int tail : {8, 9, 16, 17, 24, 25, 31, 32})
+        fail += native_gemm_case(gu, gu == 22 ? 42 : 20, 2560, 640, gemm, stream, rng, tail);
     {
         constexpr size_t gu_codes = 1280 * 640, d_codes = 2560 * 160;
         constexpr size_t gu_scales = 1280 * 40, d_scales = 2560 * 10;

@@ -1,0 +1,20 @@
+{
+  "same_request": true,
+  "same_binary": false,
+  "same_engine_args_except_chunk": true,
+  "same_model_settings": true,
+  "same_output_ids": true,
+  "same_active_states": true,
+  "fresh_prompts_no_drafts": true,
+  "trace_files": [
+    28,
+    28
+  ],
+  "rows": 32,
+  "values": 7946240,
+  "different": 0,
+  "same_trace_inputs": true,
+  "finite": true,
+  "different_binary_allowed": true,
+  "bitwise_pass": true
+}

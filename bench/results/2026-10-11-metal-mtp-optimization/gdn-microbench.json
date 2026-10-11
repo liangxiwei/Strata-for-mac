@@ -1,0 +1,44 @@
+[
+  {
+    "window": 2,
+    "replay_us": 90.19800000000001,
+    "snapshot_us": 94.1935,
+    "time_reduction_percent": -4.429699106410334,
+    "replay_runs": [
+      84.161,
+      96.235
+    ],
+    "snapshot_runs": [
+      89.446,
+      98.941
+    ]
+  },
+  {
+    "window": 3,
+    "replay_us": 107.6275,
+    "snapshot_us": 109.015,
+    "time_reduction_percent": -1.28916866042601,
+    "replay_runs": [
+      95.436,
+      119.819
+    ],
+    "snapshot_runs": [
+      99.99,
+      118.04
+    ]
+  },
+  {
+    "window": 4,
+    "replay_us": 126.577,
+    "snapshot_us": 123.0805,
+    "time_reduction_percent": 2.7623501900029157,
+    "replay_runs": [
+      126.575,
+      126.579
+    ],
+    "snapshot_runs": [
+      122.715,
+      123.446
+    ]
+  }
+]

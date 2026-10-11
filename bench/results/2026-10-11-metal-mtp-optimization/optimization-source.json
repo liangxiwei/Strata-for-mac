@@ -1,0 +1,17 @@
+{
+  "CMakeLists.txt": "c1a416d8eb4a67735d9fb8d65773c5f95f7f4a307804d5b063740589130ae99a",
+  "include/strata/core/verify.hpp": "a6a0a5c5cd8dbc31d210a26ad01911ff573cc63174ea85ba42d0df6a6be38a8a",
+  "include/strata/kernels/verify_kernels.hpp": "090bddfbbc8cc6c2d8f3fb159fb6148fa7ca41547cc088faf826383e9bb5322f",
+  "setup.py": "2e2c6adcefb5b530e73c2cad20a5339803be5d6e47e48250d626dd1d8c4dd2ac",
+  "serve/server.py": "b346bd5cc0b3fa566233d87a8c920f8d9bdb4f25d95adfa637808b1e77cb931d",
+  "serve/test_server.py": "c22fc0529e5bfe2ddfb8151cf47412f6edddaad21b6264012b6eae89293cdb56",
+  "src/core/verify.cpp": "408113cf89350ca6a1a9376494be750828775cc5257636386c3712028e9a5e8e",
+  "src/program/generate.cpp": "7ea182a88aa710ddf47545bf455756ebb219c7271934539a792df12876015ac7",
+  "src/kernels/metal/fused_gr.mm": "29fd55121cf16a523e908c5937a75d92629f251605533bfce6b2e5045f864ea4",
+  "src/kernels/metal/fused_gr.metal": "7aec9a8ff4beb9ed7ed3002a6fd10cee9de0f6ce8038b6aee5befb1b374a1b04",
+  "src/kernels/metal/verify_kernels.mm": "ecd4664600193ff117d91f72625d51894660d105fba311d4dd534ffa1e6f9264",
+  "src/kernels/metal/verify_kernels.metal": "75339ab6a0491c1a75a84e03b7e6095443ffd74e2f01017c34e19e91e15b2f7a",
+  "tools/test_setup_draft_vocab.py": "87d3745470630ecace799f8a23ad5c5ad716d0718cd22c5ce02fd4717ff4e1c0",
+  "tests/core/metal_fused_gr_multi_test.cpp": "dfce73e472ea35c938058b97fc0612aec97f84ce6f2c706491cedb5ba93487f5",
+  "tests/core/metal_gdn_snapshot_test.cpp": "10aed012d60767b9f99d2ef6b660f90b7b668b354c1e75020a7f08d5a8371b93"
+}

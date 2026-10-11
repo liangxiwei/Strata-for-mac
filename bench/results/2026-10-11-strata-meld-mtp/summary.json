@@ -1,0 +1,206 @@
+[
+  {
+    "prompt_tokens": 1139,
+    "gen_tokens": 512,
+    "ttft_s": 5.974103874999997,
+    "elapsed_s": 37.348884333,
+    "decode_tps": 16.288904061203638,
+    "prompt_tps_including_ttft": 190.6562095055638,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 1139,
+      "prompt_ms": 5745.1,
+      "prompt_per_token_ms": 5.044,
+      "prompt_per_second": 198.3,
+      "predicted_n": 512,
+      "predicted_ms": 31588.5,
+      "predicted_per_token_ms": 61.696,
+      "predicted_per_second": 16.2,
+      "draft_n": 426,
+      "draft_n_accepted": 319
+    },
+    "usage": {
+      "prompt_tokens": 1139,
+      "completion_tokens": 512,
+      "total_tokens": 1651,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "content_sha256": "5cef2bd222783506e4696a3850706808768d00416cba1d431f1d21a800713069",
+    "round": 0,
+    "approx_prompt_tokens": 1000,
+    "mode": "strata_meld_q8_mtp",
+    "prompt_sha256": "bb17082f0847b2521543da6ca01269423307fd29754cfb3ba94b800d9fcc51d1"
+  },
+  {
+    "prompt_tokens": 4289,
+    "gen_tokens": 512,
+    "ttft_s": 19.124566165999994,
+    "elapsed_s": 53.38781445799998,
+    "decode_tps": 14.915801685690584,
+    "prompt_tps_including_ttft": 224.26652519967033,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 4289,
+      "prompt_ms": 19007.0,
+      "prompt_per_token_ms": 4.432,
+      "prompt_per_second": 225.7,
+      "predicted_n": 512,
+      "predicted_ms": 34333.1,
+      "predicted_per_token_ms": 67.057,
+      "predicted_per_second": 14.9,
+      "draft_n": 416,
+      "draft_n_accepted": 336
+    },
+    "usage": {
+      "prompt_tokens": 4289,
+      "completion_tokens": 512,
+      "total_tokens": 4801,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "content_sha256": "e7c55b192c7c508e2614a7475d5aa256c296fb505c89a9749b6a6514d9f45311",
+    "round": 0,
+    "approx_prompt_tokens": 4000,
+    "mode": "strata_meld_q8_mtp",
+    "prompt_sha256": "a1453406ef3f54f4ac143a66ee5f05908f677dfa36f00eb09734366435bd4333"
+  },
+  {
+    "prompt_tokens": 1139,
+    "gen_tokens": 512,
+    "ttft_s": 6.308192208000037,
+    "elapsed_s": 38.801834375,
+    "decode_tps": 15.729354629504618,
+    "prompt_tps_including_ttft": 180.55886099277737,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 1139,
+      "prompt_ms": 6122.3,
+      "prompt_per_token_ms": 5.375,
+      "prompt_per_second": 186.0,
+      "predicted_n": 512,
+      "predicted_ms": 32665.8,
+      "predicted_per_token_ms": 63.8,
+      "predicted_per_second": 15.7,
+      "draft_n": 436,
+      "draft_n_accepted": 326
+    },
+    "usage": {
+      "prompt_tokens": 1139,
+      "completion_tokens": 512,
+      "total_tokens": 1651,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "content_sha256": "6d5cf21237deca10def1421ef01877702ea29c48734642ce36d789caa68453b8",
+    "round": 1,
+    "approx_prompt_tokens": 1000,
+    "mode": "strata_meld_q8_mtp",
+    "prompt_sha256": "23718d23aa176cb1c52e6c91cf05919619dad9fe301d2ebb2aacfe8c4e815290"
+  },
+  {
+    "prompt_tokens": 4289,
+    "gen_tokens": 512,
+    "ttft_s": 18.47524337499999,
+    "elapsed_s": 49.761189667,
+    "decode_tps": 16.335125988920527,
+    "prompt_tps_including_ttft": 232.1484980167414,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 4289,
+      "prompt_ms": 18379.2,
+      "prompt_per_token_ms": 4.285,
+      "prompt_per_second": 233.4,
+      "predicted_n": 512,
+      "predicted_ms": 31354.7,
+      "predicted_per_token_ms": 61.24,
+      "predicted_per_second": 16.3,
+      "draft_n": 413,
+      "draft_n_accepted": 313
+    },
+    "usage": {
+      "prompt_tokens": 4289,
+      "completion_tokens": 512,
+      "total_tokens": 4801,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "content_sha256": "318e3521e69e8b140040a26ff95c6b03b6e20c83819fa3fff1916662e7a8e313",
+    "round": 1,
+    "approx_prompt_tokens": 4000,
+    "mode": "strata_meld_q8_mtp",
+    "prompt_sha256": "60c430d45bdef082ece9f6cb361a8011781dee37af895366fc6cec3686c0c5a1"
+  },
+  {
+    "prompt_tokens": 1139,
+    "gen_tokens": 512,
+    "ttft_s": 5.621925125000018,
+    "elapsed_s": 40.44985570799997,
+    "decode_tps": 14.672204152679264,
+    "prompt_tps_including_ttft": 202.59963885591526,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 1139,
+      "prompt_ms": 5523.3,
+      "prompt_per_token_ms": 4.849,
+      "prompt_per_second": 206.2,
+      "predicted_n": 512,
+      "predicted_ms": 34915.5,
+      "predicted_per_token_ms": 68.194,
+      "predicted_per_second": 14.7,
+      "draft_n": 446,
+      "draft_n_accepted": 286
+    },
+    "usage": {
+      "prompt_tokens": 1139,
+      "completion_tokens": 512,
+      "total_tokens": 1651,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "content_sha256": "7863d5c9904354724d2af1f257e51e84b10b8041f7276ba7fbf652f747bc669c",
+    "round": 2,
+    "approx_prompt_tokens": 1000,
+    "mode": "strata_meld_q8_mtp",
+    "prompt_sha256": "0d512dcbe2279b249e97e41cd436cd3f00e64bcf72cf4ebb9d5f13f821edb085"
+  },
+  {
+    "prompt_tokens": 4289,
+    "gen_tokens": 512,
+    "ttft_s": 19.322073124999974,
+    "elapsed_s": 51.79043387499996,
+    "decode_tps": 15.7406504109471,
+    "prompt_tps_including_ttft": 221.97411076198924,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 4289,
+      "prompt_ms": 19229.8,
+      "prompt_per_token_ms": 4.484,
+      "prompt_per_second": 223.0,
+      "predicted_n": 512,
+      "predicted_ms": 32537.0,
+      "predicted_per_token_ms": 63.549,
+      "predicted_per_second": 15.7,
+      "draft_n": 434,
+      "draft_n_accepted": 320
+    },
+    "usage": {
+      "prompt_tokens": 4289,
+      "completion_tokens": 512,
+      "total_tokens": 4801,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "content_sha256": "18bd860ff1059f3d47a40d37a14fbce7495693973d1eb5e6ef8ef72e6bf5a376",
+    "round": 2,
+    "approx_prompt_tokens": 4000,
+    "mode": "strata_meld_q8_mtp",
+    "prompt_sha256": "1bd434a8c8127dbf84c1a835bc6632690df7a3425eafad645f92234a7880ba91"
+  }
+]

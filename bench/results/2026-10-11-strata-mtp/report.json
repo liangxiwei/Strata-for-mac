@@ -1,0 +1,113 @@
+{
+  "groups": [
+    {
+      "approx_prompt_tokens": 1000,
+      "prompt_tokens": 1139,
+      "runs": 3,
+      "gen_tokens": 512,
+      "decode_tps": 15.77343166231343,
+      "decode_tps_range": [
+        14.678925138049653,
+        16.307113799380524
+      ],
+      "prefill_tps": 204.9,
+      "ttft_s": 5.6581245840000065,
+      "total_s": 37.814199041999984,
+      "draft_n": 1291,
+      "draft_n_accepted": 914,
+      "draft_acceptance": 0.7079783113865221,
+      "previous_strata_off": {
+        "runs": 3,
+        "prompt_tokens": [
+          1139,
+          1139,
+          1139
+        ],
+        "gen_tokens": [
+          512,
+          512,
+          512
+        ],
+        "decode_tps": 18.453337130053175,
+        "prefill_tps": 203.2,
+        "ttft_s": 5.754302458999973,
+        "total_s": 33.445887374999984
+      },
+      "previous_meld_mtp": {
+        "runs": 3,
+        "prompt_tokens": [
+          1139,
+          1139,
+          1139
+        ],
+        "gen_tokens": [
+          512,
+          512,
+          512
+        ],
+        "decode_tps": 24.16548852887434,
+        "prefill_tps": 182.796520350276,
+        "ttft_s": 6.264150374999986,
+        "total_s": 27.62430458299997
+      },
+      "gain_over_previous_strata_off_percent": -14.522606121877224
+    },
+    {
+      "approx_prompt_tokens": 4000,
+      "prompt_tokens": 4289,
+      "runs": 3,
+      "gen_tokens": 512,
+      "decode_tps": 16.15680511351815,
+      "decode_tps_range": [
+        15.67537801386895,
+        17.167989265103458
+      ],
+      "prefill_tps": 225.4,
+      "ttft_s": 19.125135625000013,
+      "total_s": 50.604396334,
+      "draft_n": 1222,
+      "draft_n_accepted": 953,
+      "draft_acceptance": 0.7798690671031097,
+      "previous_strata_off": {
+        "runs": 3,
+        "prompt_tokens": [
+          4289,
+          4289,
+          4289
+        ],
+        "gen_tokens": [
+          512,
+          512,
+          512
+        ],
+        "decode_tps": 18.19168776306885,
+        "prefill_tps": 220.6,
+        "ttft_s": 19.53822716700006,
+        "total_s": 47.80414912499998
+      },
+      "previous_meld_mtp": {
+        "runs": 3,
+        "prompt_tokens": [
+          4289,
+          4289,
+          4289
+        ],
+        "gen_tokens": [
+          512,
+          512,
+          512
+        ],
+        "decode_tps": 24.000755623820805,
+        "prefill_tps": 190.38778293715305,
+        "ttft_s": 22.592608541000004,
+        "total_s": 43.88395800000001
+      },
+      "gain_over_previous_strata_off_percent": -11.185782628051355
+    }
+  ],
+  "ready_s": 130.293293709,
+  "identical_output_pairs": 6,
+  "output_pairs": 6,
+  "reference_runs_from_previous_test": true,
+  "single_process_for_three_mtp_rounds": true
+}

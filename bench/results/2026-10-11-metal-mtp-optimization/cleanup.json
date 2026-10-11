@@ -1,0 +1,9 @@
+{
+  "remaining_inference_processes": [],
+  "swap_after": "vm.swapusage: total = 23552.00M  used = 22264.06M  free = 1287.94M  (encrypted)\n",
+  "memory_pressure_after": "The system has 103079215104 (6291456 pages with a page size of 16384).\nSystem-wide memory free percentage: 91%\n",
+  "test_ports_closed": [
+    8081,
+    8082
+  ]
+}

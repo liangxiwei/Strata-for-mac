@@ -10,16 +10,16 @@
 // altogether leaves every output bit-identical, and a shared-memory copy of lo is the same bits the down
 // kernel wrote.
 //
-// EVERY POINTER IS A BOUND BUFFER ARGUMENT, ONE LAUNCH PER TOKEN (measured, docs/PORT_METAL/PROGRESS.md
+// EVERY POINTER IS A BOUND BUFFER ARGUMENT (measured, docs/PORT_METAL/PROGRESS.md
 // rule 9): a raw pointer stored in setBytes data or a buffer - the CUDA struct's whole argument style - is
 // not usable on Apple Silicon.  Two spellings were measured dead: a pointer loaded from such data
 // dereferences to zero with every write vanishing (no error), and even reconstructing it as anchor +
 // byte-offset from one bound anchor only reaches ~8-16 KB from the anchor's base (offsets beyond that
 // silently address nothing).  A bound [[buffer(N)]] argument reaches anywhere - including interior
 // pointers, which the runtime binds with a large offset the same way every other ported kernel's do.  So
-// the T-token GrMulti becomes T launches of one-token kernels, each with its own pointers as arguments;
-// per token the arithmetic is the CUDA kernels' own, so the multi read is still bitwise the single-token
-// read, exactly as fused_gr.hpp promises.
+// contiguous token-major tensors can instead share a bound allocation and use ordinary array indices.
+// The batched projections below load a weight chunk once for all tokens, retaining each token's original
+// FMA and reduction order. Arbitrary pointer layouts still use the one-token kernels.
 #include "strata_port.metalh"
 
 constant const int FGR_THREADS = 256;
@@ -248,4 +248,115 @@ kernel void fused_gr_up_kernel(constant const uint* w_up [[buffer(0)]],         
         mixed[d0 + tid] = s / (float) FGR_HC;
     }
 }
+
+// Weight reuse across a verification window. Keep dot8, the ascending chunk accumulation and the XOR
+// butterfly identical to the one-token projections: batch size must not change greedy sampling.
+template<int NT>
+static inline void fgr_down_batch(constant const uint* w_down, constant const uint* w_inject,
+                                 constant const float* xn, device float* lo, device float* inject_out,
+                                 uint block, uint lane, uint sg) {
+    const bool inject_block = block == FGR_DOWN_BLOCKS;
+    const int row = inject_block ? (int) sg : (int) block * FGR_WARPS + (int) sg;
+    const bool active = !(inject_block && (w_inject == nullptr || sg >= (uint) FGR_HC));
+    float acc[NT] = {};
+    if (active) {
+        constant const uint4* w4 = reinterpret_cast<constant const uint4*>(
+            reinterpret_cast<constant const uint16_t*>(inject_block ? w_inject : w_down) +
+            (ulong) row * FGR_D);
+        for (int j = (int) lane; j < FGR_D / 8; j += 32) {
+            const uint4 w = w4[j];
+#pragma unroll
+            for (int t = 0; t < NT; ++t) acc[t] += fgr_dot8(w, xn + (ulong) t * FGR_D + j * 8);
+        }
+    }
+#pragma unroll
+    for (int t = 0; t < NT; ++t) {
+        const float sum = fgr_warp_sum(acc[t]);
+        if (lane == 0 && active) {
+            if (inject_block) inject_out[t * FGR_HC + row] = sum;
+            else {
+                const float x = sum / (float) FGR_HC;
+                lo[t * FGR_LR + row] = x / (1.0f + metal::precise::exp(-x));
+            }
+        }
+    }
+}
+
+template<int NT>
+static inline void fgr_up_batch(constant const uint* w_up, constant const float* lo,
+                               constant const float* R, device float* R_out,
+                               constant const float* bo_prev, constant const float* inj_prev,
+                               constant const float* w_norm, constant const float* rs,
+                               device float* mixed, int apply,
+                               threadgroup float (&g)[NT][4][16], uint block, uint tid, uint lane, uint sg) {
+    const int d0 = (int) block * FGR_UPM_COLS;
+    for (int r = (int) sg; r < FGR_HC * FGR_UPM_COLS; r += FGR_WARPS) {
+        const int c = r / FGR_UPM_COLS, dd = r - c * FGR_UPM_COLS, i = c * FGR_N + d0 + dd;
+        constant const uint4* w4 = reinterpret_cast<constant const uint4*>(
+            reinterpret_cast<constant const uint16_t*>(w_up) + (ulong) i * FGR_LR);
+        const uint4 wa = w4[lane];
+        const uint4 wb = lane < (uint) (FGR_LR / 8 - 32) ? w4[32 + lane] : uint4(0u);
+#pragma unroll
+        for (int t = 0; t < NT; ++t) {
+            constant const float* xt = lo + (ulong) t * FGR_LR;
+            float acc = fgr_dot8(wa, xt + (ulong) lane * 8);
+            if (lane < (uint) (FGR_LR / 8 - 32)) acc += fgr_dot8(wb, xt + (ulong) (32 + lane) * 8);
+            acc = fgr_warp_sum(acc);
+            if (lane == 0) {
+                float rv = R[t * FGR_D + i];
+                if (apply != 0) {
+                    rv = fma(bo_prev[t * FGR_N + d0 + dd],
+                             2.0f * fgr_sigmoid(inj_prev[t * FGR_HC + c] / (float) FGR_HC), rv);
+                    R_out[t * FGR_D + i] = rv;
+                }
+                const float x = rv * w_norm[i] * rs[t * FGR_HC + c];
+                g[t][c][dd] = x * fgr_sigmoid(acc);
+            }
+        }
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (tid < FGR_UPM_COLS) {
+#pragma unroll
+        for (int t = 0; t < NT; ++t) {
+            float s = 0.0f;
+#pragma unroll
+            for (int c = 0; c < FGR_HC; ++c) s += g[t][c][tid];
+            mixed[t * FGR_N + d0 + tid] = s / (float) FGR_HC;
+        }
+    }
+}
+
+// Concrete entry points keep the token loop compile-time sized without a device pointer table.
+#define FGR_BATCH(NT) \
+kernel void fused_gr_down_batch_##NT(constant const uint* wd [[buffer(0)]], \
+                                     constant const uint* wi [[buffer(1)]], \
+                                     constant const float* xn [[buffer(2)]], \
+                                     device float* lo [[buffer(3)]], device float* inj [[buffer(4)]], \
+                                     uint3 pos [[threadgroup_position_in_grid]], \
+                                     uint lane [[thread_index_in_simdgroup]], \
+                                     uint sg [[simdgroup_index_in_threadgroup]]) { \
+    fgr_down_batch<NT>(wd, wi, xn, lo, inj, pos.x, lane, sg); \
+} \
+kernel void fused_gr_up_batch_##NT(constant const uint* wu [[buffer(0)]], \
+                                   constant const float* lo [[buffer(1)]], \
+                                   constant const float* R [[buffer(2)]], device float* Ro [[buffer(3)]], \
+                                   constant const float* bo [[buffer(4)]], \
+                                   constant const float* inj [[buffer(5)]], \
+                                   constant const float* wn [[buffer(6)]], \
+                                   constant const float* rs [[buffer(7)]], device float* mix [[buffer(8)]], \
+                                   constant const int& apply [[buffer(9)]], \
+                                   uint3 pos [[threadgroup_position_in_grid]], uint tid [[thread_index_in_threadgroup]], \
+                                   uint lane [[thread_index_in_simdgroup]], \
+                                   uint sg [[simdgroup_index_in_threadgroup]]) { \
+    threadgroup float g[NT][4][16]; \
+    fgr_up_batch<NT>(wu, lo, R, Ro, bo, inj, wn, rs, mix, apply, g, pos.x, tid, lane, sg); \
+}
+FGR_BATCH(2)
+FGR_BATCH(3)
+FGR_BATCH(4)
+FGR_BATCH(5)
+FGR_BATCH(6)
+FGR_BATCH(7)
+FGR_BATCH(8)
+#undef FGR_BATCH
 

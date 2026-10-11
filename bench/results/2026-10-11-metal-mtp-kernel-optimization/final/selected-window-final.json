@@ -1,0 +1,25 @@
+{
+  "window": 4,
+  "spec_min_p": 0.5,
+  "screen_scores": [
+    {
+      "window": 2,
+      "spec_min_p": 0.5,
+      "median_tps": [
+        21.261207440127748,
+        20.43419294323389
+      ],
+      "geometric_mean_tps": 20.843598898407404
+    },
+    {
+      "window": 4,
+      "spec_min_p": 0.5,
+      "median_tps": [
+        21.497162295640297,
+        21.322970268081672
+      ],
+      "geometric_mean_tps": 21.409889128112372
+    }
+  ],
+  "criterion": "geometric mean of three-round throughput medians for both input lengths; T2 and T4 confirmed across all three prompt variants"
+}

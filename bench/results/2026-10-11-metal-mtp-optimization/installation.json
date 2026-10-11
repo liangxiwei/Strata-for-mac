@@ -1,0 +1,17 @@
+{
+  "installed_at": "2026-10-11T21:36:56.983556+08:00",
+  "engine": "/Users/liangxw/src/xproject/petproject/Strata/engine/strata",
+  "old_engine_backup": "/Users/liangxw/src/xproject/petproject/Strata/engine/strata.before-2026-10-11-mtp-opt",
+  "old_build_metadata_backup": "/Users/liangxw/src/xproject/petproject/Strata/engine/BUILD.before-2026-10-11-mtp-opt.json",
+  "old_engine_sha256": "12365f5a7f194a02b3a306e0e554060a33cc444dbd6e894edcd2dec78579475e",
+  "installed_engine_sha256": "1f3d63b3427edbb6361d4e1fca2a344cad2ef30a6a5ef5f819051627953c2763",
+  "validated_production_engine_sha256": "1f3d63b3427edbb6361d4e1fca2a344cad2ef30a6a5ef5f819051627953c2763",
+  "source_hash": "3b46c3bde752fdd4",
+  "daily_config_changed": false,
+  "mtp_max_t": 1,
+  "hc_batch_default": true,
+  "gdn_snapshots_default": false,
+  "main_model_changed": false,
+  "original_mtp_runtime_changed": false,
+  "processes_closed": true
+}

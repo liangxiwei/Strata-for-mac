@@ -1,0 +1,51 @@
+Strata Metal MTP 优化实测（2026-10-11）
+
+Apple M2 Max, 38 GPU cores, 96 GiB unified RAM, Low Power Mode retained
+主模型为已下载 IQ3_S；使用原 Strata Q2_0 MTP。没有修改或下载模型权重。
+输入 1139 / 4289 tokens，每次生成 512 tokens，temperature=0，关闭思考和提示缓存。
+排除 64-token 预热；任意时刻只加载一个推理模型。
+
+模式 | 输入tokens | 窗口 | 次数 | 解码中位数(tok/s) | 相对关闭MTP | 文本一致
+off | 1139 | 1 | 3 | 19.113 | +0.00% | 3/3
+off | 4289 | 1 | 3 | 18.854 | +0.00% | 3/3
+optimized_mtp | 1139 | 2 | 3 | 17.663 | -7.58% | 3/3
+optimized_mtp | 4289 | 2 | 3 | 17.993 | -4.56% | 3/3
+legacy_mtp | 1139 | 4 | 3 | 16.448 | -13.94% | 3/3
+legacy_mtp | 4289 | 4 | 3 | 16.641 | -11.73% | 3/3
+snapshot_integration | 1139 | 4 | 1 | 18.228 | -4.63% | 1/1
+snapshot_integration | 4289 | 4 | 1 | 18.699 | -0.82% | 1/1
+
+代码改动：
+1. HC down/up 将连续的 2–8-token 张量合并计算，每个权重片段只读取一次。保留每个 token 的 FMA 和归约顺序。
+   norm 仍逐 token；4-token HC 从 12 次 dispatch 减至 6 次。非连续布局和单 token 走原路径。
+   STRATA_METAL_HC_BATCH=0 可回退。默认启用。
+2. Metal 实际启用 MTP 草稿时，setup.start 自动安装已有的小词表；不覆盖自定义词表。
+   关闭草稿时不新增 draft-head 的内存占用。测试词表含 106299 个 token。
+3. 实现可选 GDN 前缀快照，提交只复制被接受的最后状态，不重跑递推。
+   STRATA_METAL_GDN_SNAPSHOT=1 启用，仅支持完整模型、专家全驻留的 Metal 验证。默认关闭。
+   当前4-token窗口额外432 MiB，微基准没有支持默认启用的收益。
+4. strata_tune.mtp_max_t 可按请求缩小 MTP 窗口，范围 1–8，且不超过启动配置的上限。
+   1 关闭 MTP 草稿；下一请求恢复启动默认值。用于校准和回退，不改变模型参数。
+
+HC 交替微基准（每个点持续至少10秒）：
+T=2: 87.144 -> 75.698 us，耗时减少13.13%
+T=3: 127.051 -> 104.539 us，耗时减少17.72%
+T=4: 168.948 -> 142.208 us，耗时减少15.83%
+
+GDN 交替微基准（验证+提交）：
+T=2: replay 90.198，snapshot 94.194 us，耗时减少-4.43%
+T=3: replay 107.627，snapshot 109.015 us，耗时减少-1.29%
+T=4: replay 126.577，snapshot 123.081 us，耗时减少+2.76%
+
+验证：HC 120个逐位对照案例、GDN 174个接受前缀案例、149项Python测试全部通过。
+完整模型请求文本一致：30/30。
+
+范围与限制：只测本机 Metal/IQ3_S；不推及 CUDA/HIP、其他主模型或随机采样。
+早期 baseline-r0 与CPU编译重叠，已排除最终百分比。GDN局部微基准不代表整模型收益。
+窗口与关闭MTP在同一加载进程内交替；干净的旧MTP路径另起单个模型进程测量。
+原始数据、trace、配置、构建记录、复现脚本在本目录。
+
+最终安装和日常参数见 installation.json；进程清理见 cleanup.json。
+
+已安装验证过的生产构建；旧引擎及BUILD.json均有备份。
+日常配置未改：mtp-max-t=1，保持关闭MTP草稿。HC批量默认启用，GDN快照默认关闭。

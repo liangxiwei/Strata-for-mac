@@ -926,3 +926,120 @@ fusion duplicates norm per down group, staging two 20-KiB halves within the 32-K
 33.50 -> 62.18 us, full chain 58.85 -> 85.69 us, 93,464 intermediate/output values bitwise. Prefill FP16
 expert and dense views, IQ2 signed-nibble views and mixed expert tiles also remain out of defaults; see
 the evidence for memory budgets, negative results and noisy whole-prefill pairs.
+
+## 2026-10-09 — round 28: IQ3_S 30K prefill in Low Power Mode
+
+* M2 Max (38-core GPU, 96 GB), macOS 26.5, Xcode 26.1, plugged in, `powermode 1`. Same daily engine and IQ3_S
+  weights, 262144 context capacity, FP16 KV, 24576 resident experts, no drafts. Two fixed 30000-token inputs,
+  no prefix reuse. Chunk 1024: 172.058 / 152.005 s; 2048: 149.633 / 133.098 s (+14.99% / +14.20% throughput).
+  2048 adds 465 MiB of GPU allocation; physical footprint 61.4G -> 61.8G. The local IQ3_S config now uses 2048.
+* Chunk 4096: 159.963 / 122.470 s, peak 62.4G, +1393 MiB over 1024. Across this pair, total time is effectively
+  equal to 2048 (+928 MiB allocation), so it is recorded as an option rather than selected.
+* Numerical gate: both 2048 and 4096 match the 1024 reference bitwise at 32 positions / 7946240 logits; active
+  KV, GDN, PLE, tail, pooled/dead fingerprints and output ids match, all logits finite. Independent
+  `metal_direct_dot_test` and `metal_gemm_test` pass (6.39 s total). No engine or model replacement.
+* First-principles accounting: experts carry roughly 141.6 TFLOP of required multiply/add work for 30K.
+  Doubling chunk increases weight reuse and cuts dense dequantization and host grouping/sync counts. Diagnostic
+  kernel shares: expert GEMM 38.75%, dense GEMM 31.1%, attention 15.0%, separate dequant 6.14%, GDN 3.30%.
+* Rejected: K scratch 32 -> 64/128 (6 -> 11/21 KiB for 16x64 tiles), slower despite fewer barriers; lossless
+  FP16 expansion in 64-expert batches (400 MiB scratch), slower including expansion/write/read; mixed 16/32
+  expert tiles have format-dependent isolated gains but no whole-model evidence. Complete FP16 experts would
+  take 225 GiB and do not fit this device.
+* Measurement correction: periodic `vmmap -summary` probes took 6-7 s with CPU load; early 242.328/221.527 s
+  measurements are excluded from performance conclusions. Final timing has no periodic memory sampling,
+  phase/kernel profiler or numerical readback. Read the saved peak only after requests; audit separately.
+  Do not count removing measurement overhead as a model speed-up.
+* Evidence and reproducible harnesses: `bench/results/2026-10-09-metal-iq3-s-30k/`. Only the two 30K text inputs
+  in Low Power Mode are established; 256K-input, other models and other energy modes were not retested.
+
+## 2026-10-09 — round 29: fine expert tails with current background load
+
+* User selected fine-grained tails as default. 32-row descriptors choose 8/16/24/32-row geometry uniformly
+  per threadgroup, retaining 256 threads, 8 KiB scratch, the same weight dequantizer, half operands and
+  ascending FP32 MMA sequence. No extra global GPU allocation or dispatch. `STRATA_METAL_PREFILL_MOE_TAIL=0`
+  restores the old path; 16-row descriptors retain their old kernel.
+* Actual-model gate: original daily engine vs final build, IQ3_S / 30000 tokens / 262144 capacity / chunk 2048.
+  All 7946240 logits at 32 positions, output ids and active KV/GDN/PLE/tail/pooled/dead states match bitwise,
+  all finite, no drafts or prefix reuse. Default direct-dot + GEMM tests pass (9.10 s), rollback GEMM passes
+  (2.45 s), including 8/9/16/17/24/25/31/32-row boundaries. Daily binary replaced after this gate.
+* Clean current-load timings, two fresh prompts per engine: V1 old 170.124 / 163.013 s; coarse 16/32 tails
+  185.013 / 160.213; coarse plus 2 GiB dense cache 179.728 / 162.206, footprint 61.6G -> 63.5G. Cache removed.
+  Same V2 fine/old/fine: 183.685 / 145.010, 188.748 / 165.549, 177.349 / 166.224 s. The first warm benefit
+  (+14.16% throughput) did not repeat (-0.41%). **No stable whole-prefill speedup claim.** Background jobs
+  and Low Power Mode were retained; no profiler, numerical readback or periodic memory sampling during timing.
+* Diagnostic current 2K kernel shares: expert GEMM 36.69%, dense FP16/BF16 23.14%/9.92%, attention 16.96%,
+  separate dequant 3.30%, GDN 3.74%, other 6.25%. Reduce padding work in the large expert share first;
+  caching dequantized dense weights cannot remove the dense multiply itself. Whole dense FP16 views need
+  about 5.42 GiB; the budgeted 2 GiB prototype did not justify its extra footprint.
+* Synthetic skewed routing, 7-round medians: ~36-41 rows/expert, old r32 -> fine gate/up type 18 55.64 -> 46.92 ms,
+  21 50.88 -> 42.53, 22 68.61 -> 62.87, 23 62.55 -> 56.43; down 20 23.38 -> 20.97, 42 32.21 -> 27.29.
+  Outputs bitwise. Runtime tail guards inside the MMA loop were slower and rejected.
+* User requested 10K screening before any further 30K retest. Actual IQ3_S / 10000 input tokens / 262144
+  capacity / chunk 2048, same binary toggling only device-address-space GU types 18/21/22/23: current fine
+  67.487 / 42.835 s, candidate 61.236 / 42.819 s (warm 233.46 -> 233.54 tok/s, +0.037%, effectively tied).
+  Peak footprint 61.6G / 61.7G; output ids identical, no drafts/reuse. Independent GEMM gate passes (4.41 s),
+  but full-model logits/state audit not run for this rejected candidate. No further 30K retest or adoption.
+* Larger dense tiles, same arithmetic, 7-round micro medians: major FP16 2048x10240x2560 17.002 -> 17.546 ms
+  at best; 2048x2560x6144 8.115 -> 8.352; BF16 2048x320x10240 2.657 -> 3.454. FP16 2048x6144x2560 improves
+  11.110 -> 10.737 ms, but its ~4.2% diagnostic share implies only ~0.14% total time reduction. Not adopted.
+  Device/pipeline thread and shared-memory limits checked, up to 28 KiB threadgroup storage, outputs bitwise.
+* Evidence: `bench/results/2026-10-09-metal-iq3-s-30k-followup/`, including all noisy comparisons and rejected
+  prototype source patches. Local `run/` contains raw logs, binaries and traces; ignored by git.
+
+## 2026-10-11 — round 30: exact small batches with MTP enabled
+
+* Same IQ3_S GGUF and original Q2_0 MTP runtime, all 24,576 experts resident, FP16 KV, M2 Max 38 GPU cores /
+  96 GiB, macOS 26.5, existing Low Power Mode retained. No weights, layers, routes or sampling were reduced.
+  Exact HC batches avoid per-column launches. Q6_K batches T=2..8 use integer-valued float dots and four
+  virtual-warps in the original reduction order. Q4_K/Q5_K and IQ4_XS/IQ4_NL batches reuse decoded weights
+  across columns; resident IQ4_NL down reuses activation slices across four rows.
+* Sustained GPU microbenchmarks (ABBA, at least 10 seconds per point): actual T4 2560x640 projections,
+  Q4_K 29.159 -> 21.750 us, Q5_K 32.770 -> 22.845 us, IQ4_XS 30.312 -> 18.186 us; IQ4_NL 640x2560
+  35.356 -> 24.112 us. Resident IQ4_NL down cap 10 / 40: 124.864 / 501.528 -> 84.067 / 346.872 us.
+  IQ4 batches compare against separate existing fast single calls; Q4/Q5 compare against original packed multi.
+  Prototype shape/format checks: 672 cases / 1,551,312 outputs bitwise. Production MMVQ checks: 576 cases /
+  1,520,496 values including tail guards and changed-input captured replay. Direct-dot checks: 51,842,190 values
+  including route/offset and nonfinite scale cases. Five related CTests pass (12.87 s).
+* Actual-model gate, MTP cap 4 on both sides, capacity 262144, prefill 2048: four short inputs, frozen 10K input,
+  cached follow-up reusing 9993 tokens. All 117,703,680 finite logits at 474 positions / 132 windows, generated
+  IDs, draft counts and six committed GDN/KV/PLE/tail/pool state fingerprints match bitwise. This establishes
+  those inputs, not MTP quality at 100K or 256K input length or vision.
+* MTP window 4 / threshold 0.5 selected after repeated calibration: three-run warm medians 21.497 / 21.323
+  tok/s for approximately 1K / 4K fresh input, 512 greedy outputs, thinking off, capacity 131072, no prefix reuse.
+  Additional MTP-on new/stage1/new runs: 19.143 / 18.695 / 20.083 and 21.323 / 18.292 / 22.372 tok/s;
+  mean new +4.91% / +19.44%. This single A/B/A does not establish a confidence interval. Historical MTP-off
+  calibration is retained in the evidence, but the user now requires all future comparisons to keep MTP on.
+* Installed binary SHA-256 `3aa4e5972b0a9a56180a6e13a5b1f8ffa00112c2686003ba149d6071f0cac099`, source
+  fingerprint `73efdd2b9343705a`. Daily config retains 262144 capacity / 2048 prefill and enables MTP cap 4;
+  original runtime receives the tested CJK subset. Prior binary/metadata/config backups are retained.
+  Evidence: `bench/results/2026-10-11-metal-mtp-kernel-optimization/`.
+
+## 2026-10-12 — round 31: remaining CUDA integer emulation and installer defaults
+
+* Scanned Metal sources for packed dot, byte permutation, SWAR byte arithmetic, integer multiply-high,
+  ballot/popcount, quantization and half conversion. Active remaining packed paths are single-token/fallback
+  native MMVQ and resident IQ gate/up. S2 expert kernels are an alternate format path, not the current IQ3_S
+  native path. Sampler multiply-high is needed for exact RNG bits; quantization/half conversions preserve their
+  rounding and special-value contract. A textual occurrence alone does not establish avoidable hot work.
+* Generic float4 signed-byte dot (exact integer dot, wrapping accumulator) and vector byte permutation pass
+  262,144 independent CPU inputs per primitive / 524,288 values per mode. Resident GU validation adds 180 cases /
+  2,210,880 bitwise outputs. However, type 18 cap 20 / 40 screens worsen from 222.542 / 464.366 us to
+  278.883 / 640.453 us for float dots, and 299.937 / 829.070 us with vector permutation. Other active formats
+  also regress; no production helper change.
+* GU row reuse (2/4 rows, exact float dots, same outer/reduction order) passes another 180 cases / 2,210,880
+  bitwise values but active IQ3_XXS/IQ3_S/IQ2_S gate/up mostly regress. Q2_0 gate/up cap 40 has a favorable short
+  screen, but the draft layer uses cap 10, where the improvement is below the screening threshold; no default.
+* Q6_K single-token candidate passes 168 cases / 387,828 values bitwise. Burst timing made the draft head look
+  nearly twice as fast; sustained ABBA contradicts that: 2560x106299 median 1941.141 -> 1707.290 us (-12.05%),
+  main 2560x248320 median 4597.409 -> 4627.703 us (no gain), 6144x2560 109.276 -> 101.245 us (-7.35%).
+  Draft head saves only ~0.234 ms per call; no large whole-model gain is established. Kept as a prototype.
+* `data/mac-metal.json` defaults to MTP cap 4 / threshold 0.5 with explicit validated kernel switches. Setup
+  copies the chosen subset with `--no-start` too, and migrates the old cap-1/spec>1 Metal default once using a
+  profile revision. Other windows, existing environment overrides and subsequent manual edits are preserved.
+  Source fingerprint rebuilds already ensure setup uses current Metal code. Model/menu/context measurements
+  remain labeled historical; current whole-model MTP validation is IQ3_S only. Format-based kernels also apply
+  to other supported models, whose full-model speed and MTP acceptance need independent measurement.
+  Mac installer/draft-vocabulary regression suite: 68 tests pass in 4.40 s, no GPU or downloads; shell syntax
+  and `git diff --check` pass. Already migrated manual disables also survive a later profile revision.
+* Evidence: `bench/results/2026-10-11-metal-cuda-emulation/`, including rejected prototype source, parity logs,
+  screen/sustained CSVs and CPU-only installer regression results. No MTP-off inference was run in this round.

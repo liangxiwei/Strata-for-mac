@@ -1,0 +1,9 @@
+{
+  "engine/strata": "1f3d63b3427edbb6361d4e1fca2a344cad2ef30a6a5ef5f819051627953c2763",
+  "src/kernels/metal/native_mmvq.mm": "4d17d8bc002cd9641aa4a5274a64d21b979c22b7594f7df61476242605761544",
+  "src/kernels/metal/native_mmvq.metal": "db2569a4e237e7ddb5bd6c7e2229ddd0dabc34abc526803502c433cdb3591c68",
+  "src/core/verify.cpp": "408113cf89350ca6a1a9376494be750828775cc5257636386c3712028e9a5e8e",
+  "src/kernels/metal/fused_gr.mm": "29fd55121cf16a523e908c5937a75d92629f251605533bfce6b2e5045f864ea4",
+  "/Users/liangxw/.meld-turbo/llama.cpp/ggml/src/ggml-metal/ggml-metal-ops.cpp": "8cc449955af6102cdd34f8668c5caad00b708397611bb53f51a29fefe58bbe05",
+  "/Users/liangxw/.meld-turbo/llama.cpp/ggml/src/ggml-metal/kernels/mul_mv.metal": "3741b4465cf8287b7a8992a3860c33e29675f65a0df4d47b95331149b9709488"
+}

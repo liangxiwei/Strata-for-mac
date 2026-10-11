@@ -1,0 +1,24 @@
+{
+  "hardware": "Apple M2 Max\n103079215104\n",
+  "power": "Battery Power:\n Sleep On Power Button 1\n powermode            1\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         5\n womp                 1\n networkoversleep     0\n sleep                1\n lessbright           1\n tcpkeepalive         1\n disksleep            0\nAC Power:\n Sleep On Power Button 1\n powermode            1\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         5\n womp                 1\n networkoversleep     0\n sleep                0\n tcpkeepalive         1\n disksleep            0\n",
+  "swap_before": "vm.swapusage: total = 13312.00M  used = 12294.19M  free = 1017.81M  (encrypted)\n",
+  "strata_commit": "13da72298e0505bdcc4069bd87e96bc11e7b7aa5",
+  "strata_engine_sha256": "12365f5a7f194a02b3a306e0e554060a33cc444dbd6e894edcd2dec78579475e",
+  "meld_engine_commit": "aaa6eecbcc113bae46a51250033bc07dbf5d5b8b",
+  "context_capacity": 131072,
+  "output_token_cap": 512,
+  "order": [
+    [
+      "strata",
+      "meld_mtp"
+    ],
+    [
+      "meld_mtp",
+      "strata"
+    ],
+    [
+      "strata",
+      "meld_mtp"
+    ]
+  ]
+}

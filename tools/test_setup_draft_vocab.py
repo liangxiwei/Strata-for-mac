@@ -12,6 +12,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -36,6 +37,36 @@ class SavedChoice(unittest.TestCase):
 
 
 class Refresh(unittest.TestCase):
+    def test_metal_drafts_get_a_subset_from_the_config_folder(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(setup, "refresh_draft_vocab") as refresh:
+            p = Path(d) / "strata.json"
+            cfg = {"backend": "metal", "cwd": "model", "draft_vocab": "en",
+                   "args": ["--mtp", "rt", "--spec", "4", "--mtp-max-t", "4"]}
+            setup.refresh_config_draft_vocab(p, cfg)
+            refresh.assert_called_once_with(Path(d) / "model/rt", "en")
+            # Zero means the --spec cap; omitting --mtp-max-t has the same meaning.
+            for args in (["--mtp", "rt", "--spec", "4", "--mtp-max-t", "0"],
+                         ["--mtp", "rt", "--spec", "4"]):
+                refresh.reset_mock()
+                setup.refresh_config_draft_vocab(p, {**cfg, "args": args})
+                refresh.assert_called_once()
+
+    def test_metal_without_drafts_keeps_its_memory_profile(self):
+        with mock.patch.object(setup, "refresh_draft_vocab") as refresh:
+            for args in (["--mtp", "rt", "--spec", "4", "--mtp-max-t", "1"],
+                         ["--mtp", "rt", "--spec", "1", "--mtp-max-t", "4"],
+                         ["--mtp", "rt"], ["--spec", "4"]):
+                setup.refresh_config_draft_vocab(Path("strata.json"), {"backend": "metal", "args": args})
+            refresh.assert_not_called()
+
+    def test_custom_subset_is_preserved(self):
+        with tempfile.TemporaryDirectory() as d:
+            rt = Path(d)
+            custom = b"custom vocabulary"
+            (rt / "draft_vocab.bin").write_bytes(custom)
+            setup.refresh_draft_vocab(rt)
+            self.assertEqual((rt / "draft_vocab.bin").read_bytes(), custom)
+
     def test_cyrillic_replaces_a_shipped_subset_and_stays(self):
         if not (ROOT / "data" / setup.DRAFT_VOCABS["cyrillic"]).exists():
             self.skipTest("data/draft_vocab_cyrillic.bin is not in this checkout")

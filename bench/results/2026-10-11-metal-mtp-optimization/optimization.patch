@@ -1,0 +1,950 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ee375b6..3169698 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -878,6 +878,12 @@ if(STRATA_ENABLE_METAL)
+         add_executable(metal_fused_gr_test tests/core/metal_fused_gr_test.cpp)
+         target_link_libraries(metal_fused_gr_test PRIVATE strata_kernels)
+         add_test(NAME metal_fused_gr_test COMMAND metal_fused_gr_test)
++        add_executable(metal_fused_gr_multi_test tests/core/metal_fused_gr_multi_test.cpp)
++        target_link_libraries(metal_fused_gr_multi_test PRIVATE strata_kernels)
++        add_test(NAME metal_fused_gr_multi_test COMMAND metal_fused_gr_multi_test)
++        add_executable(metal_gdn_snapshot_test tests/core/metal_gdn_snapshot_test.cpp)
++        target_link_libraries(metal_gdn_snapshot_test PRIVATE strata_kernels)
++        add_test(NAME metal_gdn_snapshot_test COMMAND metal_gdn_snapshot_test)
+       endif()
+     endif()
+     # the engine's own tests, gated like the CUDA tree registers them (M5 verified them passing)
+diff --git a/include/strata/core/verify.hpp b/include/strata/core/verify.hpp
+index 17d7cef..57d3d97 100644
+--- a/include/strata/core/verify.hpp
++++ b/include/strata/core/verify.hpp
+@@ -218,6 +218,13 @@ private:
+     bool gdn_write_capture_ = false;      // record_window: write the GDN state back (set while capturing)
+     bool exec1_writes_gdn_ = false;       // exec_[1] was recorded that way
+     bool last_gdn_written_ = false;       // the last run() already advanced the GDN state
++#if defined(STRATA_METAL_BACKEND)
++    float* gdn_snapshots_ = nullptr;      // [GDN layer][max_t][128, h_v, 128], optional
++    cudaGraphExec_t commit_snapshot_exec_ = nullptr;
++    bool gdn_snapshot_capture_ = false;
++    bool exec_snapshots_[9] = {};
++    bool last_gdn_snapshots_ = false;
++#endif
+ 
+     // mapped staging (host pointer, device alias)
+     int32_t* h_tok_ = nullptr;   int32_t* m_tok_ = nullptr;     // T
+diff --git a/include/strata/kernels/verify_kernels.hpp b/include/strata/kernels/verify_kernels.hpp
+index 50d951a..274c509 100644
+--- a/include/strata/kernels/verify_kernels.hpp
++++ b/include/strata/kernels/verify_kernels.hpp
+@@ -35,6 +35,14 @@ void gdn_ab_multi(const float* x, const uint16_t* w_alpha, const uint16_t* w_bet
+ void gdn_step_norm_multi(float* state, const float* h, int conv_channels, const float* gate, const float* beta,
+                          const float* z, const float* gamma, float eps, float* y, int h_k, int h_v, int n_tok,
+                          const int32_t* n_keep, void* stream, int t_out_begin = 0);
++#if defined(STRATA_METAL_BACKEND)
++/// Read-only verification with one (128, h_v, 128) state snapshot per token; same output bits as above.
++void gdn_step_norm_snapshots(float* state, const float* h, int conv_channels, const float* gate, const float* beta,
++                            const float* z, const float* gamma, float eps, float* y, int h_k, int h_v, int n_tok,
++                            float* snapshots, void* stream, int t_out_begin = 0);
++/// Commit only snapshot[*n_keep - 1], keeping rejected tokens out of the live state.
++void gdn_commit_snapshot(float* state, const float* snapshots, int h_v, const int32_t* n_keep, void* stream);
++#endif
+ /// Spin until *flag >= value (a mapped host flag).  The value is fixed at capture, so several rings can be
+ /// outstanding at once (the split verify window keeps two).
+ void wait_flag_ge(const uint32_t* flag, uint32_t value, void* stream);
+diff --git a/serve/server.py b/serve/server.py
+index f1aacd8..d7307b5 100644
+--- a/serve/server.py
++++ b/serve/server.py
+@@ -384,6 +384,9 @@ class StrataEngine:
+                 v = tune.get(k)
+                 if isinstance(v, (int, float)) and not isinstance(v, bool) and 0.0 <= float(v) <= 1.0:
+                     keys += f" {k}={float(v)!r}"
++            v = tune.get("mtp_max_t")
++            if isinstance(v, int) and not isinstance(v, bool) and 1 <= v <= 8:
++                keys += f" mtp_max_t={v}"
+         return keys + StrataEngine.projection_key(sampling)
+ 
+     @staticmethod
+diff --git a/serve/test_server.py b/serve/test_server.py
+index 6869de7..20ba408 100644
+--- a/serve/test_server.py
++++ b/serve/test_server.py
+@@ -527,6 +527,13 @@ class SamplingKeys(unittest.TestCase):
+         self.assertIn("penalty_last_n=4096", self.keys(repetition_penalty=1.1, penalty_last_n=4096))
+         self.assertFalse([k for k in self.keys(temperature=0.7) if k.startswith("penalty")])
+ 
++    def test_mtp_request_window_cap(self):
++        for window in (1, 2, 4, 8):
++            self.assertIn(f"mtp_max_t={window}", self.keys(strata_tune={"mtp_max_t": window}))
++        for bad in (0, -1, 9, True, 2.5, "4", None):
++            self.assertFalse([k for k in self.keys(strata_tune={"mtp_max_t": bad})
++                              if k.startswith("mtp_max_t=")], bad)
++
+ 
+ class GpuChoice(unittest.TestCase):
+     """Issue #51: the config's \"gpu\" reaches the engine as CUDA_VISIBLE_DEVICES, numbered like nvidia-smi."""
+diff --git a/setup.py b/setup.py
+index 3c7abad..1ade455 100644
+--- a/setup.py
++++ b/setup.py
+@@ -3150,9 +3150,7 @@ def start(cfg_path: Path, port: int | None, gpu: int | list | None = None, open_
+                                                 for k, v in keep.items()))
+     cfg_path.touch()                                     # the most recently used model
+     metal = cfg.get("backend") == "metal"
+-    # the draft subset changes the draft head's memory; on a Mac no drafts are made, so the measured MTP folder stays
+-    if "--mtp" in cfg["args"][:-1] and not metal:
+-        refresh_draft_vocab(Path(cfg["args"][cfg["args"].index("--mtp") + 1]), cfg.get("draft_vocab", "cjk"))
++    refresh_config_draft_vocab(cfg_path, cfg)
+     cmd = [sys.executable, str(ROOT / "serve" / "server.py"), "--engine", "strata", "--config", str(cfg_path),
+            "--port", str(port or cfg.get("port", 8080))]
+     if metal:                                          # one GPU, sharing the Mac's memory: nothing to pick or check
+@@ -3273,6 +3271,25 @@ def mtp_corrupt(mtp: Path, env=None) -> bool:
+     return r.returncode == 3
+ 
+ 
++def refresh_config_draft_vocab(cfg_path: Path, cfg: dict) -> None:
++    """Install the subset for a Mac making MTP drafts; retain the measured memory use when drafts are off."""
++    args = cfg.get("args", [])
++    if "--mtp" not in args[:-1]:
++        return
++    if cfg.get("backend") == "metal":
++        def integer(flag, default):
++            try:
++                return int(args[args.index(flag) + 1]) if flag in args else default
++            except (ValueError, IndexError):
++                return default
++        spec = integer("--spec", 1)
++        cap = integer("--mtp-max-t", 0)
++        if spec < 2 or cap == 1:
++            return
++    rt = cfg_file(cfg_path, cfg, args[args.index("--mtp") + 1])
++    refresh_draft_vocab(rt, cfg.get("draft_vocab", "cjk"))
++
++
+ def refresh_draft_vocab(rt: Path, choice: str = "cjk") -> None:
+     """The draft layer's token subset in the MTP folder: `cjk` (data/draft_vocab.bin, since 0.1.27, #137), `en`
+     (data/draft_vocab_en.bin, the English/code subset before it: ~110 MiB less VRAM, English answers 1-2% faster) or
+diff --git a/src/core/verify.cpp b/src/core/verify.cpp
+index c07e829..bba397a 100644
+--- a/src/core/verify.cpp
++++ b/src/core/verify.cpp
+@@ -248,6 +248,10 @@ Verifier::~Verifier() {
+         if (e) cudaGraphExecDestroy(e);
+     if (commit_exec_) cudaGraphExecDestroy(commit_exec_);
+     if (commit_nogdn_exec_) cudaGraphExecDestroy(commit_nogdn_exec_);
++#if defined(STRATA_METAL_BACKEND)
++    if (commit_snapshot_exec_) cudaGraphExecDestroy(commit_snapshot_exec_);
++    if (gdn_snapshots_) cudaFree(gdn_snapshots_);
++#endif
+     if (gdn_keep1_) cudaFree(gdn_keep1_);
+     if (cs_) cudaStreamDestroy(cs_);
+     if (copy_) { cudaStreamSynchronize(copy_); cudaStreamDestroy(copy_); }
+@@ -433,6 +437,19 @@ bool Verifier::init(const WeightTable& wt, const ModelGeometry& g, SessionState&
+     }
+ #if defined(STRATA_METAL_BACKEND)
+     {
++        const char* snapshots = std::getenv("STRATA_METAL_GDN_SNAPSHOT");
++        if (snapshots && std::atoi(snapshots) != 0 && hits_.all_resident && lb_ == 0 && le_ == g.n_layers &&
++            next_ == nullptr) {
++            size_t layers = 0;
++            for (int64_t l = 0; l < g.n_layers; ++l) layers += !is_qsa_layer(g, l);
++            const size_t bytes = layers * size_t(max_t_) * size_t(g.ssm_state_size) * size_t(g.ssm_v_heads) *
++                                 size_t(g.ssm_state_size) * sizeof(float);
++            if (cudaMalloc((void**) &gdn_snapshots_, bytes) != cudaSuccess) {
++                gdn_snapshots_ = nullptr;
++                cudaGetLastError();
++                std::fprintf(stderr, "strata verify: GDN snapshots did not fit; retaining recurrence replay\n");
++            } else std::fprintf(stderr, "strata verify: GDN prefix snapshots: %.1f MiB\n", double(bytes) / (1 << 20));
++        }
+         const char* v = std::getenv("STRATA_METAL_GDN_INPLACE");
+         if (v == nullptr || std::atoi(v) != 0) {
+             const int32_t one = 1;
+@@ -668,8 +685,15 @@ bool Verifier::record_window(int T, cudaStream_t cs, std::string& err) {
+                 // the recurrence from the untouched state over tokens [0, te); outputs only for this group's.
+                 // A one-token window recorded with gdn_write_capture_ also writes the new state back (n_keep = 1:
+                 // the same y, and the state the commit's own step would compute from the same inputs)
+-                gdn_step_norm_multi(state, hb, (int) C, gate, beta, z_, (const float*) wnm->data, EPS, y_, (int) HK,
+-                                    (int) HV, te, gdn_write_capture_ ? gdn_keep1_ : nullptr, cs, tb);
++#if defined(STRATA_METAL_BACKEND)
++                if (gdn_snapshot_capture_) {
++                    const size_t nf = size_t(g.ssm_state_size) * size_t(HV) * size_t(g.ssm_state_size);
++                    gdn_step_norm_snapshots(state, hb, (int) C, gate, beta, z_, (const float*) wnm->data, EPS,
++                                           y_, (int) HK, (int) HV, te, gdn_snapshots_ + size_t(gi) * MT * nf, cs, tb);
++                } else
++#endif
++                    gdn_step_norm_multi(state, hb, (int) C, gate, beta, z_, (const float*) wnm->data, EPS, y_, (int) HK,
++                                        (int) HV, te, gdn_write_capture_ ? gdn_keep1_ : nullptr, cs, tb);
+                 stamp(l, 6, grp);
+                 native_quantize_q8_1(y_ + (size_t) tb * ZV, xq_, (int) ZV, n, cs);
+                 native_mmvq(wout->native_type, wout->native_data, xq_, bo_ + tb * N, (int) ZV, (int) N, n, cs);
+@@ -1158,9 +1182,12 @@ bool Verifier::capture(int T, std::string& err) {
+         }
+         // a one-token window keeps every token it reads: its GDN state is written back here (see verify.hpp)
+         gdn_write_capture_ = T == 1 && gdn_keep1_ != nullptr && lb_ == 0 && next_ == nullptr;
++        gdn_snapshot_capture_ = T > 1 && gdn_snapshots_ != nullptr;
+         const bool ok = record_window(T, cs_, err);
+         if (T == 1) exec1_writes_gdn_ = gdn_write_capture_;
++        exec_snapshots_[T] = gdn_snapshot_capture_;
+         gdn_write_capture_ = false;
++        gdn_snapshot_capture_ = false;
+         cudaGraph_t graph = nullptr;
+         const cudaError_t ce = cudaStreamEndCapture(cs_, &graph);
+         if (!ok || ce != cudaSuccess || !graph) {
+@@ -1295,7 +1322,7 @@ bool Verifier::capture_commit(std::string& err) {
+     const int64_t HS = (int64_t) NG_HIST * NG_HC_DIM;
+     // the commit graph; with_gdn == false is the same graph without the GDN recurrence (its window already wrote
+     // the state back: see verify.hpp)
+-    auto record = [&](bool with_gdn, cudaGraphExec_t* out) -> bool {
++    auto record = [&](bool with_gdn, cudaGraphExec_t* out, bool snapshots = false) -> bool {
+         if (cudaStreamBeginCapture(cs_, cudaStreamCaptureModeThreadLocal) != cudaSuccess) {
+             err = "verify: begin commit capture failed";
+             return false;
+@@ -1314,11 +1341,21 @@ bool Verifier::capture_commit(std::string& err) {
+                     float* conv = state + (uint64_t) g.ssm_state_size * g.ssm_v_heads * g.ssm_state_size;
+                     const float* qkv = qkv_L_ + (size_t) gdn_index * MT * C;
+                     gdn_conv_commit(conv, qkv, (int) C, commit_, cs_);
+-                    if (with_gdn)
++                    if (with_gdn) {
++#if defined(STRATA_METAL_BACKEND)
++                        if (snapshots) {
++                            const size_t nf = size_t(g.ssm_state_size) * size_t(HV) * size_t(g.ssm_state_size);
++                            gdn_commit_snapshot(state, gdn_snapshots_ + size_t(gdn_index) * MT * nf,
++                                                (int) HV, commit_, cs_);
++                        } else
++#else
++                        (void) snapshots;
++#endif
+                         gdn_step_norm_multi(state, h_L_ + (size_t) gdn_index * MT * C, (int) C,
+                                             gate_L_ + (size_t) gdn_index * MT * HV, beta_L_ + (size_t) gdn_index * MT * HV,
+                                             z_, (const float*) wnm->data, EPS, y_dummy_, (int) g.ssm_k_heads, (int) HV,
+                                             (int) MT, commit_, cs_);
++                    }
+                     ++gdn_index;
+                 } else {
+                     const QsaState& st = ss.qsa_states[qsa_index];
+@@ -1354,6 +1391,9 @@ bool Verifier::capture_commit(std::string& err) {
+     };
+     if (!record(true, &commit_exec_)) return false;
+     if (gdn_keep1_ != nullptr && !record(false, &commit_nogdn_exec_)) return false;
++#if defined(STRATA_METAL_BACKEND)
++    if (gdn_snapshots_ != nullptr && !record(true, &commit_snapshot_exec_, true)) return false;
++#endif
+     return true;
+ }
+ 
+@@ -1402,10 +1442,12 @@ bool Verifier::run(int T, const int32_t* tokens, int64_t pos0, PoolMultiFn pool,
+ #if defined(STRATA_METAL_BACKEND)
+     const int G = groups_[T] > 0 ? groups_[T] : 1;
+     last_gdn_written_ = false;
++    last_gdn_snapshots_ = false;
+     if (hits_.all_resident) {
+         const cudaError_t e = cudaGraphLaunch(exec_[T], cs_);
+         if (e != cudaSuccess) { err = "verify: resident graph launch failed"; return false; }
+         last_gdn_written_ = T == 1 && exec1_writes_gdn_;
++        last_gdn_snapshots_ = exec_snapshots_[T];
+     } else {
+     // Metal port (rules 11 + 9; see the MetalWindow comment above): the opening segment replays the first
+     // pre's; every step then waits for its pre's doorbell, serves the pool, raises the step's three flags
+@@ -1797,7 +1839,15 @@ bool Verifier::commit(int n_keep, std::string& err) {
+         err = "verify: a window that wrote its GDN state back has no matching commit";   // never: see run()
+         return false;
+     }
+-    const cudaError_t le = cudaGraphLaunch(gdn_done ? commit_nogdn_exec_ : commit_exec_, cs_);
++    cudaGraphExec_t commit_graph = gdn_done ? commit_nogdn_exec_ : commit_exec_;
++#if defined(STRATA_METAL_BACKEND)
++    if (last_gdn_snapshots_) {
++        if (commit_snapshot_exec_ == nullptr) { err = "verify: missing snapshot commit graph"; return false; }
++        commit_graph = commit_snapshot_exec_;
++    }
++    last_gdn_snapshots_ = false;
++#endif
++    const cudaError_t le = cudaGraphLaunch(commit_graph, cs_);
+     if (le != cudaSuccess) { err = std::string("verify: commit launch: ") + cudaGetErrorString(le); return false; }
+     // set_commit_async: no wait here - the next window runs on the same stream after it, and the drafter (its own
+     // stream) reads only this window's final rows and its own K/V. h_commit_ is next written after the next window's
+diff --git a/src/kernels/metal/fused_gr.metal b/src/kernels/metal/fused_gr.metal
+index 2a5549d..33194d9 100644
+--- a/src/kernels/metal/fused_gr.metal
++++ b/src/kernels/metal/fused_gr.metal
+@@ -10,16 +10,16 @@
+ // altogether leaves every output bit-identical, and a shared-memory copy of lo is the same bits the down
+ // kernel wrote.
+ //
+-// EVERY POINTER IS A BOUND BUFFER ARGUMENT, ONE LAUNCH PER TOKEN (measured, docs/PORT_METAL/PROGRESS.md
++// EVERY POINTER IS A BOUND BUFFER ARGUMENT (measured, docs/PORT_METAL/PROGRESS.md
+ // rule 9): a raw pointer stored in setBytes data or a buffer - the CUDA struct's whole argument style - is
+ // not usable on Apple Silicon.  Two spellings were measured dead: a pointer loaded from such data
+ // dereferences to zero with every write vanishing (no error), and even reconstructing it as anchor +
+ // byte-offset from one bound anchor only reaches ~8-16 KB from the anchor's base (offsets beyond that
+ // silently address nothing).  A bound [[buffer(N)]] argument reaches anywhere - including interior
+ // pointers, which the runtime binds with a large offset the same way every other ported kernel's do.  So
+-// the T-token GrMulti becomes T launches of one-token kernels, each with its own pointers as arguments;
+-// per token the arithmetic is the CUDA kernels' own, so the multi read is still bitwise the single-token
+-// read, exactly as fused_gr.hpp promises.
++// contiguous token-major tensors can instead share a bound allocation and use ordinary array indices.
++// The batched projections below load a weight chunk once for all tokens, retaining each token's original
++// FMA and reduction order. Arbitrary pointer layouts still use the one-token kernels.
+ #include "strata_port.metalh"
+ 
+ constant const int FGR_THREADS = 256;
+@@ -249,3 +249,114 @@ kernel void fused_gr_up_kernel(constant const uint* w_up [[buffer(0)]],
+     }
+ }
+ 
++// Weight reuse across a verification window. Keep dot8, the ascending chunk accumulation and the XOR
++// butterfly identical to the one-token projections: batch size must not change greedy sampling.
++template<int NT>
++static inline void fgr_down_batch(constant const uint* w_down, constant const uint* w_inject,
++                                 constant const float* xn, device float* lo, device float* inject_out,
++                                 uint block, uint lane, uint sg) {
++    const bool inject_block = block == FGR_DOWN_BLOCKS;
++    const int row = inject_block ? (int) sg : (int) block * FGR_WARPS + (int) sg;
++    const bool active = !(inject_block && (w_inject == nullptr || sg >= (uint) FGR_HC));
++    float acc[NT] = {};
++    if (active) {
++        constant const uint4* w4 = reinterpret_cast<constant const uint4*>(
++            reinterpret_cast<constant const uint16_t*>(inject_block ? w_inject : w_down) +
++            (ulong) row * FGR_D);
++        for (int j = (int) lane; j < FGR_D / 8; j += 32) {
++            const uint4 w = w4[j];
++#pragma unroll
++            for (int t = 0; t < NT; ++t) acc[t] += fgr_dot8(w, xn + (ulong) t * FGR_D + j * 8);
++        }
++    }
++#pragma unroll
++    for (int t = 0; t < NT; ++t) {
++        const float sum = fgr_warp_sum(acc[t]);
++        if (lane == 0 && active) {
++            if (inject_block) inject_out[t * FGR_HC + row] = sum;
++            else {
++                const float x = sum / (float) FGR_HC;
++                lo[t * FGR_LR + row] = x / (1.0f + metal::precise::exp(-x));
++            }
++        }
++    }
++}
++
++template<int NT>
++static inline void fgr_up_batch(constant const uint* w_up, constant const float* lo,
++                               constant const float* R, device float* R_out,
++                               constant const float* bo_prev, constant const float* inj_prev,
++                               constant const float* w_norm, constant const float* rs,
++                               device float* mixed, int apply,
++                               threadgroup float (&g)[NT][4][16], uint block, uint tid, uint lane, uint sg) {
++    const int d0 = (int) block * FGR_UPM_COLS;
++    for (int r = (int) sg; r < FGR_HC * FGR_UPM_COLS; r += FGR_WARPS) {
++        const int c = r / FGR_UPM_COLS, dd = r - c * FGR_UPM_COLS, i = c * FGR_N + d0 + dd;
++        constant const uint4* w4 = reinterpret_cast<constant const uint4*>(
++            reinterpret_cast<constant const uint16_t*>(w_up) + (ulong) i * FGR_LR);
++        const uint4 wa = w4[lane];
++        const uint4 wb = lane < (uint) (FGR_LR / 8 - 32) ? w4[32 + lane] : uint4(0u);
++#pragma unroll
++        for (int t = 0; t < NT; ++t) {
++            constant const float* xt = lo + (ulong) t * FGR_LR;
++            float acc = fgr_dot8(wa, xt + (ulong) lane * 8);
++            if (lane < (uint) (FGR_LR / 8 - 32)) acc += fgr_dot8(wb, xt + (ulong) (32 + lane) * 8);
++            acc = fgr_warp_sum(acc);
++            if (lane == 0) {
++                float rv = R[t * FGR_D + i];
++                if (apply != 0) {
++                    rv = fma(bo_prev[t * FGR_N + d0 + dd],
++                             2.0f * fgr_sigmoid(inj_prev[t * FGR_HC + c] / (float) FGR_HC), rv);
++                    R_out[t * FGR_D + i] = rv;
++                }
++                const float x = rv * w_norm[i] * rs[t * FGR_HC + c];
++                g[t][c][dd] = x * fgr_sigmoid(acc);
++            }
++        }
++    }
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    if (tid < FGR_UPM_COLS) {
++#pragma unroll
++        for (int t = 0; t < NT; ++t) {
++            float s = 0.0f;
++#pragma unroll
++            for (int c = 0; c < FGR_HC; ++c) s += g[t][c][tid];
++            mixed[t * FGR_N + d0 + tid] = s / (float) FGR_HC;
++        }
++    }
++}
++
++// Concrete entry points keep the token loop compile-time sized without a device pointer table.
++#define FGR_BATCH(NT) \
++kernel void fused_gr_down_batch_##NT(constant const uint* wd [[buffer(0)]], \
++                                     constant const uint* wi [[buffer(1)]], \
++                                     constant const float* xn [[buffer(2)]], \
++                                     device float* lo [[buffer(3)]], device float* inj [[buffer(4)]], \
++                                     uint3 pos [[threadgroup_position_in_grid]], \
++                                     uint lane [[thread_index_in_simdgroup]], \
++                                     uint sg [[simdgroup_index_in_threadgroup]]) { \
++    fgr_down_batch<NT>(wd, wi, xn, lo, inj, pos.x, lane, sg); \
++} \
++kernel void fused_gr_up_batch_##NT(constant const uint* wu [[buffer(0)]], \
++                                   constant const float* lo [[buffer(1)]], \
++                                   constant const float* R [[buffer(2)]], device float* Ro [[buffer(3)]], \
++                                   constant const float* bo [[buffer(4)]], \
++                                   constant const float* inj [[buffer(5)]], \
++                                   constant const float* wn [[buffer(6)]], \
++                                   constant const float* rs [[buffer(7)]], device float* mix [[buffer(8)]], \
++                                   constant const int& apply [[buffer(9)]], \
++                                   uint3 pos [[threadgroup_position_in_grid]], uint tid [[thread_index_in_threadgroup]], \
++                                   uint lane [[thread_index_in_simdgroup]], \
++                                   uint sg [[simdgroup_index_in_threadgroup]]) { \
++    threadgroup float g[NT][4][16]; \
++    fgr_up_batch<NT>(wu, lo, R, Ro, bo, inj, wn, rs, mix, apply, g, pos.x, tid, lane, sg); \
++}
++FGR_BATCH(2)
++FGR_BATCH(3)
++FGR_BATCH(4)
++FGR_BATCH(5)
++FGR_BATCH(6)
++FGR_BATCH(7)
++FGR_BATCH(8)
++#undef FGR_BATCH
++
+diff --git a/src/kernels/metal/fused_gr.mm b/src/kernels/metal/fused_gr.mm
+index 7bbd750..4f6bd1e 100644
+--- a/src/kernels/metal/fused_gr.mm
++++ b/src/kernels/metal/fused_gr.mm
+@@ -1,8 +1,9 @@
+ // src/kernels/metal/fused_gr.mm - the port of src/kernels/cuda/fused_gr.cu's host half (K16).  The read is
+ // three launches per token (norm, down, up), every pointer a BOUND buffer argument - the CUDA struct's
+ // by-value pointer table does not survive on Apple Silicon (fused_gr.metal's file comment has the
+-// measurements), so the T-token GrMulti becomes T one-token launches whose bound arguments the runtime
+-// resolves, interior pointers included.  The single-token read is the same path with T = 1 and a private xn
++// measurements). Contiguous multi-token tensors use bound base buffers and element indices, sharing
++// projection weights across tokens; arbitrary argument layouts keep the per-token launches. The
++// single-token read is the same path with T = 1 and a private xn
+ // buffer: the CUDA single-token kernel stages xn (40 KB) in shared memory and this GPU's threadgroup limit
+ // is 32 KB (measured), and the multi path already stages xn in device memory, so T = 1 through it is the
+ // whole single-token read, bit for bit.
+@@ -18,6 +19,7 @@
+ #include <cstdio>
+ #include <cstdlib>
+ #include <cstring>
++#include <cstdint>
+ 
+ namespace strata::kernels {
+ namespace {
+@@ -58,6 +60,30 @@ const char* norm_kernel() {
+     return name;
+ }
+ 
++// The verifier's tensors are token-major allocations. Do not construct a device pointer table: Metal
++// receives each allocation as a bound buffer. Unusual callers retain the original per-token path.
++bool batch_layout(const FusedGrArgs* a, int nt) {
++    static const bool enabled = [] {
++        const char* v = std::getenv("STRATA_METAL_HC_BATCH");
++        return v == nullptr || std::atoi(v) != 0;
++    }();
++    if (!enabled || nt < 2) return false;
++    auto at = [](const float* base, const float* p, int t, int stride) {
++        return reinterpret_cast<uintptr_t>(p) == reinterpret_cast<uintptr_t>(base) +
++                                                size_t(t) * size_t(stride) * sizeof(float);
++    };
++    for (int t = 1; t < nt; ++t) {
++        const auto& x = a[t];
++        if (x.apply != a[0].apply || x.eps != a[0].eps || !at(a[0].R, x.R, t, D) ||
++            !at(a[0].lo, x.lo, t, LR) || !at(a[0].rs, x.rs, t, HC) ||
++            !at(a[0].mixed, x.mixed, t, N) ||
++            (a[0].w_inject && !at(a[0].inject_out, x.inject_out, t, HC)) ||
++            (x.apply && (!at(a[0].R_out, x.R_out, t, D) || !at(a[0].bo_prev, x.bo_prev, t, N) ||
++                         !at(a[0].inj_prev, x.inj_prev, t, HC)))) return false;
++    }
++    return true;
++}
++
+ /// One token's read: the norm, the down projection, the up projection, all pointers bound as arguments.
+ /// The CUDA original tiles the multi down kernel by what fits the card's shared-memory opt-in; the Metal
+ /// down kernel reads xn from device memory, so every token count fits one launch and there is no tiling.
+@@ -109,7 +135,7 @@ void fused_gr_read_multi(const FusedGrArgs* a, int n_tok, float* xn_scratch, voi
+         return true;
+     }();
+     (void) v3_note;
+-    if (n_tok < 1 || n_tok > kFusedGrMaxT || xn_scratch == nullptr) {
++    if (a == nullptr || n_tok < 1 || n_tok > kFusedGrMaxT || xn_scratch == nullptr) {
+         std::fprintf(stderr, "fused_gr_read_multi: invalid arguments\n");
+         std::exit(1);
+     }
+@@ -122,6 +148,7 @@ void fused_gr_read_multi(const FusedGrArgs* a, int n_tok, float* xn_scratch, voi
+             std::exit(1);
+         }
+     }
++    const bool batch = batch_layout(a, n_tok);
+     // the norm for every token, then the down projection, then the up - the CUDA dataflow; each down/up
+     // launch touches only its own token's xn/lo, so per-token launches keep exactly that order
+     for (int t = 0; t < n_tok; ++t) {
+@@ -133,17 +160,22 @@ void fused_gr_read_multi(const FusedGrArgs* a, int n_tok, float* xn_scratch, voi
+         n.done();
+     }
+     if (stamp_buf) gpu_stamp(stamp_buf, stamp_i0, stream);
+-    for (int t = 0; t < n_tok; ++t) {
++    char down_name[64], up_name[64];
++    std::snprintf(down_name, sizeof(down_name), "fused_gr_down_batch_%d", n_tok);
++    std::snprintf(up_name, sizeof(up_name), "fused_gr_up_batch_%d", n_tok);
++    for (int t = 0; t < (batch ? 1 : n_tok); ++t) {
+         const FusedGrArgs& x = a[t];
+-        metal::Launch d("fused_gr_down_kernel", (unsigned) (DOWN_BLOCKS + 1), 1, 1, THREADS, 1, 1, 0, stream);
++        metal::Launch d(batch ? down_name : "fused_gr_down_kernel", (unsigned) (DOWN_BLOCKS + 1),
++                        1, 1, THREADS, 1, 1, 0, stream);
+         d.buf(x.w_down).buf(x.w_inject).buf(xn_scratch + (size_t) t * D).buf(x.lo).buf(x.inject_out);
+         d.done();
+     }
+     if (stamp_buf) gpu_stamp(stamp_buf, stamp_i0 + 1, stream);
+-    for (int t = 0; t < n_tok; ++t) {
++    for (int t = 0; t < (batch ? 1 : n_tok); ++t) {
+         const FusedGrArgs& x = a[t];
+         const int apply = x.apply ? 1 : 0;
+-        metal::Launch u("fused_gr_up_kernel", (unsigned) UPM_BLOCKS, 1, 1, THREADS, 1, 1, 0, stream);
++        metal::Launch u(batch ? up_name : "fused_gr_up_kernel", (unsigned) UPM_BLOCKS,
++                        1, 1, THREADS, 1, 1, 0, stream);
+         u.buf(x.w_up).buf(x.lo).buf(x.R).buf(x.R_out).buf(x.bo_prev).buf(x.inj_prev).buf(x.w_norm).buf(x.rs)
+          .buf(x.mixed).scalar(apply);
+         u.done();
+diff --git a/src/kernels/metal/verify_kernels.metal b/src/kernels/metal/verify_kernels.metal
+index 73fe210..42466bd 100644
+--- a/src/kernels/metal/verify_kernels.metal
++++ b/src/kernels/metal/verify_kernels.metal
+@@ -178,13 +178,14 @@ kernel void gdn_ab_multi_kernel(constant const float* x [[buffer(0)]],
+ // STAGE_LAST = false (gdn_step_norm_multi_tail_kernel): the last token's state is not staged in `shadow` - no
+ // later token reads it - and a commit writes it straight to `state`, where the staged kernel copied it back
+ // afterwards. Every value is the same float; only redundant device traffic goes.
+-template<bool STAGE_LAST>
++template<bool STAGE_LAST, bool SNAPSHOT = false>
+ static inline void vr_gdn_step_body(device float* state, constant const float* hbuf, const int C, constant const float* gate,
+                                     constant const float* beta, constant const float* z, constant const float* gamma,
+                                     const float eps, device float* y, const int h_k, const int h_v, const int T,
+                                     constant const int* n_keep, const int t_out_begin, device float* shadow, uint3 gpos,
+                                     uint tid, threadgroup float* sk, threadgroup float* sq,
+-                                    threadgroup float (*red)[VR_S], threadgroup float* wsum) {
++                                    threadgroup float (*red)[VR_S], threadgroup float* wsum,
++                                    device float* snapshots = nullptr) {
+     const int head = (int) gpos.x;
+     const int col = (int) (tid & 127u);          // threadIdx.x, 0..127
+     const int rg = (int) (tid >> 7);             // threadIdx.y, 0..3
+@@ -204,7 +205,10 @@ static inline void vr_gdn_step_body(device float* state, constant const float* h
+         }
+         threadgroup_barrier(mem_flags::mem_threadgroup);
+         const float g = metal::precise::exp(gate[(ulong) (uint) t * (ulong) h_v + (ulong) head]);
+-        device float* s_at = t == 0 ? base : srun;        // token 0 reads the caller's state itself
++        const ulong snapshot_stride = (ulong) VR_S * h_v * VR_S;
++        const ulong state_offset = ((ulong) (rg * VR_RPG) * h_v + head) * VR_S + col;
++        device float* s_at = t == 0 ? base :
++            (SNAPSHOT ? snapshots + (ulong) (t - 1) * snapshot_stride + state_offset : srun);
+         float kv = 0.0f;
+ #pragma unroll
+         for (int r = 0; r < VR_RPG; ++r) kv = fma(s_at[r * row_stride], sk[rg * VR_RPG + r], kv);
+@@ -215,7 +219,8 @@ static inline void vr_gdn_step_body(device float* state, constant const float* h
+                             beta[(ulong) (uint) t * (ulong) h_v + (ulong) head];
+         float o = 0.0f;
+         const bool last = !STAGE_LAST && t == n - 1;
+-        device float* s_to = last ? (n_keep != nullptr ? base : nullptr) : srun;
++        device float* s_to = SNAPSHOT ? snapshots + (ulong) t * snapshot_stride + state_offset :
++                                       (last ? (n_keep != nullptr ? base : nullptr) : srun);
+ #pragma unroll
+         for (int r = 0; r < VR_RPG; ++r) {
+             const float s = fma(g, s_at[r * row_stride], sk[rg * VR_RPG + r] * delta);
+@@ -258,6 +263,23 @@ kernel void NAME(VR_STEP_PARAMS) { \
+ VR_STEP_KERNEL(gdn_step_norm_multi_kernel, true)
+ VR_STEP_KERNEL(gdn_step_norm_multi_tail_kernel, false)
+ 
++kernel void gdn_step_norm_snapshot_kernel(VR_STEP_PARAMS, device float* snapshots [[buffer(15)]]) {
++    threadgroup float sk[VR_S], sq[VR_S];
++    threadgroup float red[VR_RG][VR_S];
++    threadgroup float wsum[VR_S * VR_RG / 32];
++    vr_gdn_step_body<false, true>(state, hbuf, C, gate, beta, z, gamma, eps, y, h_k, h_v, T,
++                                 n_keep, t_out_begin, shadow, gpos, tid, sk, sq, red, wsum, snapshots);
++}
++
++kernel void gdn_commit_snapshot_kernel(device float* state [[buffer(0)]],
++                                       constant const float* snapshots [[buffer(1)]],
++                                       constant const uint& n_float [[buffer(2)]],
++                                       constant const int* n_keep [[buffer(3)]],
++                                       uint i [[thread_position_in_grid]]) {
++    if (i < n_float && n_keep[0] > 0)
++        state[i] = snapshots[(ulong) (n_keep[0] - 1) * n_float + i];
++}
++
+ 
+ 
+ // ---- the MTP draft layer -----------------------------------------------------------------------------------
+diff --git a/src/kernels/metal/verify_kernels.mm b/src/kernels/metal/verify_kernels.mm
+index 3fb7c33..efa17ec 100644
+--- a/src/kernels/metal/verify_kernels.mm
++++ b/src/kernels/metal/verify_kernels.mm
+@@ -245,6 +245,33 @@ void gdn_step_norm_multi(float* state, const float* h, int conv_channels, const
+     check("gdn_step_norm_multi");
+ }
+ 
++void gdn_step_norm_snapshots(float* state, const float* h, int conv_channels, const float* gate, const float* beta,
++                            const float* z, const float* gamma, float eps, float* y, int h_k, int h_v, int n_tok,
++                            float* snapshots, void* stream, int t_out_begin) {
++    if (!state || !h || !gate || !beta || !z || !gamma || !y || !snapshots || h_k <= 0 ||
++        h_v <= 0 || h_v % h_k || n_tok < 1 || n_tok > kVerifyMaxT) {
++        std::fprintf(stderr, "gdn_step_norm_snapshots: invalid arguments\n");
++        std::exit(1);
++    }
++    metal::Launch k("gdn_step_norm_snapshot_kernel", (unsigned) h_v, 1, 1, S, RG, 1, 0, stream);
++    k.buf(state).buf(h).scalar(conv_channels).buf(gate).buf(beta).buf(z).buf(gamma).scalar(eps).buf(y)
++     .scalar(h_k).scalar(h_v).scalar(n_tok).buf(nullptr).scalar(t_out_begin).buf(nullptr).buf(snapshots);
++    k.done();
++    check("gdn_step_norm_snapshots");
++}
++
++void gdn_commit_snapshot(float* state, const float* snapshots, int h_v, const int32_t* n_keep, void* stream) {
++    if (!state || !snapshots || !n_keep || h_v <= 0) {
++        std::fprintf(stderr, "gdn_commit_snapshot: invalid arguments\n");
++        std::exit(1);
++    }
++    const unsigned nf = (unsigned) (S * h_v * S);
++    metal::Launch k("gdn_commit_snapshot_kernel", (nf + 255) / 256, 1, 1, 256, 1, 1, 0, stream);
++    k.buf(state).buf(snapshots).scalar(nf).buf(n_keep);
++    k.done();
++    check("gdn_commit_snapshot");
++}
++
+ void resident_plan(const int32_t* ids, int n_entries, int k, const int32_t* res_layer, int n_expert,
+                    const uint8_t* cache_base, const unsigned long long* slot_off, long long blob, int32_t* plan,
+                    long long capx, uint32_t* skip, uint32_t ring, void* stream) {
+diff --git a/src/program/generate.cpp b/src/program/generate.cpp
+index 1396c1d..64592e2 100644
+--- a/src/program/generate.cpp
++++ b/src/program/generate.cpp
+@@ -4702,9 +4702,7 @@ int main(int argc, char** argv) {
+         std::string line;
+         int64_t rounds = 0;
+         const int S = o.spec;
+-        const int S_mtp = o.mtp_max_t > 0 ? std::min(o.mtp_max_t, S) : S;   // the MTP's windows; suffixes go up to S
+-        const bool need_draft = S_mtp > 1 || o.suffix_draft > 0;
+-        if (S_mtp < S) mtp.set_max_drafts(S_mtp - 1);
++        const int S_mtp_limit = o.mtp_max_t > 0 ? std::min(o.mtp_max_t, S) : S;
+         strata::spec::SuffixDrafter sfx(std::max(1, o.suffix_draft), 64, (size_t) o.max_context + 4096);
+         strata::spec::DraftPolicy policy(S);   // MTP or lookup window, learned over the whole process
+         // The vision path (--vision): GENI <max_new> <embeddings file> <id,id,...> carries images.  The file is one
+@@ -4743,6 +4741,7 @@ int main(int argc, char** argv) {
+             // tuning keys (setup's calibration measures settings without restarting the engine): the PCIe share of
+             // the missed experts and the draft-probability floor, for this request only
+             double req_pcie_frac = o.pcie_frac, req_spec_min_p = o.spec_min_p;
++            int S_mtp = S_mtp_limit;   // request cap, never beyond the configured window/allocation
+             if (endp != nullptr) {   // GENI takes the same keys (#75: image requests were always greedy); its
+                                      // embedding file path is the first token without an =
+                 for (;;) {
+@@ -4767,9 +4766,13 @@ int main(int argc, char** argv) {
+                     else if (key == "seed") req_seed = std::strtoull(tok.c_str() + eq + 1, nullptr, 10);
+                     else if (key == "pcie_frac") req_pcie_frac = std::clamp((double) fv, 0.0, 1.0);
+                     else if (key == "spec_min_p") req_spec_min_p = std::clamp((double) fv, 0.0, 1.0);
++                    else if (key == "mtp_max_t")
++                        S_mtp = std::clamp(std::atoi(tok.c_str() + eq + 1), 1, std::max(1, S_mtp_limit));
+                     // unknown keys are skipped: the ids start at the first token without '='
+                 }
+             }
++            const bool need_draft = S_mtp > 1 || o.suffix_draft > 0;
++            mtp.set_max_drafts(std::max(0, S_mtp - 1));   // restore the default on the following request
+             std::string emb_path;
+             if (geni && endp != nullptr) {
+                 while (*endp == ' ') ++endp;
+diff --git a/tools/test_setup_draft_vocab.py b/tools/test_setup_draft_vocab.py
+index f0b7569..c5ddbaa 100644
+--- a/tools/test_setup_draft_vocab.py
++++ b/tools/test_setup_draft_vocab.py
+@@ -12,6 +12,7 @@ import sys
+ import tempfile
+ import unittest
+ from pathlib import Path
++from unittest import mock
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+ sys.path.insert(0, str(ROOT))
+@@ -36,6 +37,36 @@ class SavedChoice(unittest.TestCase):
+ 
+ 
+ class Refresh(unittest.TestCase):
++    def test_metal_drafts_get_a_subset_from_the_config_folder(self):
++        with tempfile.TemporaryDirectory() as d, mock.patch.object(setup, "refresh_draft_vocab") as refresh:
++            p = Path(d) / "strata.json"
++            cfg = {"backend": "metal", "cwd": "model", "draft_vocab": "en",
++                   "args": ["--mtp", "rt", "--spec", "4", "--mtp-max-t", "4"]}
++            setup.refresh_config_draft_vocab(p, cfg)
++            refresh.assert_called_once_with(Path(d) / "model/rt", "en")
++            # Zero means the --spec cap; omitting --mtp-max-t has the same meaning.
++            for args in (["--mtp", "rt", "--spec", "4", "--mtp-max-t", "0"],
++                         ["--mtp", "rt", "--spec", "4"]):
++                refresh.reset_mock()
++                setup.refresh_config_draft_vocab(p, {**cfg, "args": args})
++                refresh.assert_called_once()
++
++    def test_metal_without_drafts_keeps_its_memory_profile(self):
++        with mock.patch.object(setup, "refresh_draft_vocab") as refresh:
++            for args in (["--mtp", "rt", "--spec", "4", "--mtp-max-t", "1"],
++                         ["--mtp", "rt", "--spec", "1", "--mtp-max-t", "4"],
++                         ["--mtp", "rt"], ["--spec", "4"]):
++                setup.refresh_config_draft_vocab(Path("strata.json"), {"backend": "metal", "args": args})
++            refresh.assert_not_called()
++
++    def test_custom_subset_is_preserved(self):
++        with tempfile.TemporaryDirectory() as d:
++            rt = Path(d)
++            custom = b"custom vocabulary"
++            (rt / "draft_vocab.bin").write_bytes(custom)
++            setup.refresh_draft_vocab(rt)
++            self.assertEqual((rt / "draft_vocab.bin").read_bytes(), custom)
++
+     def test_cyrillic_replaces_a_shipped_subset_and_stays(self):
+         if not (ROOT / "data" / setup.DRAFT_VOCABS["cyrillic"]).exists():
+             self.skipTest("data/draft_vocab_cyrillic.bin is not in this checkout")
+diff --git a/tests/core/metal_fused_gr_multi_test.cpp b/tests/core/metal_fused_gr_multi_test.cpp
+new file mode 100644
+index 0000000..5a75c88
+--- /dev/null
++++ b/tests/core/metal_fused_gr_multi_test.cpp
+@@ -0,0 +1,129 @@
++#include "strata/kernels/fused_gr.hpp"
++#include "strata/kernels/bf16_bits.hpp"
++#include <cuda_runtime.h>
++#include <chrono>
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++#include <random>
++#include <vector>
++
++// Compare every writable buffer against independent single-token launches, including guards and
++// captured graph replays with changed inputs. Token offsets extend well beyond the first 40 KB.
++namespace {
++constexpr int N = 2560, HC = 4, D = N * HC, LR = 320, GUARD = 16;
++void check(cudaError_t e) {
++    if (e != cudaSuccess) { std::fprintf(stderr, "%s\n", cudaGetErrorString(e)); std::exit(2); }
++}
++template<class T> struct Buffer {
++    T* p{}; size_t n;
++    explicit Buffer(size_t size) : n(size) { check(cudaMalloc((void**)&p, n * sizeof(T))); }
++    ~Buffer() { cudaFree(p); }
++    void put(const std::vector<T>& v) { check(cudaMemcpy(p, v.data(), n * sizeof(T), cudaMemcpyHostToDevice)); }
++    std::vector<T> get() const {
++        std::vector<T> v(n); check(cudaMemcpy(v.data(), p, n * sizeof(T), cudaMemcpyDeviceToHost)); return v;
++    }
++};
++struct Workspace {
++    Buffer<float> r, ro, bo, ip, lo, rs, io, mix, xn;
++    int dr, db, dl, dh;
++    Workspace(int nt, bool irregular) :
++        r(2 * GUARD + nt * (D + (irregular ? 16 : 0))), ro(r.n),
++        bo(2 * GUARD + nt * (N + (irregular ? 16 : 0))),
++        ip(2 * GUARD + nt * (HC + (irregular ? 16 : 0))),
++        lo(2 * GUARD + nt * (LR + (irregular ? 16 : 0))), rs(ip.n), io(ip.n), mix(bo.n),
++        xn(2 * GUARD + nt * D), dr(D + (irregular ? 16 : 0)), db(N + (irregular ? 16 : 0)),
++        dl(LR + (irregular ? 16 : 0)), dh(HC + (irregular ? 16 : 0)) {}
++};
++}
++int main(int argc, char** argv) {
++    using namespace strata::kernels;
++    std::mt19937 rng(7104);
++    auto random = [&] { return float(int(rng() % 2001) - 1000) / 1000; };
++    std::vector<float> norm(D);
++    std::vector<uint16_t> wd(LR * D), wu(D * LR), wi(HC * D);
++    for (auto& v : norm) v = .8f + .1f * random();
++    for (auto* w : {&wd, &wu, &wi}) for (auto& v : *w) v = bf16_from_f32(.02f * random());
++    Buffer<float> dn(D); Buffer<uint16_t> dd(wd.size()), du(wu.size()), di(wi.size());
++    dn.put(norm); dd.put(wd); du.put(wu); di.put(wi);
++    cudaStream_t stream{}; check(cudaStreamCreate(&stream));
++    const bool bench = argc > 1 && std::strcmp(argv[1], "--bench") == 0;
++    int failures = 0, cases = 0;
++    for (int nt = bench ? 2 : 1; nt <= (bench ? 4 : 8); ++nt) {
++      for (int mode = 0; mode < (bench ? 1 : 5); ++mode) {
++        // no pending write; in-place; separate output; no inject; irregular layout + mixed flags/eps.
++        const bool apply = mode != 0, inject = mode != 3, separate = mode == 2, irregular = mode == 4;
++        Workspace ref(nt, irregular), got(nt, irregular);
++        auto args = [&](Workspace& w) {
++            std::vector<FusedGrArgs> a(nt);
++            for (int t = 0; t < nt; ++t) {
++                auto& x = a[t];
++                x.R = w.r.p + GUARD + t * w.dr;
++                x.R_out = (separate ? w.ro.p : w.r.p) + GUARD + t * w.dr;
++                x.apply = apply && (!irregular || t % 2 == 0);
++                x.bo_prev = x.apply ? w.bo.p + GUARD + t * w.db : nullptr;
++                x.inj_prev = x.apply ? w.ip.p + GUARD + t * w.dh : nullptr;
++                x.w_norm = dn.p; x.w_down = dd.p; x.w_up = du.p; x.w_inject = inject ? di.p : nullptr;
++                x.eps = irregular ? 1e-6f * (t + 1) : 1e-6f;
++                x.lo = w.lo.p + GUARD + t * w.dl; x.rs = w.rs.p + GUARD + t * w.dh;
++                x.inject_out = inject ? w.io.p + GUARD + t * w.dh : nullptr;
++                x.mixed = w.mix.p + GUARD + t * w.db;
++            }
++            return a;
++        };
++        auto ar = args(ref), ag = args(got);
++        cudaGraph_t graph{}; cudaGraphExec_t exec{};
++        check(cudaStreamBeginCapture(stream, cudaStreamCaptureModeThreadLocal));
++        fused_gr_read_multi(ag.data(), nt, got.xn.p + GUARD, stream);
++        check(cudaStreamEndCapture(stream, &graph));
++        check(cudaGraphInstantiate(&exec, graph, nullptr, nullptr, 0)); check(cudaGraphDestroy(graph));
++        for (int replay = 0; replay < (bench ? 1 : 3); ++replay) {
++            std::vector<float> r(ref.r.n, 123.f), bo(ref.bo.n, 123.f), ip(ref.ip.n, 123.f);
++            for (int t = 0; t < nt; ++t) {
++                for (int j = 0; j < D; ++j) r[GUARD + t * ref.dr + j] = random();
++                for (int j = 0; j < N; ++j) bo[GUARD + t * ref.db + j] = random();
++                for (int j = 0; j < HC; ++j) ip[GUARD + t * ref.dh + j] = 2 * random();
++            }
++            for (Workspace* w : {&ref, &got}) {
++                w->r.put(r); w->bo.put(bo); w->ip.put(ip);
++                for (Buffer<float>* b : {&w->ro, &w->lo, &w->rs, &w->io, &w->mix, &w->xn})
++                    b->put(std::vector<float>(b->n, 123.f));
++            }
++            for (const auto& x : ar) fused_gr_read(x, stream);
++            if (replay == 0) fused_gr_read_multi(ag.data(), nt, got.xn.p + GUARD, stream);
++            else check(cudaGraphLaunch(exec, stream));
++            check(cudaStreamSynchronize(stream));
++            Buffer<float>* rb[] = {&ref.r, &ref.ro, &ref.lo, &ref.rs, &ref.io, &ref.mix, &ref.bo, &ref.ip};
++            Buffer<float>* gb[] = {&got.r, &got.ro, &got.lo, &got.rs, &got.io, &got.mix, &got.bo, &got.ip};
++            for (int b = 0; b < 8; ++b) {
++                auto expected = rb[b]->get(), actual = gb[b]->get();
++                if (std::memcmp(expected.data(), actual.data(), actual.size() * 4) != 0) {
++                    ++failures;
++                    std::fprintf(stderr, "Mismatch nt=%d mode=%d replay=%d buffer=%d\n", nt, mode, replay, b);
++                }
++            }
++            const auto scratch = got.xn.get();
++            for (int j = 0; j < GUARD; ++j)
++                failures += scratch[j] != 123.f || scratch[scratch.size() - 1 - j] != 123.f;
++            ++cases;
++        }
++        if (bench) {
++            check(cudaGraphLaunch(exec, stream)); check(cudaStreamSynchronize(stream));
++            const auto start = std::chrono::steady_clock::now();
++            int rounds = 0; double seconds;
++            do {
++                for (int i = 0; i < 100; ++i) check(cudaGraphLaunch(exec, stream));
++                check(cudaStreamSynchronize(stream)); rounds += 100;
++                seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
++            } while (seconds < 10);
++            const char* batch = std::getenv("STRATA_METAL_HC_BATCH");
++            std::printf("HC batch=%s T=%d: %.3f us/read (%d reads, %.2f s)\n",
++                        batch ? batch : "default", nt, seconds * 1e6 / rounds, rounds, seconds);
++        }
++        check(cudaGraphExecDestroy(exec));
++      }
++    }
++    check(cudaStreamDestroy(stream));
++    std::printf("Metal fused GR multi: %d cases, %d failures\n", cases, failures);
++    return failures != 0;
++}
+diff --git a/tests/core/metal_gdn_snapshot_test.cpp b/tests/core/metal_gdn_snapshot_test.cpp
+new file mode 100644
+index 0000000..94fc57c
+--- /dev/null
++++ b/tests/core/metal_gdn_snapshot_test.cpp
+@@ -0,0 +1,114 @@
++#include "strata/kernels/verify_kernels.hpp"
++#include <cuda_runtime.h>
++#include <chrono>
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++#include <random>
++#include <vector>
++
++namespace {
++constexpr int S = 128, PAD = 16;
++void check(cudaError_t e) {
++    if (e != cudaSuccess) { std::fprintf(stderr, "%s\n", cudaGetErrorString(e)); std::exit(2); }
++}
++template<class T> struct Buffer {
++    T* p{}; size_t n;
++    explicit Buffer(size_t size) : n(size) { check(cudaMalloc((void**)&p, n * sizeof(T))); }
++    ~Buffer() { cudaFree(p); }
++    void put(const std::vector<T>& v) { check(cudaMemcpy(p, v.data(), n * sizeof(T), cudaMemcpyHostToDevice)); }
++    std::vector<T> get() const {
++        std::vector<T> v(n); check(cudaMemcpy(v.data(), p, n * sizeof(T), cudaMemcpyDeviceToHost)); return v;
++    }
++};
++}
++int main(int argc, char** argv) {
++    using namespace strata::kernels;
++    const bool bench = argc > 1 && std::strcmp(argv[1], "--bench") == 0;
++    const bool use_snapshot = argc > 2 && std::strcmp(argv[2], "snapshot") == 0;
++    std::mt19937 rng(4281);
++    auto random = [&] { return float(int(rng() % 2001) - 1000) / 1000; };
++    cudaStream_t stream{}; check(cudaStreamCreate(&stream));
++    int failures = 0, cases = 0;
++    // The existing replay kernel's permanent scratch ring is sized by its first use.
++    for (int hv : (bench ? std::vector<int>{48} : std::vector<int>{48, 4})) {
++      const int hk = hv == 4 ? 2 : 16, C = S * (2 * hk + hv), V = S * hv, NF = S * hv * S;
++      for (int nt = bench ? 2 : 1; nt <= (bench ? 4 : (hv == 4 ? 8 : 4)); ++nt) {
++        Buffer<float> ref(NF + 2 * PAD), got(ref.n), snapshots(nt * NF + 2 * PAD);
++        Buffer<float> h(nt * C), gate(nt * hv), beta(nt * hv), z(nt * V), gamma(S), yr(nt * V), yg(yr.n);
++        Buffer<int32_t> keep(1);
++        auto verify = [&](bool snapshot) {
++            if (snapshot) gdn_step_norm_snapshots(got.p + PAD, h.p, C, gate.p, beta.p, z.p, gamma.p,
++                                                 1e-6f, yg.p, hk, hv, nt, snapshots.p + PAD, stream);
++            else gdn_step_norm_multi(got.p + PAD, h.p, C, gate.p, beta.p, z.p, gamma.p,
++                                     1e-6f, yg.p, hk, hv, nt, nullptr, stream);
++        };
++        auto commit = [&](bool snapshot) {
++            if (snapshot) gdn_commit_snapshot(got.p + PAD, snapshots.p + PAD, hv, keep.p, stream);
++            else gdn_step_norm_multi(got.p + PAD, h.p, C, gate.p, beta.p, z.p, gamma.p,
++                                     1e-6f, yg.p, hk, hv, nt, keep.p, stream);
++        };
++        cudaGraph_t graph{}; cudaGraphExec_t ve{}, ce{};
++        check(cudaStreamBeginCapture(stream, cudaStreamCaptureModeThreadLocal)); verify(true);
++        check(cudaStreamEndCapture(stream, &graph)); check(cudaGraphInstantiate(&ve, graph, nullptr, nullptr, 0));
++        check(cudaGraphDestroy(graph));
++        check(cudaStreamBeginCapture(stream, cudaStreamCaptureModeThreadLocal)); commit(true);
++        check(cudaStreamEndCapture(stream, &graph)); check(cudaGraphInstantiate(&ce, graph, nullptr, nullptr, 0));
++        check(cudaGraphDestroy(graph));
++        for (int replay = 0; replay < (bench ? 1 : 3); ++replay) {
++            std::vector<float> state(ref.n, 123.f), hh(h.n), gg(gate.n), bb(beta.n), zz(z.n), gn(S);
++            for (int i = PAD; i < PAD + NF; ++i) state[i] = .02f * random();
++            for (auto& v : hh) v = .05f * random();
++            for (auto& v : gg) v = -.3f + .1f * random();
++            for (auto& v : bb) v = .5f + .1f * random();
++            for (auto& v : zz) v = random();
++            for (auto& v : gn) v = .8f + .1f * random();
++            ref.put(state); got.put(state); h.put(hh); gate.put(gg); beta.put(bb); z.put(zz); gamma.put(gn);
++            snapshots.put(std::vector<float>(snapshots.n, 123.f));
++            gdn_step_norm_multi(ref.p + PAD, h.p, C, gate.p, beta.p, z.p, gamma.p,
++                                 1e-6f, yr.p, hk, hv, nt, nullptr, stream);
++            if (replay == 0) verify(true); else check(cudaGraphLaunch(ve, stream));
++            check(cudaStreamSynchronize(stream));
++            auto expected_y = yr.get(), actual_y = yg.get(), actual_state = got.get(), snap = snapshots.get();
++            failures += std::memcmp(expected_y.data(), actual_y.data(), yr.n * 4) != 0;
++            failures += std::memcmp(state.data(), actual_state.data(), state.size() * 4) != 0;
++            for (int i = 0; i < PAD; ++i) failures += snap[i] != 123.f || snap[snap.size() - 1 - i] != 123.f;
++            for (int accepted = 0; accepted <= nt; ++accepted) {
++                ref.put(state); got.put(state); keep.put({accepted});
++                gdn_step_norm_multi(ref.p + PAD, h.p, C, gate.p, beta.p, z.p, gamma.p,
++                                     1e-6f, yr.p, hk, hv, nt, keep.p, stream);
++                check(cudaGraphLaunch(ce, stream)); check(cudaStreamSynchronize(stream));
++                auto expected = ref.get(), actual = got.get();
++                if (std::memcmp(expected.data(), actual.data(), ref.n * 4) != 0) {
++                    ++failures; std::fprintf(stderr, "GDN state mismatch hv=%d T=%d keep=%d replay=%d\n",
++                                             hv, nt, accepted, replay);
++                }
++                if (accepted > 0) failures += std::memcmp(expected.data() + PAD,
++                                                         snap.data() + PAD + (accepted - 1) * NF, NF * 4) != 0;
++                ++cases;
++            }
++        }
++        if (bench) {
++            keep.put({nt - 1});
++            cudaGraphExec_t be{};
++            check(cudaStreamBeginCapture(stream, cudaStreamCaptureModeThreadLocal));
++            verify(use_snapshot); commit(use_snapshot);
++            check(cudaStreamEndCapture(stream, &graph)); check(cudaGraphInstantiate(&be, graph, nullptr, nullptr, 0));
++            check(cudaGraphDestroy(graph)); check(cudaGraphLaunch(be, stream)); check(cudaStreamSynchronize(stream));
++            const auto start = std::chrono::steady_clock::now(); int rounds = 0; double seconds;
++            do {
++                for (int i = 0; i < 20; ++i) check(cudaGraphLaunch(be, stream));
++                check(cudaStreamSynchronize(stream)); rounds += 20;
++                seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
++            } while (seconds < 10);
++            std::printf("GDN %s T=%d keep=%d: %.3f us/verify+commit (%d reads, %.2f s)\n",
++                        use_snapshot ? "snapshot" : "replay", nt, nt - 1, seconds * 1e6 / rounds, rounds, seconds);
++            check(cudaGraphExecDestroy(be));
++        }
++        check(cudaGraphExecDestroy(ve)); check(cudaGraphExecDestroy(ce));
++      }
++    }
++    check(cudaStreamDestroy(stream));
++    std::printf("Metal GDN snapshots: %d accepted-prefix cases, %d failures\n", cases, failures);
++    return failures != 0;
++}

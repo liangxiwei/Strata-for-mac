@@ -92,6 +92,14 @@ bool direct_dots() {
     return on;
 }
 
+bool resident_iq4_direct() {
+    static const bool on = [] {
+        const char* v = std::getenv("STRATA_METAL_EXPERT_IQ4_DIRECT");
+        return v == nullptr || std::atoi(v) != 0;
+    }();
+    return on;
+}
+
 // kernel names carry the template argument as a suffix (mmvq_kernel_16); a macro cannot stringify a
 // template parameter (it expands before instantiation), so the names are spelled with snprintf
 template<int TY>
@@ -349,8 +357,12 @@ void native_expert_gemm(const NativeExpertLayout& L, const uint16_t* x, const ui
     char name[64];
     const int64_t cols = down ? L.n_embd : 2 * L.n_ff;
     if (tile_rows == 16 || tile_rows == 32) {   // descriptors of up to tile_rows rows (prefill.cpp builds them)
-        std::snprintf(name, sizeof name, "native_gemm2_%s_%d_r%d", down ? "down" : "gu", down ? L.d_type : L.gu_type,
-                      tile_rows);
+        static const bool tail = [] {
+            const char* e = std::getenv("STRATA_METAL_PREFILL_MOE_TAIL");
+            return e == nullptr || std::atoi(e) != 0;
+        }();
+        std::snprintf(name, sizeof name, "native_gemm2_%s_%d_r%d%s", down ? "down" : "gu", down ? L.d_type : L.gu_type,
+                      tile_rows, tile_rows == 32 && tail ? "_tail" : "");
         metal::Launch q(name, (unsigned) ((cols + 63) / 64), (unsigned) n_tiles, 1, tile_rows == 32 ? 256 : 128, 1, 1, 0,
                         stream);
         q.buf(x).buf(arena).buf(tiles).buf(y).scalar(L.n_embd).scalar(L.n_ff)
@@ -391,14 +403,17 @@ void native_expert_resident(const NativeExpertLayout& L, const uint8_t* arena, c
     metal::Launch q("quantize_q8_1_kernel", (unsigned) ((nh + 255) / 256), 1, 1, 256, 1, 1, 0, stream);
     q.buf(h).buf(hq).scalar(nh);
     q.done();
-    const bool direct = L.d_type == 42 && direct_dots();         // four rows per warp
+    const bool direct_q2 = L.d_type == 42 && direct_dots();
+    const bool direct_iq4 = L.d_type == 20 && direct_dots() && resident_iq4_direct();
+    const bool direct = direct_q2 || direct_iq4;               // four rows per warp
     static const bool specialize_down = [] {
         const char* e = std::getenv("STRATA_METAL_DECODE_DOWN_DIMS"); // =0: runtime-dimension kernel
         return e == nullptr || std::atoi(e) != 0;
     }();
     const bool canonical_down = specialize_down && L.n_embd == 2560 && L.n_ff == 640;
-    if (direct) std::snprintf(name, sizeof name, canonical_down ? "native_resident_down_dim_42_r4"
-                                                               : "native_resident_down_direct_42_r4");
+    if (direct_q2) std::snprintf(name, sizeof name, canonical_down ? "native_resident_down_dim_42_r4"
+                                                                 : "native_resident_down_direct_42_r4");
+    else if (direct_iq4) std::snprintf(name, sizeof name, "native_resident_down_direct_20_r4");
     else std::snprintf(name, sizeof name, "native_resident_down_%d", L.d_type);
     metal::Launch down(name, (unsigned) ((L.n_embd + (direct ? 31 : 7)) / (direct ? 32 : 8)), (unsigned) cap, 1, 256, 1, 1, 0,
                        stream);

@@ -1,0 +1,9 @@
+{
+  "window": 2,
+  "screen_scores": {
+    "2": 18.306132751531155,
+    "3": 18.286819756740627,
+    "4": 18.204673745834107
+  },
+  "criterion": "geometric mean of both input-length decode rates"
+}

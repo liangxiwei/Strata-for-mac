@@ -1,0 +1,192 @@
+{
+  "strata": [
+    {
+      "mode": "strata_full",
+      "spec_min_p": 0.5,
+      "windows": 195,
+      "average_input_window_tokens": 3.15,
+      "output_tokens_per_window": 2.63,
+      "round_ms": 153.54,
+      "verify_wall_ms": 136.47,
+      "commit_emit_cpu_ms": 0.25,
+      "draft_wall_ms": 16.82,
+      "decode_tps": 17.124662847237552,
+      "verification_share": 0.8888237592809691,
+      "draft_share": 0.10954800052103687,
+      "draft_acceptance": 0.7595238095238095,
+      "output_equal_to_original_strata_off": true
+    },
+    {
+      "mode": "strata_full",
+      "spec_min_p": 0.0,
+      "windows": 178,
+      "average_input_window_tokens": 3.98,
+      "output_tokens_per_window": 2.88,
+      "round_ms": 187.74,
+      "verify_wall_ms": 167.77,
+      "commit_emit_cpu_ms": 0.25,
+      "draft_wall_ms": 19.71,
+      "decode_tps": 15.332490130709843,
+      "verification_share": 0.8936294875892191,
+      "draft_share": 0.1049856184084372,
+      "draft_acceptance": 0.632768361581921,
+      "output_equal_to_original_strata_off": true
+    },
+    {
+      "mode": "strata_subset",
+      "spec_min_p": 0.5,
+      "windows": 196,
+      "average_input_window_tokens": 3.13,
+      "output_tokens_per_window": 2.61,
+      "round_ms": 146.98,
+      "verify_wall_ms": 134.94,
+      "commit_emit_cpu_ms": 0.27,
+      "draft_wall_ms": 11.77,
+      "decode_tps": 17.794976028169266,
+      "verification_share": 0.9180840930738876,
+      "draft_share": 0.08007892230235407,
+      "draft_acceptance": 0.7607655502392344,
+      "output_equal_to_original_strata_off": true
+    },
+    {
+      "mode": "strata_subset",
+      "spec_min_p": 0.0,
+      "windows": 180,
+      "average_input_window_tokens": 3.98,
+      "output_tokens_per_window": 2.84,
+      "round_ms": 180.37,
+      "verify_wall_ms": 166.39,
+      "commit_emit_cpu_ms": 0.28,
+      "draft_wall_ms": 13.7,
+      "decode_tps": 15.785409050962413,
+      "verification_share": 0.9224926539890225,
+      "draft_share": 0.07595498142706658,
+      "draft_acceptance": 0.6219739292364991,
+      "output_equal_to_original_strata_off": true
+    }
+  ],
+  "meld": {
+    "target_context": "0x101aa4000",
+    "draft_context": "0x791ec8400",
+    "target_decode_calls": 176,
+    "target_tokens_per_call": {
+      "4": 174,
+      "3": 1,
+      "1": 1
+    },
+    "target_4_token_calls": 174,
+    "target_4_token_mean_ms": 103.79211494252874,
+    "target_4_token_median_ms": 103.78399999999999,
+    "target_mean_call_ms": 103.5035909090909,
+    "draft_1_token_calls": 523,
+    "draft_1_token_mean_ms": 2.7296137667304015,
+    "draft_1_token_median_ms": 2.41,
+    "target_total_ms": 18216.632,
+    "draft_total_ms": 1908.0049999999983,
+    "draft_ms_per_target_call": 10.84093749999999,
+    "output_tokens_per_target_call": 2.909090909090909,
+    "decode_tps": 25.260681676673258,
+    "timing_caveat": "GPU-synchronized llama_decode wall time, not a kernel-only timestamp; includes catch-up calls"
+  },
+  "strata_encoding_diagnostic": {
+    "strata_full": {
+      "2733": {
+        "samples": 7,
+        "median_ms": 1.074,
+        "max_ms": 1.794
+      },
+      "134": {
+        "samples": 7,
+        "median_ms": 0.153,
+        "max_ms": 0.204
+      },
+      "37": {
+        "samples": 5,
+        "median_ms": 0.045,
+        "max_ms": 0.065
+      },
+      "1743": {
+        "samples": 2,
+        "median_ms": 0.95,
+        "max_ms": 0.978
+      },
+      "98": {
+        "samples": 2,
+        "median_ms": 0.097,
+        "max_ms": 0.098
+      },
+      "17": {
+        "samples": 1,
+        "median_ms": 0.014,
+        "max_ms": 0.014
+      },
+      "84": {
+        "samples": 1,
+        "median_ms": 0.253,
+        "max_ms": 0.253
+      },
+      "61": {
+        "samples": 5,
+        "median_ms": 0.054,
+        "max_ms": 0.128
+      },
+      "104": {
+        "samples": 2,
+        "median_ms": 0.098,
+        "max_ms": 0.128
+      }
+    },
+    "strata_subset": {
+      "2733": {
+        "samples": 7,
+        "median_ms": 1.2,
+        "max_ms": 1.829
+      },
+      "134": {
+        "samples": 7,
+        "median_ms": 0.181,
+        "max_ms": 1.514
+      },
+      "37": {
+        "samples": 5,
+        "median_ms": 0.053,
+        "max_ms": 0.06
+      },
+      "1743": {
+        "samples": 2,
+        "median_ms": 1.409,
+        "max_ms": 1.693
+      },
+      "98": {
+        "samples": 2,
+        "median_ms": 0.186,
+        "max_ms": 0.224
+      },
+      "17": {
+        "samples": 1,
+        "median_ms": 0.031,
+        "max_ms": 0.031
+      },
+      "85": {
+        "samples": 1,
+        "median_ms": 0.197,
+        "max_ms": 0.197
+      },
+      "62": {
+        "samples": 5,
+        "median_ms": 0.052,
+        "max_ms": 0.117
+      },
+      "105": {
+        "samples": 2,
+        "median_ms": 0.181,
+        "max_ms": 0.288
+      }
+    }
+  },
+  "all_strata_output_equal_to_original_strata_off": true,
+  "daily_engine_sha256": "12365f5a7f194a02b3a306e0e554060a33cc444dbd6e894edcd2dec78579475e",
+  "processes_closed": true,
+  "comparison_limit": "One 1139-input/512-output request per setting; diagnostic, not an interleaved three-round speed comparison",
+  "verify_wall_caveat": "Strata commit is asynchronous; some preceding commit GPU work can be charged to verify wall time"
+}

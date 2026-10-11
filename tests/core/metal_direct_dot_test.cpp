@@ -133,17 +133,18 @@ void mmvq_case(int ty, int K, int N, int mode) {
     cudaFree(dw); cudaFree(dx); cudaFree(y0); cudaFree(y1); cudaFree(y2);
 }
 
-// The Q2_0 resident down projection: missing, out-of-range, non-resident and repeated experts, uniform slots and
+// The Q2_0 / IQ4_NL resident down projections: missing, out-of-range, non-resident and repeated experts, uniform slots and
 // a per-slot offset table, row counts that leave a partial four-row warp.
-void resident_down_case(long n_embd, long n_ff, int cap, bool offsets_table, int mode) {
+void resident_down_case(long n_embd, long n_ff, int cap, bool offsets_table, int mode, int type = 42) {
     const int n_expert = 12, slots = 10;
-    const unsigned long d_row = (unsigned long) (n_ff / 64) * 18, down_off = 4096;
+    const int qk = type == 20 ? 32 : 64;
+    const unsigned long d_row = (unsigned long) (n_ff / qk) * 18, down_off = 4096;
     const unsigned long slot_bytes = down_off + (unsigned long) n_embd * d_row + 64;
     std::vector<uint8_t> arena(slot_bytes * slots);
     for (auto& v : arena) v = mode == 1 ? 0xFF : (uint8_t) rng();   // 0xFF: every code 3, the value 2
     for (int s = 0; s < slots; ++s)
         for (long r = 0; r < n_embd; ++r)
-            for (long b = 0; b < n_ff / 64; ++b) {
+            for (long b = 0; b < n_ff / qk; ++b) {
                 const uint16_t d = half_scale(mode);
                 std::memcpy(arena.data() + s * slot_bytes + down_off + r * d_row + b * 18, &d, 2);
             }
@@ -159,12 +160,13 @@ void resident_down_case(long n_embd, long n_ff, int cap, bool offsets_table, int
     void* dh = upload(q8((int) n_ff * cap, mode));
     float* y0 = out_buffer((size_t) cap * n_embd, 0xAA);
     float* y1 = out_buffer((size_t) cap * n_embd, 0x55);
-    const bool canonical = n_embd == 2560 && n_ff == 640;
+    const bool canonical = type == 42 && n_embd == 2560 && n_ff == 640;
     float* y2 = canonical ? out_buffer((size_t) cap * n_embd, 0x33) : nullptr;
     const int k = 10, has = offsets_table ? 1 : 0;
     for (int v = 0; v < (canonical ? 3 : 2); ++v) {
         const bool direct = v != 0;
-        const char* name = v == 0 ? "native_resident_down_42" : v == 1 ? "native_resident_down_direct_42_r4"
+        const char* name = type == 20 ? (v == 0 ? "native_resident_down_20" : "native_resident_down_direct_20_r4") :
+                          v == 0 ? "native_resident_down_42" : v == 1 ? "native_resident_down_direct_42_r4"
                                                                  : "native_resident_down_dim_42_r4";
         Launch d(name,
                  (unsigned) (direct ? (n_embd + 31) / 32 : (n_embd + 7) / 8), (unsigned) cap, 1, 256, 1, 1, 0, stream);
@@ -172,7 +174,7 @@ void resident_down_case(long n_embd, long n_ff, int cap, bool offsets_table, int
          .scalar(down_off).scalar(slot_bytes).scalar(n_expert).scalar(k).scalar(has).buf(v == 0 ? y0 : v == 1 ? y1 : y2);
         d.done();
     }
-    compare("Q2_0 resident down", std::to_string(n_embd) + "x" + std::to_string(n_ff) + " cap " + std::to_string(cap) +
+    compare(type == 20 ? "IQ4_NL resident down" : "Q2_0 resident down", std::to_string(n_embd) + "x" + std::to_string(n_ff) + " cap " + std::to_string(cap) +
             (offsets_table ? " offsets" : " uniform") + " mode " + std::to_string(mode),
             download(y0, (size_t) cap * n_embd), download(y1, (size_t) cap * n_embd));
     if (canonical) {
@@ -185,9 +187,9 @@ void resident_down_case(long n_embd, long n_ff, int cap, bool offsets_table, int
 }
 
 // native_expert_resident (gate/up, SwiGLU, Q8_1, down) against the same chain with the original down kernel.
-void resident_public_case(int n_tok, long n_embd = 2560, long n_ff = 640) {
+void resident_public_case(int n_tok, long n_embd = 2560, long n_ff = 640, int down_type = 42) {
     const int n_expert = 6, k = 4, cap = n_tok * k;
-    const auto L = strata::kernels::native_expert_layout(42, 42, n_embd, n_ff);
+    const auto L = strata::kernels::native_expert_layout(42, down_type, n_embd, n_ff);
     std::vector<uint8_t> arena(L.bytes * n_expert);
     fill_blocks(arena, 18, 0, 0);   // every blob section is a whole number of 18-byte Q2_0 blocks
     std::vector<int> residency = {3, -1, 0, 4, 1, 2}, ids(cap);
@@ -218,11 +220,13 @@ void resident_public_case(int n_tok, long n_embd = 2560, long n_ff = 640) {
     sw.buf(gate).buf(up).buf(h).scalar(nh); sw.done();
     Launch qz("quantize_q8_1_kernel", (unsigned) ((nh + 255) / 256), 1, 1, 256, 1, 1, 0, stream);
     qz.buf(h).buf(hq).scalar(nh); qz.done();
-    Launch dn("native_resident_down_42", (unsigned) ((n_embd + 7) / 8), (unsigned) cap, 1, 256, 1, 1, 0, stream);
+    Launch dn(down_type == 20 ? "native_resident_down_20" : "native_resident_down_42",
+              (unsigned) ((n_embd + 7) / 8), (unsigned) cap, 1, 256, 1, 1, 0, stream);
     dn.buf(da).buf(nullptr).buf(di).buf(dr).buf(hq).scalar(n_embd).scalar(n_ff).scalar(d_row).scalar(down_off)
       .scalar(sb).scalar(n_expert).scalar(k).scalar(has).buf(y0);
     dn.done();
-    compare("Q2_0 resident public", "tokens " + std::to_string(n_tok), download(y0, (size_t) cap * n_embd),
+    compare(down_type == 20 ? "IQ4_NL resident public" : "Q2_0 resident public",
+            "tokens " + std::to_string(n_tok), download(y0, (size_t) cap * n_embd),
             download(y1, (size_t) cap * n_embd));
     cudaFree(da); cudaFree(di); cudaFree(dr); cudaFree(dx); cudaFree(scratch); cudaFree(y0); cudaFree(y1);
 }
@@ -533,8 +537,14 @@ int main() {
         resident_down_case(2560, 640, 23, true, mode);
         resident_down_case(2563 - 3 + 36, 640, 23, true, mode);   // 2596 rows: a partial four-row warp
         resident_down_case(512, 128, 7, true, mode);
+        resident_down_case(2560, 640, 10, false, mode, 20);
+        resident_down_case(2596, 640, 23, true, mode, 20);
+        resident_down_case(517, 96, 13, true, mode, 20);
     }
-    for (int t : {1, 3}) { resident_public_case(t); resident_public_case(t, 512, 128); }
+    for (int t : {1, 3}) {
+        resident_public_case(t); resident_public_case(t, 512, 128);
+        resident_public_case(t, 2560, 640, 20); resident_public_case(t, 512, 128, 20);
+    }
     for (int apply : {0, 1}) { gr_case(apply, false); gr_case(apply, true); }
     for (int T : {1, 2, 4, 8}) {
         gdn_case(T, -1, 0);                      // verify: state read, not written

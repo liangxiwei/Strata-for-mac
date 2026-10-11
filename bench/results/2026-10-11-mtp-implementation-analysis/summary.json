@@ -1,0 +1,170 @@
+[
+  {
+    "prompt_tokens": 1139,
+    "gen_tokens": 512,
+    "ttft_s": 5.333235416999997,
+    "elapsed_s": 35.17953216700002,
+    "decode_tps": 17.124662847237552,
+    "prompt_tps_including_ttft": 213.56642093266152,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 1139,
+      "prompt_ms": 5211.2,
+      "prompt_per_token_ms": 4.575,
+      "prompt_per_second": 218.6,
+      "predicted_n": 512,
+      "predicted_ms": 29940.0,
+      "predicted_per_token_ms": 58.477,
+      "predicted_per_second": 17.1,
+      "draft_n": 420,
+      "draft_n_accepted": 319
+    },
+    "usage": {
+      "prompt_tokens": 1139,
+      "completion_tokens": 512,
+      "total_tokens": 1651,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "content_sha256": "5cef2bd222783506e4696a3850706808768d00416cba1d431f1d21a800713069",
+    "identical_to_strata_off": true,
+    "decode_round_timing": "strata decode timing: 195 windows, avg T 3.15, 2.63 tokens/window, 153.54 ms/window = verify 136.47 (GPU-reach wait 0.00 + per-layer host 0.00 [plan 0.00 actq 0.00 jobs 0.00 CPU 0.00] + stage 1.16) + commit/emit 0.25 + draft 16.82; per layer-window: CPU experts 0.00 (0.00 entries), VRAM hits 0.00, PCIe 0.00",
+    "mode": "strata_full",
+    "spec_min_p": 0.5
+  },
+  {
+    "prompt_tokens": 1139,
+    "gen_tokens": 512,
+    "ttft_s": 5.262033792000011,
+    "elapsed_s": 38.594817000000006,
+    "decode_tps": 15.332490130709843,
+    "prompt_tps_including_ttft": 216.4562306178359,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 1139,
+      "prompt_ms": 5162.8,
+      "prompt_per_token_ms": 4.533,
+      "prompt_per_second": 220.6,
+      "predicted_n": 512,
+      "predicted_ms": 33418.2,
+      "predicted_per_token_ms": 65.27,
+      "predicted_per_second": 15.3,
+      "draft_n": 531,
+      "draft_n_accepted": 336
+    },
+    "usage": {
+      "prompt_tokens": 1139,
+      "completion_tokens": 512,
+      "total_tokens": 1651,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "content_sha256": "5cef2bd222783506e4696a3850706808768d00416cba1d431f1d21a800713069",
+    "identical_to_strata_off": true,
+    "decode_round_timing": "strata decode timing: 178 windows, avg T 3.98, 2.88 tokens/window, 187.74 ms/window = verify 167.77 (GPU-reach wait 0.00 + per-layer host 0.00 [plan 0.00 actq 0.00 jobs 0.00 CPU 0.00] + stage 0.35) + commit/emit 0.25 + draft 19.71; per layer-window: CPU experts 0.00 (0.00 entries), VRAM hits 0.00, PCIe 0.00",
+    "mode": "strata_full",
+    "spec_min_p": 0.0
+  },
+  {
+    "prompt_tokens": 1139,
+    "gen_tokens": 512,
+    "ttft_s": 5.35146583400001,
+    "elapsed_s": 34.072093833999986,
+    "decode_tps": 17.794976028169266,
+    "prompt_tps_including_ttft": 212.83888103395446,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 1139,
+      "prompt_ms": 5240.4,
+      "prompt_per_token_ms": 4.601,
+      "prompt_per_second": 217.3,
+      "predicted_n": 512,
+      "predicted_ms": 28808.8,
+      "predicted_per_token_ms": 56.267,
+      "predicted_per_second": 17.8,
+      "draft_n": 418,
+      "draft_n_accepted": 318
+    },
+    "usage": {
+      "prompt_tokens": 1139,
+      "completion_tokens": 512,
+      "total_tokens": 1651,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "content_sha256": "5cef2bd222783506e4696a3850706808768d00416cba1d431f1d21a800713069",
+    "identical_to_strata_off": true,
+    "decode_round_timing": "strata decode timing: 196 windows, avg T 3.13, 2.61 tokens/window, 146.98 ms/window = verify 134.94 (GPU-reach wait 0.00 + per-layer host 0.00 [plan 0.00 actq 0.00 jobs 0.00 CPU 0.00] + stage 1.20) + commit/emit 0.27 + draft 11.77; per layer-window: CPU experts 0.00 (0.00 entries), VRAM hits 0.00, PCIe 0.00",
+    "mode": "strata_subset",
+    "spec_min_p": 0.5
+  },
+  {
+    "prompt_tokens": 1139,
+    "gen_tokens": 512,
+    "ttft_s": 5.172552457999984,
+    "elapsed_s": 37.54985733299998,
+    "decode_tps": 15.785409050962413,
+    "prompt_tps_including_ttft": 220.20076340422557,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 1139,
+      "prompt_ms": 5068.9,
+      "prompt_per_token_ms": 4.45,
+      "prompt_per_second": 224.7,
+      "predicted_n": 512,
+      "predicted_ms": 32465.8,
+      "predicted_per_token_ms": 63.41,
+      "predicted_per_second": 15.8,
+      "draft_n": 537,
+      "draft_n_accepted": 334
+    },
+    "usage": {
+      "prompt_tokens": 1139,
+      "completion_tokens": 512,
+      "total_tokens": 1651,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "content_sha256": "5cef2bd222783506e4696a3850706808768d00416cba1d431f1d21a800713069",
+    "identical_to_strata_off": true,
+    "decode_round_timing": "strata decode timing: 180 windows, avg T 3.98, 2.84 tokens/window, 180.37 ms/window = verify 166.39 (GPU-reach wait 0.00 + per-layer host 0.00 [plan 0.00 actq 0.00 jobs 0.00 CPU 0.00] + stage 0.36) + commit/emit 0.28 + draft 13.70; per layer-window: CPU experts 0.00 (0.00 entries), VRAM hits 0.00, PCIe 0.00",
+    "mode": "strata_subset",
+    "spec_min_p": 0.0
+  },
+  {
+    "prompt_tokens": 1139,
+    "gen_tokens": 512,
+    "ttft_s": 6.107932125000048,
+    "elapsed_s": 26.337352915999986,
+    "decode_tps": 25.260681676673258,
+    "prompt_tps_including_ttft": 186.478824042268,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 1139,
+      "prompt_ms": 6079.452,
+      "prompt_per_token_ms": 5.3375346795434595,
+      "prompt_per_second": 187.35241268456434,
+      "predicted_n": 512,
+      "predicted_ms": 20238.968,
+      "predicted_per_token_ms": 39.60659099804305,
+      "predicted_per_second": 25.24832293820515,
+      "draft_n": 521,
+      "draft_n_accepted": 336
+    },
+    "usage": {
+      "completion_tokens": 512,
+      "prompt_tokens": 1139,
+      "total_tokens": 1651,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "content_sha256": "bd57b828e1c5dbe60c471e2b8b54a18f2a33de273e38b016c61768d51b2848e6",
+    "mode": "meld_trace",
+    "spec_min_p": 0.0
+  }
+]

@@ -1,0 +1,12 @@
+native_gemm2_gu_18_r16 rows 9936 (19.4 per expert):  orig 32.92 ms  r32 35.01 ms  adaptive 31.51 ms  hybrid 28.96 ms
+native_gemm2_down_20_r16 rows 9936 (19.4 per expert):  orig 15.89 ms  r32 17.89 ms  adaptive 14.34 ms  hybrid 13.99 ms
+native_gemm2_gu_18_r16 rows 18290 (35.7 per expert):  orig 54.48 ms  r32 48.87 ms  adaptive 46.16 ms  hybrid 42.70 ms
+native_gemm2_down_20_r16 rows 18290 (35.7 per expert):  orig 24.34 ms  r32 24.74 ms  adaptive 22.14 ms  hybrid 20.86 ms
+native_gemm2_gu_21_r16 rows 9195 (18.0 per expert):  orig 34.14 ms  r32 36.70 ms  adaptive 33.25 ms  hybrid 28.99 ms
+native_gemm2_gu_21_r16 rows 18768 (36.7 per expert):  orig 55.91 ms  r32 50.40 ms  adaptive 48.51 ms  hybrid 46.07 ms
+native_gemm2_gu_22_r16 rows 10256 (20.0 per expert):  orig 33.05 ms  r32 37.27 ms  adaptive 32.39 ms  hybrid 32.28 ms
+native_gemm2_down_42_r16 rows 10256 (20.0 per expert):  orig 15.05 ms  r32 17.46 ms  adaptive 14.52 ms  hybrid 14.13 ms
+native_gemm2_gu_22_r16 rows 19817 (38.7 per expert):  orig 55.07 ms  r32 52.91 ms  adaptive 48.83 ms  hybrid 47.57 ms
+native_gemm2_down_42_r16 rows 19817 (38.7 per expert):  orig 25.16 ms  r32 25.14 ms  adaptive 22.64 ms  hybrid 22.21 ms
+native_gemm2_gu_23_r16 rows 9581 (18.7 per expert):  orig 36.91 ms  r32 40.38 ms  adaptive 34.97 ms  hybrid 31.67 ms
+native_gemm2_gu_23_r16 rows 21049 (41.1 per expert):  orig 54.32 ms  r32 50.83 ms  adaptive 49.42 ms  hybrid 46.80 ms

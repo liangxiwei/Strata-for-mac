@@ -1,0 +1,708 @@
+--- a/src/kernels/metal/native_mmvq.mm
++++ b/src/kernels/metal/native_mmvq.mm
+@@ -1,6 +1,7 @@
+ // src/kernels/metal/native_mmvq.mm - the port of src/kernels/cuda/native_mmvq.cu's host half.  Same entry
+-// points (include/strata/kernels/native_mmvq.hpp), same validation, same launch decisions (the small-K
+-// rule, the multi_exact layouts, the ncols switch), same forwards to iq_mmvq for the i-quants and Q5_1 -
++// points (include/strata/kernels/native_mmvq.hpp), same validation and single-column arithmetic, plus
++// exact Metal small-batch paths for Q4_K / Q5_K / Q6_K and IQ4. Other formats retain the CUDA small-K / multi_exact
++// launch decisions and the forwards to iq_mmvq for the i-quants and Q5_1 -
+ // the kernels are metal::Launch chains whose argument order IS each kernel's [[buffer(N)]] order (rule A)
+ // and every pointer rides as a bound buffer (rule 9: nothing but scalars travels as bytes).
+ //
+@@ -9,7 +10,7 @@
+ // native_mmvq_multi_kernel_<fmt>_r1/_r2/_r4 (<F, NCOLS, NW, ROWS> with ROWS spelled and NCOLS/NW runtime -
+ // see native_mmvq.metal's file comment for why runtime NCOLS/NW keep the multi == single bitwise contract).
+ //
+-// THE ONE HOST-SIDE ADDITION (the iq_kernels.mm precedent, "make_host_visible"): the shim's cudaMemcpy
++// Host visibility (the iq_kernels.mm precedent, "make_host_visible"): the shim's cudaMemcpy
+ // orders only against the NULL stream, and callers read the quantizer's output with a bare cudaMemcpy right
+ // after launching on their own stream - native_quantize_q8_1 therefore commits+waits the caller's stream
+ // before returning.  Inside a graph capture there is no pending command buffer, so it is a no-op there.
+@@ -107,6 +108,39 @@
+     return on;
+ }
+ 
++// 0: original packed multi, 1: independent direct calls, 2: shared-weight batch.
++int iq4_multi_mode() {
++    static const int mode = [] {
++        const char* v = std::getenv("STRATA_METAL_IQ4_MULTI");
++        return v == nullptr ? 2 : std::clamp(std::atoi(v), 0, 2);
++    }();
++    return mode;
++}
++
++bool iq4_simdgroup() {
++    static const bool on = [] {
++        const char* v = std::getenv("STRATA_METAL_IQ4_SG");
++        return v == nullptr || std::atoi(v) != 0;
++    }();
++    return on;
++}
++
++bool k_multi_fast() {
++    static const bool on = [] {
++        const char* v = std::getenv("STRATA_METAL_K_MULTI");
++        return v == nullptr || std::atoi(v) != 0;
++    }();
++    return on;
++}
++
++bool q6_multi_fast() {
++    static const bool on = [] {
++        const char* v = std::getenv("STRATA_METAL_Q6_MULTI");
++        return v == nullptr || std::atoi(v) != 0;
++    }();
++    return on;
++}
++
+ // the ncols == 1 kernels: the small-K rule picks 4 rows per block (grid rounded up) or 1 row (grid n_out)
+ void launch_single(int f, const void* weights, const void* x_q8_1, float* y, int n_in, int n_out, void* stream) {
+     const FmtHost& fmt = k_fmts[f];
+@@ -119,11 +153,7 @@
+         }
+         if (!expanded) {
+             // simdgroup-per-row for the wide IQ4_XS matrices, 4 rows per threadgroup below (measured crossover)
+-            static const bool sg_on = [] {
+-                const char* v = std::getenv("STRATA_METAL_IQ4_SG");   // =0: 4 rows per threadgroup everywhere
+-                return v == nullptr || std::atoi(v) != 0;
+-            }();
+-            const bool sg = sg_on && f == 5 && n_out >= 2560;
++            const bool sg = iq4_simdgroup() && f == 5 && n_out >= 2560;
+             metal::Launch k(sg ? "native_iq4_xs_direct_sg4" : f == 5 ? "native_iq4_xs_direct_r4" : "native_iq4_nl_direct_r4",
+                             (unsigned) (((size_t) n_out + (sg ? 15 : 3)) / (sg ? 16 : 4)), 1, 1, WARP, WARPS, 1, 0, stream);
+             k.buf(weights).buf(x_q8_1).buf(y).scalar(n_in).scalar(n_out);
+@@ -163,6 +193,46 @@
+                     void* stream) {
+     const FmtHost& fmt = k_fmts[f];
+     char name[80];
++    if (g_multi_exact && f < 2 && k_multi_fast()) {
++        std::snprintf(name, sizeof name, "native_batch_f%d_nt%d_r1", f, ncols);
++        metal::Launch k(name, (unsigned) (((size_t) n_out + 1) / 2), 1, 1, WARP, 2, 1, 0, stream);
++        k.buf(weights).buf(x_q8_1).buf(y).scalar(n_in).scalar(n_out).scalar(n_in / fmt.div < fmt.bpi ? 1 : 0);
++        k.done();
++        return;
++    }
++    if (g_multi_exact && f == 4 && q6_multi_fast()) {
++        // Large heads benefit from eight rows per group; wider projections keep
++        // four to limit live accumulators. Both preserve the single-column bits.
++        const int rows = n_out >= 65536 && n_in <= 4096 && ncols <= 4 ? 4 : 2;
++        std::snprintf(name, sizeof name, "native_q6_multi_nt%d_r%d", ncols, rows);
++        metal::Launch k(name, (unsigned) (((size_t) n_out + 2 * rows - 1) / (2 * rows)),
++                        1, 1, WARP, 2, 1, 0, stream);
++        k.buf(weights).buf(x_q8_1).buf(y).scalar(n_in).scalar(n_out);
++        k.done();
++        return;
++    }
++    if (g_multi_exact && (f == 5 || f == 9) && iq4_direct() && iq4_multi_mode()) {
++        bool expanded = false;
++        if (f == 5) {
++            std::lock_guard<std::mutex> lock(g_expanded_mu);
++            expanded = g_expanded.count(weights) != 0;
++        }
++        if (iq4_multi_mode() == 2 && !expanded) {
++            const int rows = f == 9 && (n_in <= 1024 || n_in >= 4096) && ncols <= 4 ? 2 : 1;
++            std::snprintf(name, sizeof name, "native_batch_f%d_nt%d_r%d", f, ncols, rows);
++            metal::Launch k(name, (unsigned) (((size_t) n_out + 2 * rows - 1) / (2 * rows)),
++                            1, 1, WARP, 2, 1, 0, stream);
++            const int row_lane = f == 9 || !iq4_simdgroup() || n_out < 2560;
++            k.buf(weights).buf(x_q8_1).buf(y).scalar(n_in).scalar(n_out).scalar(row_lane);
++            k.done();
++            return;
++        }
++        const size_t stride = (size_t) (n_in / Q8K) * Q81_BYTES;
++        for (int j = 0; j < ncols; ++j)
++            launch_single(f, weights, (const uint8_t*) x_q8_1 + (size_t) j * stride,
++                          y + (size_t) j * n_out, n_in, n_out, stream);
++        return;
++    }
+     if (!g_multi_exact) {
+         const int nw = ncols <= 4 ? 4 : 2;
+         const unsigned blocks = (unsigned) (((size_t) n_out + 1) / 2);
+--- a/src/kernels/metal/native_mmvq.metal
++++ b/src/kernels/metal/native_mmvq.metal
+@@ -935,6 +935,84 @@
+     }
+ }
+ 
++// Q6_K small batches: each simdgroup owns complete rows and evaluates the old
++// four virtual warps in their original order. Integer dot products remain exact
++// (four products of values in [-32,31] and [-128,127], < 2^24); only their packed
++// CUDA emulation is replaced. NT is specialized and weights are shared across
++// its columns. The original scale products, float partials and XOR tree remain.
++// M2 Max, ABBA >=10 s per point (2026-10-11-metal-mtp-kernel-optimization):
++// T4 head 2560 x 248320: ~15.14 -> 6.55 ms; 6144 x 2560: ~365 -> 193 us.
++
++// The integer four-byte dot is exactly representable as float. Keep the Q8 scales,
++// signed integer scale product, block accumulation and XOR reduction unchanged.
++struct NmvQ6DirectWeight { float4 q0, q1; int s0, s1; float d; };
++static inline NmvQ6DirectWeight nmv_q6_direct_load(constant const uint8_t* blk, int lane) {
++    const nmv_Fmt<4>::W wv = nmv_Fmt<4>::load(blk, lane);
++    constant const Q6KBlock* w = reinterpret_cast<constant const Q6KBlock*>(blk);
++    const int so = 8 * (lane / 16) + (lane % 16) / 4;
++    const uint4 sh = uint4(0, 8, 16, 24);
++    const uint vl = as_type<uint>(wv.vl), vh = as_type<uint>(wv.vh);
++    const uint c0 = (vl & 0x0f0f0f0fu) | ((vh << 4) & 0x30303030u);
++    const uint c1 = ((vl >> 4) & 0x0f0f0f0fu) | (vh & 0x30303030u);
++    return NmvQ6DirectWeight{float4((uint4(c0) >> sh) & 63u) - 32.0f,
++                          float4((uint4(c1) >> sh) & 63u) - 32.0f,
++                          (int) w->scales[so], (int) w->scales[so + 4], wv.d};
++}
++static inline float nmv_q6_direct_apply(const thread NmvQ6DirectWeight& w, constant const Q81Block* x, int lane) {
++    const int off = 4 * (lane / 16) + (lane % 16) / 8;
++    const int iqs = lane % 8;
++    const float4 a0 = float4(as_type<char4>(reinterpret_cast<constant const int*>(x[off].qs)[iqs]));
++    const float4 a1 = float4(as_type<char4>(reinterpret_cast<constant const int*>(x[off + 2].qs)[iqs]));
++    const int d0 = (int) dot(w.q0, a0), d1 = (int) dot(w.q1, a1);
++    float s = 0.0f;
++    s += (float) x[off].ds.x * (float) (d0 * w.s0);
++    s += (float) x[off + 2].ds.x * (float) (d1 * w.s1);
++    return w.d * s;
++}
++template<int NT, int R>
++static inline void nmv_q6_exact_sg(constant const uint8_t* w, constant const Q81Block* x, device float* y,
++                              int n_in, int n_out, uint gx, uint tid) {
++    const int lane = (int) (tid & 31u), sg = (int) (tid >> 5);
++    const int row0 = ((int) gx * 2 + sg) * R;
++    const int nb = n_in / 256, xs = n_in / 32;
++    if (row0 >= n_out) return;
++    float acc[NT][R];
++#pragma unroll
++    for (int vw = 0; vw < 4; ++vw) {
++        float part[NT][R];
++#pragma unroll
++        for (int j = 0; j < NT; ++j)
++#pragma unroll
++            for (int i = 0; i < R; ++i) part[j][i] = 0.0f;
++        for (int kb = vw; kb < nb; kb += 4) {
++#pragma unroll
++            for (int i = 0; i < R; ++i) if (row0 + i < n_out) {
++                const NmvQ6DirectWeight wv = nmv_q6_direct_load(w + ((size_t) (row0 + i) * nb + kb) * 210, lane);
++#pragma unroll
++                for (int j = 0; j < NT; ++j)
++                    part[j][i] += nmv_q6_direct_apply(wv, x + (size_t) j * xs + kb * 8, lane);
++            }
++        }
++#pragma unroll
++        for (int j = 0; j < NT; ++j)
++#pragma unroll
++            for (int i = 0; i < R; ++i) acc[j][i] = vw == 0 ? part[j][i] : acc[j][i] + part[j][i];
++    }
++#pragma unroll
++    for (int j = 0; j < NT; ++j)
++#pragma unroll
++        for (int i = 0; i < R; ++i) {
++            const float value = nmv_warp_sum(acc[j][i]);
++            const int store_lane = nb < 4 ? (row0 + i) % 4 : 0;
++            if (lane == store_lane && row0 + i < n_out) y[(size_t) j * n_out + row0 + i] = value;
++        }
++}
++#define NMV_Q6_SG(NT, R) \
++kernel void native_q6_multi_nt##NT##_r##R(NMV_SINGLE_PARAMS) { nmv_q6_exact_sg<NT, R>(w, x, y, n_in, n_out, gpos.x, tid); }
++#define NMV_Q6_SHAPES(NT) NMV_Q6_SG(NT, 2) NMV_Q6_SG(NT, 4)
++NMV_Q6_SHAPES(2) NMV_Q6_SHAPES(3) NMV_Q6_SHAPES(4)
++NMV_Q6_SHAPES(5) NMV_Q6_SHAPES(6) NMV_Q6_SHAPES(7) NMV_Q6_SHAPES(8)
++
+ // rows and nw are runtime scalars: r4/r1 are the exact layout's two shapes (nw is 4), r2 the upstream one
+ // (nw 4 or 2, chosen by the launcher, per the file comment).
+ #define NMV_MULTI_KERNEL(FMT, F, ROWS) \
+@@ -966,3 +1044,167 @@
+ NMV_MULTI_TRIPLE(q5_0, 7)
+ NMV_MULTI_TRIPLE(q8_0, 8)
+ NMV_MULTI_TRIPLE(iq4_nl, 9)
++
++// Exact Q4_K / Q5_K and IQ4 small batches: specialize the column count and
++// decode each weight slice once for all columns. Two simdgroups each own one
++// row; IQ4_NL also uses two rows per simdgroup for its measured small-K shape.
++
++// Integer products and their sums fit exactly in float. The outer scales,
++// block accumulation and virtual-warp reduction retain the packed oracle order.
++template<int F> struct NmvBatchDirect;
++struct NmvBatchKWeight { float4 q[4]; int sc[2], m[2], off, word; float d, dm; };
++template<int F> struct NmvBatchKCodes;
++template<> struct NmvBatchKCodes<0> {
++    static uint code(const thread nmv_Fmt<0>::W& w, int i, int j) {
++        return ((as_type<uint>(w.vl[j]) >> (4 * i)) & 0x0f0f0f0fu) |
++               (((as_type<uint>(w.vh[j]) >> i) << 4) & 0x10101010u);
++    }
++};
++template<> struct NmvBatchKCodes<1> {
++    static uint code(const thread nmv_Fmt<1>::W& w, int i, int j) {
++        return (as_type<uint>(w.v[j]) >> (4 * i)) & 0x0f0f0f0fu;
++    }
++};
++template<int F> static inline NmvBatchKWeight nmv_batch_k_load(constant const uint8_t* blk, int iqs) {
++    const typename nmv_Fmt<F>::W old = nmv_Fmt<F>::load(blk, iqs);
++    NmvBatchKWeight w;
++    w.off = old.bq8_offset; w.word = (iqs / 2) % 4;
++    w.d = (float) old.dm.x; w.dm = (float) old.dm.y;
++    const thread uint8_t* s = reinterpret_cast<const thread uint8_t*>(old.aux);
++    const uint4 shifts = uint4(0, 8, 16, 24);
++#pragma unroll
++    for (int i = 0; i < 2; ++i) {
++        w.sc[i] = s[i]; w.m[i] = s[i + 2];
++#pragma unroll
++        for (int j = 0; j < 2; ++j) {
++            const uint v = NmvBatchKCodes<F>::code(old, i, j);
++            w.q[2 * i + j] = float4((uint4(v) >> shifts) & 255u);
++        }
++    }
++    return w;
++}
++static inline float nmv_batch_k_apply(const thread NmvBatchKWeight& w, constant const Q81Block* x) {
++    float sd = 0.0f, sm = 0.0f;
++#pragma unroll
++    for (int i = 0; i < 2; ++i) {
++        constant const Q81Block* b = x + w.off + i;
++        constant const int* q = reinterpret_cast<constant const int*>(b->qs) + w.word;
++        const float4 a0 = float4(as_type<char4>(q[0])), a1 = float4(as_type<char4>(q[4]));
++        const int dotq = (int) (dot(w.q[2 * i], a0) + dot(w.q[2 * i + 1], a1));
++        const int sumq = (int) (dot(float4(1.0f), a0) + dot(float4(1.0f), a1));
++        sd += (float) b->ds.x * (float) (dotq * w.sc[i]);
++        sm += (float) b->ds.x * (float) (sumq * w.m[i]);
++    }
++    return w.d * sd - w.dm * sm;
++}
++template<> struct NmvBatchDirect<0> {
++    using W = NmvBatchKWeight;
++    static W load(constant const uint8_t* b, int i, threadgroup const float*) { return nmv_batch_k_load<0>(b, i); }
++    static float apply(const thread W& w, constant const Q81Block* x, int) { return nmv_batch_k_apply(w, x); }
++};
++template<> struct NmvBatchDirect<1> {
++    using W = NmvBatchKWeight;
++    static W load(constant const uint8_t* b, int i, threadgroup const float*) { return nmv_batch_k_load<1>(b, i); }
++    static float apply(const thread W& w, constant const Q81Block* x, int) { return nmv_batch_k_apply(w, x); }
++};
++template<int V> struct NmvBatchIqWeight { float4 q[V]; int scale; float d; };
++template<int F, int V> static inline NmvBatchIqWeight<V> nmv_batch_iq_load(constant const uint8_t* b, int iqs,
++                                                                          threadgroup const float* tbl) {
++    NmvBatchIqWeight<V> w;
++    w.d = (float) *reinterpret_cast<constant const half*>(b);
++    w.scale = 1;
++    if (F == 5) {
++        constant const IQ4XSBlock* x = reinterpret_cast<constant const IQ4XSBlock*>(b);
++        w.scale = (((x->scales_l[iqs / 8] >> (iqs & 4)) & 15) |
++                   (((x->scales_h >> (iqs / 2)) & 3) << 4)) - 32;
++    }
++#pragma unroll
++    for (int j = 0; j < V / 2; ++j) {
++        uint u;
++        if (F == 5)
++            u = reinterpret_cast<constant const uint*>(reinterpret_cast<constant const IQ4XSBlock*>(b)->qs)[iqs + j];
++        else u = as_type<uint>(nmv_load_int_b2(reinterpret_cast<constant const uint16_t*>(
++                     reinterpret_cast<constant const IQ4NLBlock*>(b)->qs), iqs + j));
++#pragma unroll
++        for (int k = 0; k < 4; ++k) {
++            w.q[j][k] = tbl[(u >> (8 * k)) & 15u];
++            w.q[j + V / 2][k] = tbl[(u >> (8 * k + 4)) & 15u];
++        }
++    }
++    return w;
++}
++template<> struct NmvBatchDirect<5> {
++    using W = NmvBatchIqWeight<8>;
++    static W load(constant const uint8_t* b, int i, threadgroup const float* t) { return nmv_batch_iq_load<5, 8>(b, i, t); }
++    static float apply(const thread W& w, constant const Q81Block* x, int i) {
++        const NmvActXs a = nmv_Direct<5>::act(x, 0, i);
++        float s = 0.0f;
++#pragma unroll
++        for (int j = 0; j < 8; ++j) s += dot(w.q[j], a.a[j]);
++        return (w.d * a.d8) * (float) ((int) s * w.scale);
++    }
++};
++template<> struct NmvBatchDirect<9> {
++    using W = NmvBatchIqWeight<4>;
++    static W load(constant const uint8_t* b, int i, threadgroup const float* t) { return nmv_batch_iq_load<9, 4>(b, i, t); }
++    static float apply(const thread W& w, constant const Q81Block* x, int i) {
++        const NmvActNl a = nmv_Direct<9>::act(x, 0, i);
++        float s = 0.0f;
++#pragma unroll
++        for (int j = 0; j < 4; ++j) s += dot(w.q[j], a.a[j]);
++        return (w.d * a.d8) * (float) (int) s;
++    }
++};
++template<int F, int NT, int R>
++static inline void nmv_batch_body(constant const uint8_t* w, constant const Q81Block* x, device float* y,
++                                   int n_in, int n_out, uint gx, uint tid, int store_lane_rows, threadgroup float* table) {
++    using Fmt = nmv_Fmt<F>; using D = NmvBatchDirect<F>;
++    if (F == 5 || F == 9) {
++        if (tid < 16) table[tid] = (float) kvalues_iq4nl[tid];
++        threadgroup_barrier(mem_flags::mem_threadgroup);
++    }
++    const int lane = (int) (tid & 31u), sg = (int) (tid >> 5);
++    const int row0 = ((int) gx * 2 + sg) * R;
++    const int nb = n_in / Fmt::DIV, xs = n_in / 32;
++    if (row0 >= n_out) return;
++    float acc[NT][R];
++#pragma unroll
++    for (int vw = 0; vw < 4; ++vw) {
++        const int vt = lane + 32 * vw, iqs = Fmt::kqs(vt);
++        float part[NT][R];
++#pragma unroll
++        for (int j = 0; j < NT; ++j)
++#pragma unroll
++            for (int i = 0; i < R; ++i) part[j][i] = 0.0f;
++        for (int kb = vt / Fmt::T; kb < nb; kb += Fmt::BPI) {
++#pragma unroll
++            for (int i = 0; i < R; ++i) if (row0 + i < n_out) {
++                const typename D::W v = D::load(w + ((size_t) (row0 + i) * nb + kb) * Fmt::BYTES, iqs, table);
++#pragma unroll
++                for (int j = 0; j < NT; ++j)
++                    part[j][i] += D::apply(v, x + (size_t) j * xs + kb * Fmt::KBY, iqs);
++            }
++        }
++#pragma unroll
++        for (int j = 0; j < NT; ++j)
++#pragma unroll
++            for (int i = 0; i < R; ++i) acc[j][i] = vw == 0 ? part[j][i] : acc[j][i] + part[j][i];
++    }
++#pragma unroll
++    for (int j = 0; j < NT; ++j)
++#pragma unroll
++        for (int i = 0; i < R; ++i) {
++            const float value = nmv_warp_sum(acc[j][i]);
++            const int sl = store_lane_rows ? (row0 + i) % 4 : 0;
++            if (lane == sl && row0 + i < n_out) y[(size_t) j * n_out + row0 + i] = value;
++        }
++}
++#define NMV_BATCH_KERNEL(F, NT, R) \
++kernel void native_batch_f##F##_nt##NT##_r##R(NMV_SINGLE_PARAMS, constant const int& store_lane_rows [[buffer(5)]]) { \
++    threadgroup float table[16]; \
++    nmv_batch_body<F, NT, R>(w, x, y, n_in, n_out, gpos.x, tid, store_lane_rows, table); }
++#define NMV_BATCH_COLS(F, R) NMV_BATCH_KERNEL(F, 2, R) NMV_BATCH_KERNEL(F, 3, R) NMV_BATCH_KERNEL(F, 4, R) \
++    NMV_BATCH_KERNEL(F, 5, R) NMV_BATCH_KERNEL(F, 6, R) NMV_BATCH_KERNEL(F, 7, R) NMV_BATCH_KERNEL(F, 8, R)
++NMV_BATCH_COLS(0, 1) NMV_BATCH_COLS(1, 1) NMV_BATCH_COLS(5, 1) NMV_BATCH_COLS(9, 1) NMV_BATCH_COLS(9, 2)
++#undef NMV_BATCH_COLS
++#undef NMV_BATCH_KERNEL
+--- a/src/kernels/metal/iq_kernels.mm
++++ b/src/kernels/metal/iq_kernels.mm
+@@ -87,6 +87,14 @@
+ bool direct_dots() {
+     static const bool on = [] {
+         const char* v = std::getenv("STRATA_METAL_EXPERT_DIRECT");
++        return v == nullptr || std::atoi(v) != 0;
++    }();
++    return on;
++}
++
++bool resident_iq4_direct() {
++    static const bool on = [] {
++        const char* v = std::getenv("STRATA_METAL_EXPERT_IQ4_DIRECT");
+         return v == nullptr || std::atoi(v) != 0;
+     }();
+     return on;
+@@ -395,14 +403,17 @@
+     metal::Launch q("quantize_q8_1_kernel", (unsigned) ((nh + 255) / 256), 1, 1, 256, 1, 1, 0, stream);
+     q.buf(h).buf(hq).scalar(nh);
+     q.done();
+-    const bool direct = L.d_type == 42 && direct_dots();         // four rows per warp
++    const bool direct_q2 = L.d_type == 42 && direct_dots();
++    const bool direct_iq4 = L.d_type == 20 && direct_dots() && resident_iq4_direct();
++    const bool direct = direct_q2 || direct_iq4;               // four rows per warp
+     static const bool specialize_down = [] {
+         const char* e = std::getenv("STRATA_METAL_DECODE_DOWN_DIMS"); // =0: runtime-dimension kernel
+         return e == nullptr || std::atoi(e) != 0;
+     }();
+     const bool canonical_down = specialize_down && L.n_embd == 2560 && L.n_ff == 640;
+-    if (direct) std::snprintf(name, sizeof name, canonical_down ? "native_resident_down_dim_42_r4"
+-                                                               : "native_resident_down_direct_42_r4");
++    if (direct_q2) std::snprintf(name, sizeof name, canonical_down ? "native_resident_down_dim_42_r4"
++                                                                 : "native_resident_down_direct_42_r4");
++    else if (direct_iq4) std::snprintf(name, sizeof name, "native_resident_down_direct_20_r4");
+     else std::snprintf(name, sizeof name, "native_resident_down_%d", L.d_type);
+     metal::Launch down(name, (unsigned) ((L.n_embd + (direct ? 31 : 7)) / (direct ? 32 : 8)), (unsigned) cap, 1, 256, 1, 1, 0,
+                        stream);
+--- a/src/kernels/metal/iq_kernels.metal
++++ b/src/kernels/metal/iq_kernels.metal
+@@ -1672,6 +1672,68 @@
+                                     weight_offset, slot_bytes, n_expert, has_offsets, out, gp, tid);
+ }
+ 
++// Resident IQ4_NL down: reuse each activation across four rows and form the
++// integer codebook dot directly. The 16 products sum to < 2^24, so FMA is exact;
++// scale multiplication, ascending per-lane accumulation and XOR are unchanged.
++// M2 Max, ABBA >=10 s per point (2026-10-11-metal-mtp-kernel-optimization):
++// 2560 x 640, ten entries ~125 -> 84 us; forty entries ~502 -> 347 us.
++template<int R>
++static inline void iqk_resident_down_direct_iq4_nl(constant const uint8_t* arena, constant const ulong* offsets,
++    constant const int* ids, constant const int* residency, constant const block_q8_1* xq,
++    long n_embd, long n_ff, ulong row_bytes, ulong weight_offset, ulong slot_bytes, int n_expert,
++    int has_offsets, device float* out, threadgroup const float* table, uint3 gp, uint tid) {
++    const int e = (int) gp.y, lane = (int) (tid & 31);
++    const int row0 = ((int) gp.x * 8 + (int) (tid >> 5)) * R;
++    if (row0 >= n_embd) return;
++    const int id = ids[e], slot = id >= 0 && id < n_expert ? residency[id] : -1;
++    float sum[R];
++#pragma unroll
++    for (int r = 0; r < R; ++r) sum[r] = 0.0f;
++    if (slot >= 0) {
++        const ulong off = has_offsets ? offsets[slot] : (ulong) slot * slot_bytes;
++        constant const uint8_t* base = arena + off + weight_offset;
++        constant const block_q8_1* x = xq + (size_t) e * (n_ff / 32);
++        for (int kk = lane; kk < (n_ff / 32) * 2; kk += 32) {
++            const int kb = kk / 2, iqs = 2 * (kk % 2);
++            const float d8 = iqk_lo2f(x[kb].ds);
++            constant const int* aq = reinterpret_cast<constant const int*>(x[kb].qs);
++            const float4 a0 = float4(as_type<char4>(aq[iqs])), a1 = float4(as_type<char4>(aq[iqs + 1]));
++            const float4 a2 = float4(as_type<char4>(aq[iqs + 4])), a3 = float4(as_type<char4>(aq[iqs + 5]));
++#pragma unroll
++            for (int r = 0; r < R; ++r) {
++                constant const block_iq4_nl* w = reinterpret_cast<constant const block_iq4_nl*>(
++                    base + (ulong) min(row0 + r, (int) n_embd - 1) * row_bytes) + kb;
++                constant const uint16_t* qw = reinterpret_cast<constant const uint16_t*>(w->qs);
++                const uint q0 = as_type<uint>(iqk_get_int_b2(qw, iqs));
++                const uint q1 = as_type<uint>(iqk_get_int_b2(qw, iqs + 1));
++                float v = 0.0f;
++#pragma unroll
++                for (int b = 0; b < 4; ++b) {
++                    v = fma(table[(q0 >> (8 * b)) & 15u], a0[b], v);
++                    v = fma(table[(q0 >> (8 * b + 4)) & 15u], a2[b], v);
++                    v = fma(table[(q1 >> (8 * b)) & 15u], a1[b], v);
++                    v = fma(table[(q1 >> (8 * b + 4)) & 15u], a3[b], v);
++                }
++                const float d = (float) w->d * d8;
++                sum[r] += d * (float) (int) v;
++            }
++        }
++    }
++#pragma unroll
++    for (int r = 0; r < R; ++r) {
++        const float v = slot >= 0 ? iqk_warp_sum(sum[r]) : 0.0f;
++        if (lane == 0 && row0 + r < n_embd) out[(size_t) e * n_embd + row0 + r] = v;
++    }
++}
++kernel void native_resident_down_direct_20_r4(IQK_RESIDENT_PARAMS, uint3 gp [[threadgroup_position_in_grid]],
++                                             uint tid [[thread_index_in_threadgroup]]) {
++    threadgroup float table[16];
++    if (tid < 16) table[tid] = (float) kvalues_iq4nl[tid];
++    threadgroup_barrier(mem_flags::mem_threadgroup);
++    iqk_resident_down_direct_iq4_nl<4>(arena, offsets, ids, residency, xq, n_embd, n_ff, row_bytes, weight_offset,
++                                     slot_bytes, n_expert, has_offsets, out, table, gp, tid);
++}
++
+ // IQ3_S single column (mmvq_multi_kernel_21_1's arithmetic), R rows per warp: grid x = ceil(n_out / (4R))
+ template<int R>
+ static inline void iqk_mmvq_direct_iq3_s(constant const uint8_t* w, ulong row_bytes, constant const block_q8_1* x,
+--- a/src/program/generate.cpp
++++ b/src/program/generate.cpp
+@@ -2656,7 +2656,8 @@
+             std::fprintf(stderr, "strata generate: %s\n", err.c_str());
+             return 1;
+         }
+-        std::fprintf(stderr, "strata generate: experimental native Q5_K head, %llu bytes\n",
++        std::fprintf(stderr, "strata generate: experimental native %s head, %llu bytes\n",
++                     strata::ggml_type_name((uint32_t) native_head.type()),
+                      (unsigned long long) native_head.weight_bytes());
+     }
+     std::vector<float> logits((size_t) n_vocab);
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -773,6 +773,9 @@
+     add_executable(metal_mmvq_decode_test tests/core/metal_mmvq_decode_test.cpp)
+     target_link_libraries(metal_mmvq_decode_test PRIVATE strata_kernels strata_metal_runtime)
+     add_test(NAME metal_mmvq_decode_test COMMAND metal_mmvq_decode_test)
++    add_executable(metal_mmvq_multi_test tests/core/metal_mmvq_multi_test.cpp)
++    target_link_libraries(metal_mmvq_multi_test PRIVATE strata_kernels strata_metal_runtime)
++    add_test(NAME metal_mmvq_multi_test COMMAND metal_mmvq_multi_test)
+     add_executable(metal_direct_dot_test tests/core/metal_direct_dot_test.cpp)
+     target_link_libraries(metal_direct_dot_test PRIVATE strata_kernels strata_metal_runtime)
+     add_test(NAME metal_direct_dot_test COMMAND metal_direct_dot_test)
+--- a/tests/core/metal_direct_dot_test.cpp
++++ b/tests/core/metal_direct_dot_test.cpp
+@@ -133,17 +133,18 @@
+     cudaFree(dw); cudaFree(dx); cudaFree(y0); cudaFree(y1); cudaFree(y2);
+ }
+ 
+-// The Q2_0 resident down projection: missing, out-of-range, non-resident and repeated experts, uniform slots and
++// The Q2_0 / IQ4_NL resident down projections: missing, out-of-range, non-resident and repeated experts, uniform slots and
+ // a per-slot offset table, row counts that leave a partial four-row warp.
+-void resident_down_case(long n_embd, long n_ff, int cap, bool offsets_table, int mode) {
++void resident_down_case(long n_embd, long n_ff, int cap, bool offsets_table, int mode, int type = 42) {
+     const int n_expert = 12, slots = 10;
+-    const unsigned long d_row = (unsigned long) (n_ff / 64) * 18, down_off = 4096;
++    const int qk = type == 20 ? 32 : 64;
++    const unsigned long d_row = (unsigned long) (n_ff / qk) * 18, down_off = 4096;
+     const unsigned long slot_bytes = down_off + (unsigned long) n_embd * d_row + 64;
+     std::vector<uint8_t> arena(slot_bytes * slots);
+     for (auto& v : arena) v = mode == 1 ? 0xFF : (uint8_t) rng();   // 0xFF: every code 3, the value 2
+     for (int s = 0; s < slots; ++s)
+         for (long r = 0; r < n_embd; ++r)
+-            for (long b = 0; b < n_ff / 64; ++b) {
++            for (long b = 0; b < n_ff / qk; ++b) {
+                 const uint16_t d = half_scale(mode);
+                 std::memcpy(arena.data() + s * slot_bytes + down_off + r * d_row + b * 18, &d, 2);
+             }
+@@ -159,12 +160,13 @@
+     void* dh = upload(q8((int) n_ff * cap, mode));
+     float* y0 = out_buffer((size_t) cap * n_embd, 0xAA);
+     float* y1 = out_buffer((size_t) cap * n_embd, 0x55);
+-    const bool canonical = n_embd == 2560 && n_ff == 640;
++    const bool canonical = type == 42 && n_embd == 2560 && n_ff == 640;
+     float* y2 = canonical ? out_buffer((size_t) cap * n_embd, 0x33) : nullptr;
+     const int k = 10, has = offsets_table ? 1 : 0;
+     for (int v = 0; v < (canonical ? 3 : 2); ++v) {
+         const bool direct = v != 0;
+-        const char* name = v == 0 ? "native_resident_down_42" : v == 1 ? "native_resident_down_direct_42_r4"
++        const char* name = type == 20 ? (v == 0 ? "native_resident_down_20" : "native_resident_down_direct_20_r4") :
++                          v == 0 ? "native_resident_down_42" : v == 1 ? "native_resident_down_direct_42_r4"
+                                                                  : "native_resident_down_dim_42_r4";
+         Launch d(name,
+                  (unsigned) (direct ? (n_embd + 31) / 32 : (n_embd + 7) / 8), (unsigned) cap, 1, 256, 1, 1, 0, stream);
+@@ -172,7 +174,7 @@
+          .scalar(down_off).scalar(slot_bytes).scalar(n_expert).scalar(k).scalar(has).buf(v == 0 ? y0 : v == 1 ? y1 : y2);
+         d.done();
+     }
+-    compare("Q2_0 resident down", std::to_string(n_embd) + "x" + std::to_string(n_ff) + " cap " + std::to_string(cap) +
++    compare(type == 20 ? "IQ4_NL resident down" : "Q2_0 resident down", std::to_string(n_embd) + "x" + std::to_string(n_ff) + " cap " + std::to_string(cap) +
+             (offsets_table ? " offsets" : " uniform") + " mode " + std::to_string(mode),
+             download(y0, (size_t) cap * n_embd), download(y1, (size_t) cap * n_embd));
+     if (canonical) {
+@@ -185,9 +187,9 @@
+ }
+ 
+ // native_expert_resident (gate/up, SwiGLU, Q8_1, down) against the same chain with the original down kernel.
+-void resident_public_case(int n_tok, long n_embd = 2560, long n_ff = 640) {
++void resident_public_case(int n_tok, long n_embd = 2560, long n_ff = 640, int down_type = 42) {
+     const int n_expert = 6, k = 4, cap = n_tok * k;
+-    const auto L = strata::kernels::native_expert_layout(42, 42, n_embd, n_ff);
++    const auto L = strata::kernels::native_expert_layout(42, down_type, n_embd, n_ff);
+     std::vector<uint8_t> arena(L.bytes * n_expert);
+     fill_blocks(arena, 18, 0, 0);   // every blob section is a whole number of 18-byte Q2_0 blocks
+     std::vector<int> residency = {3, -1, 0, 4, 1, 2}, ids(cap);
+@@ -218,11 +220,13 @@
+     sw.buf(gate).buf(up).buf(h).scalar(nh); sw.done();
+     Launch qz("quantize_q8_1_kernel", (unsigned) ((nh + 255) / 256), 1, 1, 256, 1, 1, 0, stream);
+     qz.buf(h).buf(hq).scalar(nh); qz.done();
+-    Launch dn("native_resident_down_42", (unsigned) ((n_embd + 7) / 8), (unsigned) cap, 1, 256, 1, 1, 0, stream);
++    Launch dn(down_type == 20 ? "native_resident_down_20" : "native_resident_down_42",
++              (unsigned) ((n_embd + 7) / 8), (unsigned) cap, 1, 256, 1, 1, 0, stream);
+     dn.buf(da).buf(nullptr).buf(di).buf(dr).buf(hq).scalar(n_embd).scalar(n_ff).scalar(d_row).scalar(down_off)
+       .scalar(sb).scalar(n_expert).scalar(k).scalar(has).buf(y0);
+     dn.done();
+-    compare("Q2_0 resident public", "tokens " + std::to_string(n_tok), download(y0, (size_t) cap * n_embd),
++    compare(down_type == 20 ? "IQ4_NL resident public" : "Q2_0 resident public",
++            "tokens " + std::to_string(n_tok), download(y0, (size_t) cap * n_embd),
+             download(y1, (size_t) cap * n_embd));
+     cudaFree(da); cudaFree(di); cudaFree(dr); cudaFree(dx); cudaFree(scratch); cudaFree(y0); cudaFree(y1);
+ }
+@@ -533,8 +537,14 @@
+         resident_down_case(2560, 640, 23, true, mode);
+         resident_down_case(2563 - 3 + 36, 640, 23, true, mode);   // 2596 rows: a partial four-row warp
+         resident_down_case(512, 128, 7, true, mode);
+-    }
+-    for (int t : {1, 3}) { resident_public_case(t); resident_public_case(t, 512, 128); }
++        resident_down_case(2560, 640, 10, false, mode, 20);
++        resident_down_case(2596, 640, 23, true, mode, 20);
++        resident_down_case(517, 96, 13, true, mode, 20);
++    }
++    for (int t : {1, 3}) {
++        resident_public_case(t); resident_public_case(t, 512, 128);
++        resident_public_case(t, 2560, 640, 20); resident_public_case(t, 512, 128, 20);
++    }
+     for (int apply : {0, 1}) { gr_case(apply, false); gr_case(apply, true); }
+     for (int T : {1, 2, 4, 8}) {
+         gdn_case(T, -1, 0);                      // verify: state read, not written
+--- /dev/null
++++ b/tests/core/metal_mmvq_multi_test.cpp
+@@ -0,0 +1,101 @@
++#include "strata/kernels/native_mmvq.hpp"
++#include "strata/kernels/metal_mmvq.hpp"
++#include "strata/platform/metal_launch.hpp"
++#include <cuda_runtime.h>
++#include <algorithm>
++#include <cmath>
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++#include <random>
++#include <string>
++#include <utility>
++#include <vector>
++
++// The unchanged packed-byte single-token shaders are the GPU oracle. Independent
++// columns, row tails, guards and changed-input tape replay detect indexing errors.
++int main() {
++    setenv("STRATA_METAL_IQ4_EXPAND", "1", 1);
++    cudaStream_t stream{};
++    cudaStreamCreate(&stream);
++    long long checked = 0, different = 0, guards = 0, cases = 0;
++    for (int type : {12, 13, 14, 20, 23}) {
++        const int block = type == 20 ? 32 : 256;
++        const int bytes = type == 12 ? 144 : type == 13 ? 176 : type == 14 ? 210 : type == 20 ? 18 : 136;
++        const std::string stem = type == 12 ? "native_q4_k_mmvq_kernel_" :
++                                 type == 13 ? "native_q5_k_mmvq_kernel_" : type == 14 ? "native_q6_k_mmvq_kernel_" :
++                                 type == 20 ? "native_small_mmvq_kernel_iq4_nl_" : "native_iq4_xs_mmvq_kernel_";
++        for (auto [K, N] : {std::pair{256, 1}, {512, 17}, {768, 513}, {1024, 3},
++                            {2560, 513}, {6144, 2561}, {16384, 513}}) {
++            const size_t wb = strata::kernels::native_mmvq_weight_bytes(type, K, N);
++            std::mt19937 random(type + K + N);
++            std::vector<unsigned char> weights(wb);
++            for (auto& v : weights) v = (unsigned char) random();
++            for (size_t b = 0; b < wb; b += bytes) {
++                const unsigned r = random();
++                const uint16_t scale = uint16_t(((r >> 31) << 15) | ((5 + (r >> 10) % 7) << 10) | (r & 1023));
++                std::memcpy(weights.data() + b + (type == 14 ? 208 : 0), &scale, 2);
++                if (type == 12 || type == 13) {
++                    const unsigned m = random();
++                    const uint16_t minimum = uint16_t(((m >> 31) << 15) | ((5 + (m >> 10) % 7) << 10) | (m & 1023));
++                    std::memcpy(weights.data() + b + 2, &minimum, 2);
++                }
++            }
++            void *dw, *qx;
++            float *dx, *ref, *out;
++            const size_t qcol = strata::kernels::native_q8_1_bytes(K, 1);
++            cudaMalloc(&dw, wb); cudaMalloc(&qx, qcol * 8); cudaMalloc(&dx, size_t(K) * 8 * 4);
++            cudaMalloc(&ref, size_t(N) * 8 * 4); cudaMalloc(&out, (size_t(N) * 8 + 32) * 4);
++            cudaMemcpy(dw, weights.data(), wb, cudaMemcpyHostToDevice);
++            const int small_limit = type == 12 || type == 13 ? 8 : type == 14 ? 4 : type == 20 ? 64 : 16;
++            const int oracle_rows = K / block < small_limit ? 4 : 1;
++            const std::string oracle = stem + (oracle_rows == 4 ? "small" : "large");
++            for (int expanded = 0; expanded <= (type == 23 && K == 2560 ? 1 : 0); ++expanded) {
++                if (expanded) strata::kernels::metal_iq4_prepare(type, dw, K, N);
++                for (int T = 1; T <= 8; ++T) {
++                    cudaGraph_t graph{}; cudaGraphExec_t exec{};
++                    cudaStreamBeginCapture(stream, cudaStreamCaptureModeThreadLocal);
++                    strata::kernels::native_mmvq(type, dw, qx, out + 16, K, N, T, stream);
++                    cudaStreamEndCapture(stream, &graph);
++                    cudaGraphInstantiate(&exec, graph, nullptr, nullptr, 0);
++                    cudaGraphDestroy(graph);
++                    for (int pass = 0; pass < 2; ++pass) {
++                        std::vector<float> input(size_t(K) * T);
++                        for (auto& v : input) v = float(int(random() % 20001) - 10000) / 713.0f;
++                        if (!pass) std::fill(input.begin(), input.begin() + K, 0.0f);
++                        cudaMemcpy(dx, input.data(), input.size() * 4, cudaMemcpyHostToDevice);
++                        strata::kernels::native_quantize_q8_1(dx, qx, K, T, stream);
++                        for (int j = 0; j < T; ++j) {
++                            strata::metal::Launch legacy(oracle.c_str(), (N + oracle_rows - 1) / oracle_rows,
++                                                         1, 1, 32, 4, 1, 0, stream);
++                            legacy.buf(dw).buf((const unsigned char*) qx + size_t(j) * qcol)
++                                  .buf(ref + size_t(j) * N).scalar(K).scalar(N);
++                            legacy.done();
++                        }
++                        cudaStreamSynchronize(stream);
++                        std::vector<float> expected(size_t(N) * T), got(size_t(N) * 8 + 32, 123456.0f);
++                        cudaMemcpy(expected.data(), ref, expected.size() * 4, cudaMemcpyDeviceToHost);
++                        cudaMemcpy(out, got.data(), got.size() * 4, cudaMemcpyHostToDevice);
++                        cudaGraphLaunch(exec, stream); cudaStreamSynchronize(stream);
++                        cudaMemcpy(got.data(), out, got.size() * 4, cudaMemcpyDeviceToHost);
++                        long diff = 0, guard = 0;
++                        for (size_t i = 0; i < expected.size(); ++i)
++                            diff += !std::isfinite(got[i + 16]) || std::memcmp(&got[i + 16], &expected[i], 4) != 0;
++                        for (size_t i = 0; i < got.size(); ++i)
++                            if (i < 16 || i >= 16 + expected.size()) guard += got[i] != 123456.0f;
++                        checked += expected.size(); different += diff; guards += guard; ++cases;
++                        if (diff || guard) std::fprintf(stderr, "type=%d K=%d N=%d T=%d expanded=%d pass=%d diff=%ld guard=%ld\n",
++                                                       type, K, N, T, expanded, pass, diff, guard);
++                    }
++                    cudaGraphExecDestroy(exec);
++                }
++                if (expanded) strata::kernels::metal_iq4_release(dw);
++            }
++            cudaFree(dw); cudaFree(qx); cudaFree(dx); cudaFree(ref); cudaFree(out);
++        }
++    }
++    cudaStreamDestroy(stream);
++    std::printf("Metal MMVQ multi: %lld cases, %lld outputs, %lld bit differences, %lld guard errors\n",
++                cases, checked, different, guards);
++    return different != 0 || guards != 0;
++}

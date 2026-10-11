@@ -1,0 +1,51 @@
+Strata Metal MTP kernel optimization, 2026-10-11
+
+Measurement: Apple M2 Max (38 GPU cores, 96 GiB), macOS 26.5, existing Low Power Mode retained. Original IQ3_S GGUF weights and original Q2_0 MTP runtime. No model download or quantization change. All 24576 experts resident, FP16 KV, prefill 2048, suffix drafts off. One inference model at a time.
+Throughput: 131072 context capacity, approximately 1K / 4K fresh inputs, 512 greedy output tokens, thinking off, no prompt cache reuse. Warmup excluded. No kernel profiler, logits readback or periodic memory probes during timing. Runtime window sweep followed by alternating MTP/off confirmation; three measurements of each selected point.
+Numerical audit: 262144 context capacity, four short inputs, frozen 10000-token input and cached followup, MTP cap 4, same inputs for old/new kernels.
+
+Selected MTP window 4, confidence threshold 0.5.
+Input budget 1000: off median 18.572, MTP median 21.497 tok/s, +15.75%.
+Input budget 4000: off median 18.536, MTP median 21.323 tok/s, +15.04%.
+
+All 26 throughput requests reproduce the original MTP-off text exactly.
+Audit: 117,703,680 finite logits at 474 positions, 132 matched windows, zero bit differences; all 6 committed GDN/KV/PLE/tail/pooled states, generated ids and draft counts match.
+Independent tests: 576 MMVQ cases / 1520496 outputs bitwise with guards and changed-input tape replay; 51842190 direct-dot outputs bitwise including nonfinite expert-scale and routing/offset cases. Five related Metal tests pass (12.87 s).
+
+Changes:
+1. Q6_K small batches replace packed CUDA integer emulation with exact float integer dots; preserve scale multiplication, four virtual-warp partials and XOR reduction. Specialize T=2..8; use 8 rows/group for the large head and 4 for wide projections. T4 head micro: 15.14 -> 6.55 ms; 6144x2560: 365 -> 193 us.
+2. IQ4_XS / IQ4_NL batches now decode weights once across columns instead of repeatedly calling the fast single-token path. The first fallback fixed the packed multi regression; this batch path improves further.
+3. Q4_K / Q5_K use the same exact integer-dot approach, preserving their scale/min correction and accumulation.
+4. Resident IQ4_NL expert down replaces byte-permutation/codebook integer emulation with exact float dots, shares activation slices across four rows and preserves the original reduction. Cap 10: 124.864 -> 84.067 us; cap 40: 501.528 -> 346.872 us (31-33% lower).
+5. Correct the startup label: the actual native main head is Q6_K, not the old hardcoded Q5_K label.
+
+Additional sustained batch microbenchmarks (ABBA, each point >=10 s; GPU command-buffer timestamps, rotating weights):
+F0 K2560 N10240 T4 r1: 463.043 -> 364.209 us, 21.34% less time. Source batch-bench.csv.
+F0 K6144 N2560 T4 r1: 251.685 -> 215.940 us, 14.20% less time. Source batch-bench.csv.
+F1 K2560 N10240 T4 r1: 411.478 -> 357.877 us, 13.03% less time. Source batch-bench.csv.
+F1 K6144 N2560 T4 r1: 238.094 -> 207.365 us, 12.91% less time. Source batch-bench.csv.
+F5 K2560 N10240 T4 r1: 322.016 -> 249.686 us, 22.46% less time. Source batch-bench.csv.
+F5 K6144 N2560 T4 r1: 160.748 -> 131.613 us, 18.12% less time. Source batch-bench.csv.
+F9 K2560 N10240 T4 r1: 337.599 -> 245.404 us, 27.31% less time. Source batch-bench.csv.
+F9 K6144 N2560 T4 r2: 181.780 -> 123.501 us, 32.06% less time. Source batch-bench.csv.
+F0 K2560 N640 T4 r2: 30.494 -> 26.368 us, 13.53% less time. Source batch-actual-bench.csv.
+F1 K2560 N640 T4 r1: 29.159 -> 21.750 us, 25.41% less time. Source batch-actual-bench.csv.
+F5 K2560 N640 T4 r1: 30.311 -> 18.186 us, 40.00% less time. Source batch-actual-bench.csv.
+F9 K640 N2560 T4 r2: 35.356 -> 24.111 us, 31.80% less time. Source batch-actual-bench.csv.
+F0 K2560 N640 T4 r1: 32.770 -> 22.845 us, 30.29% less time. Source batch-q5-r1.csv.
+IQ4 baseline above is T separate existing fast single calls; Q4/Q5 baseline is original packed multi. Synthetic larger shapes are listed alongside actual-model sizes in model-dense-shapes.json. Candidate parity: 672 cases / 1551312 outputs, zero differences against unchanged packed single shaders.
+
+Rejected/limited: more rows per simdgroup was slower for most Q4/Q5/IQ4_XS shapes; keep one, with a measured two-row IQ4_NL selection. Preserve four-row IQ4 fallbacks and prepared lossless expanded views. Confidence-zero MTP and larger windows remain measurements rather than assumptions. GDN snapshots remain opt-in (previous end-to-end trials did not establish a benefit). No 100K/256K input or vision audit was added.
+
+Format legend: F0 Q5_K, F1 Q4_K, F5 IQ4_XS, F9 IQ4_NL.
+
+Rollback controls: STRATA_METAL_Q6_MULTI=0; STRATA_METAL_K_MULTI=0; STRATA_METAL_IQ4_MULTI=0 (original packed) or 1 (independent fast singles), default 2; STRATA_METAL_EXPERT_IQ4_DIRECT=0. Existing master switches, all weights, layers, expert count, KV precision and sampling are preserved. Restart the engine to change these cached switches.
+
+Validated binary SHA-256: 3aa4e5972b0a9a56180a6e13a5b1f8ffa00112c2686003ba149d6071f0cac099
+Metal source hash: 73efdd2b9343705a
+
+Further improvements isolated on the same prompt (new / stage1 / new, T4 fixed window, warmup excluded):
+Budget 1000: 19.143 / 18.695 / 20.083 tok/s; mean new +4.91%. This is an A/B/A confirmation, not a multi-round confidence interval.
+Budget 4000: 21.323 / 18.292 / 22.372 tok/s; mean new +19.44%. This is an A/B/A confirmation, not a multi-round confidence interval.
+
+Installed after gates: engine/strata and engine/BUILD.json; daily strata-iq3_s.json uses the selected MTP window/threshold. Capacity remains 262144. Original RT receives the tested CJK draft subset. Prior binary, metadata and config have before-2026-10-11-mtp-kernel-opt backups. All owned test servers and engines closed.

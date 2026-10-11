@@ -51,7 +51,7 @@ def install(ram, argv, answers=None, extra=(), machine="arm64", tty=False, befor
         (data / "mtp" / "rt").mkdir(parents=True)
         (data / "mtp" / "rt" / "experts.bin").write_bytes(b"")
         eng = t / "engine"
-        eng.mkdir()
+        eng.mkdir(exist_ok=True)
         (eng / "strata").write_bytes(b"")
         asked = []
 
@@ -94,7 +94,7 @@ def install(ram, argv, answers=None, extra=(), machine="arm64", tty=False, befor
             mock.patch.object(setup, "check_shards", lambda shards: None),
             mock.patch.object(setup, "run", lambda *a, **k: None),
             mock.patch.object(setup, "mtp_corrupt", lambda *a, **k: False),
-            mock.patch.object(setup, "refresh_draft_vocab", never("the draft subset copy")),
+            mock.patch.object(setup, "refresh_draft_vocab"),
             mock.patch.object(setup, "calibrate_config", never("tuning")),
             mock.patch.dict(sys.modules, {"gguf_reader": types.SimpleNamespace(GGUFFile=FakeGGUF)}),
             mock.patch.object(sys, "argv", ["setup.py", *argv] + (["--yes"] if answers is None else [])),
@@ -126,6 +126,7 @@ def measured_args(context=262144) -> list:
     for flag, p in paths.items():
         a[a.index(flag) + 1] = p
     a[a.index("--max-context") + 1] = str(context)
+    a[a.index("--mtp-max-t") + 1] = "4"  # current MTP default; the remaining baseline settings are historical
     return a + VISION_ARGS
 
 
@@ -140,7 +141,9 @@ class ContextConfig(unittest.TestCase):
         self.assertIn("* 2) 256K tokens", out)
         for k, v in setup.mac_profile()["env"].items():
             self.assertEqual(cfg["env"][k], v)
-            self.assertEqual(MEASURED["env"][k], v)                # the measured run had the same switch
+            if k in MEASURED["env"]:
+                self.assertEqual(MEASURED["env"][k], v)
+        self.assertEqual(cfg["metal_profile_revision"], setup.mac_profile()["revision"])
         self.assertEqual((cfg["exe"], cfg["cwd"], cfg["tokenizer"], cfg["log"], cfg["backend"]),
                          ("engine/strata", ".", "Strata-data/packs/iq2_xs/tokenizer", "strata-iq2_xs.log", "metal"))
         self.assertNotIn("gpu", cfg)
@@ -154,6 +157,24 @@ class ContextConfig(unittest.TestCase):
         self.assertIn('cd "$(dirname "$0")"', script)
         self.assertIn('--config "strata-iq2_xs.json"', script)
         self.assertNotIn(tempfile.gettempdir(), script)
+
+    def test_no_start_prepares_the_mtp_subset_for_the_run_script(self):
+        refresh = mock.Mock()
+        code, out, cfg, _, _ = install(96.0, ["--no-start"],
+                                     extra=[mock.patch.object(setup, "refresh_draft_vocab", refresh)])
+        self.assertEqual(code, 0, out[-3000:])
+        refresh.assert_called_once()
+        rt, choice = refresh.call_args.args
+        self.assertEqual(rt.parts[-3:], ("Strata-data", "mtp", "rt"))
+        self.assertEqual(choice, "cjk")
+        self.assertEqual(cfg["args"][cfg["args"].index("--mtp-max-t") + 1], "4")
+
+    def test_download_only_does_not_prepare_an_unused_subset(self):
+        refresh = mock.Mock()
+        code, out, _, _, _ = install(96.0, ["--download-only"],
+                                   extra=[mock.patch.object(setup, "refresh_draft_vocab", refresh)])
+        self.assertEqual(code, 0, out[-3000:])
+        refresh.assert_not_called()
 
     def test_enter_for_every_question_is_the_same(self):
         code, out, cfg, asked, _ = install(96.0, ["--no-start"], answers="")
@@ -184,6 +205,12 @@ class ContextConfig(unittest.TestCase):
         for flag in ("--mmap-experts", "--no-prefill-borrow"):
             self.assertIn(flag, p["args"])
         self.assertNotIn("--kv", p["args"])                      # FP16 KV, the engine's default
+        self.assertEqual(p["args"][p["args"].index("--mtp-max-t") + 1], "4")
+        self.assertEqual(p["args"][p["args"].index("--spec-min-p") + 1], "0.5")
+        self.assertEqual(p["env"], {"STRATA_METAL_IQ4_EXPAND": "0", "STRATA_METAL_HC_BATCH": "1",
+                                    "STRATA_METAL_Q6_MULTI": "1", "STRATA_METAL_K_MULTI": "1",
+                                    "STRATA_METAL_IQ4_MULTI": "2", "STRATA_METAL_EXPERT_IQ4_DIRECT": "1",
+                                    "STRATA_METAL_GDN_SNAPSHOT": "0"})
 
 
 class Memory(unittest.TestCase):
@@ -370,17 +397,90 @@ def mac_config(t: Path) -> Path:
     return p
 
 
+class ProfileRefresh(unittest.TestCase):
+    def refresh(self, cfg):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "strata.json"
+            p.write_text(json.dumps(cfg), encoding="utf-8")
+            result = setup.refresh_mac_profile_defaults(p, cfg, setup.mac_profile())
+            self.assertEqual(json.loads(p.read_text(encoding="utf-8")), result)
+            return result
+
+    def config(self, cap="1", spec="4"):
+        return {"backend": "metal", "args": ["--mtp", "rt", "--spec", spec, "--mtp-max-t", cap,
+                                             "--max-context", "262144", "--prefill", "2048"],
+                "env": {"STRATA_METAL_IQ4_EXPAND": "0", "STRATA_METAL_HC_BATCH": "0"},
+                "draft_vocab": "en", "temperature": 0.7}
+
+    def test_legacy_default_is_updated_and_custom_settings_are_kept(self):
+        cfg = self.refresh(self.config())
+        self.assertEqual(cfg["args"], ["--mtp", "rt", "--spec", "4", "--mtp-max-t", "4",
+                                       "--max-context", "262144", "--prefill", "2048"])
+        self.assertEqual((cfg["draft_vocab"], cfg["temperature"]), ("en", 0.7))
+        self.assertEqual(cfg["env"]["STRATA_METAL_HC_BATCH"], "0")
+        self.assertEqual(cfg["env"]["STRATA_METAL_IQ4_MULTI"], "2")
+        self.assertEqual(cfg["env"]["STRATA_METAL_Q6_MULTI"], "1")
+        self.assertEqual(cfg["metal_profile_revision"], setup.mac_profile()["revision"])
+
+    def test_after_migration_a_manual_disable_is_kept(self):
+        cfg = self.refresh(self.config())
+        cfg["args"][cfg["args"].index("--mtp-max-t") + 1] = "1"
+        cfg["env"]["STRATA_METAL_Q6_MULTI"] = "0"
+        self.assertEqual(self.refresh(cfg), cfg)
+        self.assertEqual(cfg["args"][cfg["args"].index("--mtp-max-t") + 1], "1")
+
+    def test_custom_window_and_explicit_no_spec_are_kept(self):
+        for cap, spec in (("2", "4"), ("1", "1"), ("1", "invalid")):
+            with self.subTest(cap=cap, spec=spec):
+                cfg = self.refresh(self.config(cap, spec))
+                self.assertEqual(cfg["args"][cfg["args"].index("--mtp-max-t") + 1], cap)
+        cfg = self.config()
+        cfg["args"] = ["--spec", "4"]
+        self.assertEqual(self.refresh(cfg)["args"], ["--spec", "4"])
+
+    def test_new_profile_revision_keeps_an_already_migrated_manual_disable(self):
+        cfg = self.config()
+        cfg["metal_profile_revision"] = "an-earlier-mtp-profile"
+        cfg["env"]["STRATA_METAL_Q6_MULTI"] = "0"
+        self.refresh(cfg)
+        self.assertEqual(cfg["args"][cfg["args"].index("--mtp-max-t") + 1], "1")
+        self.assertEqual(cfg["env"]["STRATA_METAL_Q6_MULTI"], "0")
+        self.assertEqual(cfg["metal_profile_revision"], setup.mac_profile()["revision"])
+
+    def test_other_backends_are_not_migrated(self):
+        cfg = self.config()
+        cfg["backend"] = "cuda"
+        self.assertNotIn("metal_profile_revision", self.refresh(cfg))
+
+    def test_plain_setup_refreshes_a_legacy_config_before_start(self):
+        def before(t):
+            p = mac_config(t)
+            cfg = json.loads(p.read_text())
+            for flag, value in (("--max-context", "262144"), ("--mtp-max-t", "1")):
+                cfg["args"][cfg["args"].index(flag) + 1] = value
+            p.write_text(json.dumps(cfg))
+
+        start = mock.Mock(return_value=0)
+        code, out, cfg, _, _ = install(96.0, [], before=before,
+                                     extra=[mock.patch.object(setup, "start", start)])
+        self.assertEqual(code, 0, out[-3000:])
+        start.assert_called_once()
+        self.assertEqual(cfg["args"][cfg["args"].index("--mtp-max-t") + 1], "4")
+        self.assertEqual(cfg["metal_profile_revision"], setup.mac_profile()["revision"])
+
+
 class Start(unittest.TestCase):
     def test_a_mac_start_asks_no_gpu_and_finds_its_files_from_anywhere(self):
         with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as elsewhere:
             p = mac_config(Path(tmp))
             call = mock.Mock(return_value=0)
+            refresh = mock.Mock()
             cwd = os.getcwd()
             os.chdir(elsewhere)                             # relative paths are the config folder's, not the shell's
             try:
                 with mock.patch.object(setup, "gpus", never("nvidia-smi")), \
                         mock.patch.object(setup, "amd_gpus", never("the AMD probe")), \
-                        mock.patch.object(setup, "refresh_draft_vocab", never("the draft subset copy")), \
+                        mock.patch.object(setup, "refresh_draft_vocab", refresh), \
                         mock.patch.object(setup.subprocess, "call", call), \
                         contextlib.redirect_stdout(io.StringIO()) as out:
                     self.assertEqual(setup.start(p, None, gpu=1), 0)
@@ -392,6 +492,7 @@ class Start(unittest.TestCase):
             self.assertIn("--open", cmd)
             self.assertIn("this Mac's GPU", out.getvalue())
             self.assertIn("a Mac has one GPU", out.getvalue())
+            refresh.assert_called_once_with(Path(tmp) / "Strata-data/mtp/rt", "cjk")
 
     def test_a_missing_model_file_is_named(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -1,0 +1,8 @@
+{
+  "remaining_inference_processes": [],
+  "ports_open": {
+    "8081": false,
+    "8082": false
+  },
+  "daily_engine_matches_original_comparison": true
+}

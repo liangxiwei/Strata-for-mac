@@ -1,23 +1,66 @@
-# HANDOFF - the Strata Metal port, 2026-10-04 (updated after round 27)
+# HANDOFF - the Strata Metal port, 2026-10-12 (updated after round 31)
 
 For the agent continuing this work. Read AGENTS.md first (repo rules), then this file, then
-docs/PORT_METAL/PROGRESS.md rounds 9-27 (the platform rules with their measurements) and STATUS.md
+docs/PORT_METAL/PROGRESS.md rounds 9-31 (the platform rules with their measurements) and STATUS.md
 (the per-file state). PLAN.md is the original plan. Everything below is measured, not assumed.
 
 ## Quality constraint
 
 The user explicitly requires speed improvements without reducing model capability. Preserve the current
-IQ2_XS weights/quantization, full layers and routed expert count, FP16 KV and requested sampling. Retain
+model weights/quantization (current daily model: IQ3_S), full layers and routed expert count, FP16 KV and requested sampling. Retain
 independent kernel references and compare real-model logits on identical input tokens plus committed
 state; retrieval scores or plausible wording alone are insufficient. A candidate with unexplained
 numerical deviations must stay out of the default path until investigated. Current round-21 audits
-pass for the tested short, 10K and cached-follow-up inputs; 100K still needs its own validation.
+pass for the tested short, 10K and cached-follow-up inputs; round 30 repeats those gates with MTP enabled.
+100K still needs its own MTP validation. The user requires future performance comparisons to keep MTP enabled
+on both sides, using the latest validated binary as the reference; do not repeat MTP-off comparisons.
 
 ## Where things stand
 
 The CUDA/HIP engine is ported to Metal (Apple M2 Max, macOS 26.5) end to end:
 
-* **Round 27 (latest): canonical expert down dimensions.** The Q2_0 resident direct down helper receives
+* **Rounds 30-31: MTP and exact quantized batches.** Daily `engine/strata` SHA-256
+  `3aa4e5972b0a9a56180a6e13a5b1f8ffa00112c2686003ba149d6071f0cac099`, Metal source fingerprint
+  `73efdd2b9343705a`, IQ3_S, original Q2_0 MTP runtime with CJK draft subset, `--spec 4 --mtp-max-t 4
+  --spec-min-p 0.5`, suffix drafts and GDN snapshots off. Daily capacity 262144 / prefill 2048 are retained.
+  Q6_K, Q4_K, Q5_K and IQ4_XS/IQ4_NL small batches reuse decoded weights and preserve the original FP32
+  reduction; resident IQ4_NL down uses exact integer-valued float dots. Independent tests and the matched-input
+  short/10K/cached audit pass: 117,703,680 finite logits / 474 positions, zero bit differences, all six committed
+  state fingerprints and draft counts match. Latest MTP medians are 21.50 / 21.32 tok/s (approximately 1K / 4K
+  fresh prompts, 512 greedy outputs, 128K capacity, Low Power Mode). A further MTP-on new/stage1/new comparison
+  shows +4.9% / +19.4% using the mean of the new runs; this is one A/B/A confirmation, not a confidence interval.
+  Setup now writes those switches explicitly and migrates the historical no-draft default once, preserving
+  existing overrides and subsequent edits. Generic float `dp4a` / vector byte permutation and resident GU row
+  reuse were slower in the active formats; rejected. Q6 single-token sustained gain is only ~12% at the draft
+  head and absent at the main head; retained as a prototype. See round 31 before interpreting burst timings.
+  Evidence: `bench/results/2026-10-11-metal-mtp-kernel-optimization/` and
+  `bench/results/2026-10-11-metal-cuda-emulation/`. Future baseline: the installed binary above, MTP enabled.
+* **Round 29: fine-grained expert tails, selected by the user.** A 32-row descriptor chooses 8/16/24/32 valid-row
+  tiles in one dispatch, with the same 256 threads / 8 KiB scratch, half operands and ascending FP32 MMA
+  accumulation. Default on; `STRATA_METAL_PREFILL_MOE_TAIL=0` restores the old path. On the actual IQ3_S 30K
+  input, all 7,946,240 logits and active states match the old daily binary; focused tests pass for default and
+  rollback. The daily engine was replaced only after this gate; local chunk remains 2048 / capacity 262144.
+  Background jobs remain running: same-build fine/old/fine warm prefill was 145.010 / 165.549 / 166.224 s.
+  **A stable whole-prefill speedup is not established.** A 2 GiB dense FP16 cache added about 1.9G footprint
+  without repeated benefit and was removed from production. Further screening uses actual 10K inputs / 256K
+  capacity, as requested: same-build fine vs device gate/up warm prefill 42.835 / 42.819 s (233.46 / 233.54 tok/s),
+  effectively tied. First-request 67.487 / 61.236 s is unconfirmed under background load; candidate not adopted
+  or numerically audited on the full model. Larger dense tiles were mostly slower; the lone ~3.4% local gain
+  represents only about 0.14% of diagnostic whole-prefill time. No further 30K retest without confirmed 10K gain.
+  Evidence and prototype patches:
+  `bench/results/2026-10-09-metal-iq3-s-30k-followup/`.
+* **Round 28: IQ3_S, 30K in Low Power Mode, 256K capacity.** Same daily binary, all 24,576 experts resident,
+  FP16 KV, no drafts. Two fresh prompts (no reuse): chunk 1024 reads in 172.058 / 152.005 s; 2048 in
+  149.633 / 133.098 s (+14.99% / +14.20% throughput), with 465 MiB more GPU allocation, footprint
+  61.4G -> 61.8G. Local `strata-iq3_s.json` now uses 2048. Chunk 4096 reads in 159.963 / 122.470 s;
+  the pair takes nearly the same total time as 2048 and adds 1393 MiB over 1024, so 2048 is selected.
+  Both larger chunks match 7,946,240 logits at 32 positions plus active KV/GDN/PLE state fingerprints.
+  No kernel/model binary was replaced. Larger K scratch and lossless FP16 expert expansion were slower.
+  **Measurement:** do not run periodic `vmmap -summary` during timed inference; this machine's probe took
+  6-7 s with noticeable CPU load. Read the saved peak once after requests. Kernel/phase profiler runs are
+  separate, diagnostic only. Evidence: `bench/results/2026-10-09-metal-iq3-s-30k/`. This establishes these
+  30K text inputs in Low Power Mode, not a new 256K-input or Automatic-mode result.
+* **Round 27: canonical expert down dimensions.** The Q2_0 resident direct down helper receives
   compile-time 2560 x 640 dimensions, retaining its lane arithmetic, original weights and four rows per warp.
   M2 Max, Automatic: same-binary warm 10K / 256-output decode gains of 2.16%, 0.45% (reversed order), and 2.45%
   (full build: median 9.0732 -> 8.8561 s). No extra weight or scratch memory. Cold first-request speedup was not
@@ -39,7 +82,7 @@ The CUDA/HIP engine is ported to Metal (Apple M2 Max, macOS 26.5) end to end:
   because the view is slower than the direct kernels). Every output id, all 96,596,480 audited logits and all
   six committed states stay bitwise equal. Evidence: `bench/results/2026-10-03-metal-decode-opt2/` and `-opt3/`;
   the switches are in the next section and PROGRESS rounds 22-23. Rounds 21's notes below are history.
-* **The current model is IQ2_XS**, with both GGUF shards SHA-256 verified. Round 21's matched-binary
+* **Historical round-21 model: IQ2_XS**, with both GGUF shards SHA-256 verified. Round 21's matched-binary
   10K / 256-output test, MTP off, improves warm decode **18.69 -> 19.53 tok/s (+4.5%)** with only
   **2.244 GiB** additional cache. Three repeated requests recompute all output tokens; prompt reuse
   is identical on both sides. First-request decode varies (17.69-19.52 tok/s), so cold-request speedup
@@ -74,13 +117,13 @@ The CUDA/HIP engine is ported to Metal (Apple M2 Max, macOS 26.5) end to end:
     data/mac-metal.json). The 128K / 256K context reservation measured 2,677 / 6,248 MiB beyond 32K, so the default
     is 256K only where model plus context fits the detected shared memory. It puts images on by default, downloads a
     big file over four connections and checks each file's published SHA-256.
-* **Installed by setup now (2026-10-03, after round 26):** `./download-model.sh` + `./setup.sh` compile the Metal
+* **Historical setup install (2026-10-03, after round 26):** `./download-model.sh` + `./setup.sh` compile the Metal
   engine into `engine/strata` and write `strata-iq2_xs.json` from `data/mac-metal.json` (the settings below, paths
   relative to the repo); the model files live in the repo's git-ignored `Strata-data/` (models/IQ2_XS, packs/iq2_xs,
   mtp/rt - moved there from the old IQ2_XS/ folder). Same output text and speed as the round-26 binary:
   `bench/results/2026-10-03-metal-setup/`. The old `IQ2_XS/strata-mac-optimized.json` named below points at the
   files' old place and is superseded.
-* **Current local server config (until setup):** `/Users/liangxw/src/xproject/petproject/IQ2_XS/strata-mac-optimized.json`.
+* **Historical local server config (before setup, round 26):** `/Users/liangxw/src/xproject/petproject/IQ2_XS/strata-mac-optimized.json`.
   It uses 32,768 capacity, FP16 KV, 1,024-token prefill, and
   `--spec 4 --mtp-max-t 1 --suffix-draft 0`. The measured draft count is zero. All 24,576 experts
   reside in the GPU cache (33.02 GiB); `--mmap-experts --no-prefill-borrow` avoids another pinned

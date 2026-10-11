@@ -1,8 +1,9 @@
 // src/kernels/metal/fused_gr.mm - the port of src/kernels/cuda/fused_gr.cu's host half (K16).  The read is
 // three launches per token (norm, down, up), every pointer a BOUND buffer argument - the CUDA struct's
 // by-value pointer table does not survive on Apple Silicon (fused_gr.metal's file comment has the
-// measurements), so the T-token GrMulti becomes T one-token launches whose bound arguments the runtime
-// resolves, interior pointers included.  The single-token read is the same path with T = 1 and a private xn
+// measurements). Contiguous multi-token tensors use bound base buffers and element indices, sharing
+// projection weights across tokens; arbitrary argument layouts keep the per-token launches. The
+// single-token read is the same path with T = 1 and a private xn
 // buffer: the CUDA single-token kernel stages xn (40 KB) in shared memory and this GPU's threadgroup limit
 // is 32 KB (measured), and the multi path already stages xn in device memory, so T = 1 through it is the
 // whole single-token read, bit for bit.
@@ -18,6 +19,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cstdint>
 
 namespace strata::kernels {
 namespace {
@@ -56,6 +58,30 @@ const char* norm_kernel() {
         return v != nullptr && std::atoi(v) == 0 ? "fused_gr_norm_kernel" : "fused_gr_norm1_kernel";
     }();
     return name;
+}
+
+// The verifier's tensors are token-major allocations. Do not construct a device pointer table: Metal
+// receives each allocation as a bound buffer. Unusual callers retain the original per-token path.
+bool batch_layout(const FusedGrArgs* a, int nt) {
+    static const bool enabled = [] {
+        const char* v = std::getenv("STRATA_METAL_HC_BATCH");
+        return v == nullptr || std::atoi(v) != 0;
+    }();
+    if (!enabled || nt < 2) return false;
+    auto at = [](const float* base, const float* p, int t, int stride) {
+        return reinterpret_cast<uintptr_t>(p) == reinterpret_cast<uintptr_t>(base) +
+                                                size_t(t) * size_t(stride) * sizeof(float);
+    };
+    for (int t = 1; t < nt; ++t) {
+        const auto& x = a[t];
+        if (x.apply != a[0].apply || x.eps != a[0].eps || !at(a[0].R, x.R, t, D) ||
+            !at(a[0].lo, x.lo, t, LR) || !at(a[0].rs, x.rs, t, HC) ||
+            !at(a[0].mixed, x.mixed, t, N) ||
+            (a[0].w_inject && !at(a[0].inject_out, x.inject_out, t, HC)) ||
+            (x.apply && (!at(a[0].R_out, x.R_out, t, D) || !at(a[0].bo_prev, x.bo_prev, t, N) ||
+                         !at(a[0].inj_prev, x.inj_prev, t, HC)))) return false;
+    }
+    return true;
 }
 
 /// One token's read: the norm, the down projection, the up projection, all pointers bound as arguments.
@@ -109,7 +135,7 @@ void fused_gr_read_multi(const FusedGrArgs* a, int n_tok, float* xn_scratch, voi
         return true;
     }();
     (void) v3_note;
-    if (n_tok < 1 || n_tok > kFusedGrMaxT || xn_scratch == nullptr) {
+    if (a == nullptr || n_tok < 1 || n_tok > kFusedGrMaxT || xn_scratch == nullptr) {
         std::fprintf(stderr, "fused_gr_read_multi: invalid arguments\n");
         std::exit(1);
     }
@@ -122,6 +148,7 @@ void fused_gr_read_multi(const FusedGrArgs* a, int n_tok, float* xn_scratch, voi
             std::exit(1);
         }
     }
+    const bool batch = batch_layout(a, n_tok);
     // the norm for every token, then the down projection, then the up - the CUDA dataflow; each down/up
     // launch touches only its own token's xn/lo, so per-token launches keep exactly that order
     for (int t = 0; t < n_tok; ++t) {
@@ -133,17 +160,22 @@ void fused_gr_read_multi(const FusedGrArgs* a, int n_tok, float* xn_scratch, voi
         n.done();
     }
     if (stamp_buf) gpu_stamp(stamp_buf, stamp_i0, stream);
-    for (int t = 0; t < n_tok; ++t) {
+    char down_name[64], up_name[64];
+    std::snprintf(down_name, sizeof(down_name), "fused_gr_down_batch_%d", n_tok);
+    std::snprintf(up_name, sizeof(up_name), "fused_gr_up_batch_%d", n_tok);
+    for (int t = 0; t < (batch ? 1 : n_tok); ++t) {
         const FusedGrArgs& x = a[t];
-        metal::Launch d("fused_gr_down_kernel", (unsigned) (DOWN_BLOCKS + 1), 1, 1, THREADS, 1, 1, 0, stream);
+        metal::Launch d(batch ? down_name : "fused_gr_down_kernel", (unsigned) (DOWN_BLOCKS + 1),
+                        1, 1, THREADS, 1, 1, 0, stream);
         d.buf(x.w_down).buf(x.w_inject).buf(xn_scratch + (size_t) t * D).buf(x.lo).buf(x.inject_out);
         d.done();
     }
     if (stamp_buf) gpu_stamp(stamp_buf, stamp_i0 + 1, stream);
-    for (int t = 0; t < n_tok; ++t) {
+    for (int t = 0; t < (batch ? 1 : n_tok); ++t) {
         const FusedGrArgs& x = a[t];
         const int apply = x.apply ? 1 : 0;
-        metal::Launch u("fused_gr_up_kernel", (unsigned) UPM_BLOCKS, 1, 1, THREADS, 1, 1, 0, stream);
+        metal::Launch u(batch ? up_name : "fused_gr_up_kernel", (unsigned) UPM_BLOCKS,
+                        1, 1, THREADS, 1, 1, 0, stream);
         u.buf(x.w_up).buf(x.lo).buf(x.R).buf(x.R_out).buf(x.bo_prev).buf(x.inj_prev).buf(x.w_norm).buf(x.rs)
          .buf(x.mixed).scalar(apply);
         u.done();

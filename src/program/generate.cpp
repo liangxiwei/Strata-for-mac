@@ -2656,7 +2656,8 @@ int main(int argc, char** argv) {
             std::fprintf(stderr, "strata generate: %s\n", err.c_str());
             return 1;
         }
-        std::fprintf(stderr, "strata generate: experimental native Q5_K head, %llu bytes\n",
+        std::fprintf(stderr, "strata generate: experimental native %s head, %llu bytes\n",
+                     strata::ggml_type_name((uint32_t) native_head.type()),
                      (unsigned long long) native_head.weight_bytes());
     }
     std::vector<float> logits((size_t) n_vocab);
@@ -4702,9 +4703,7 @@ int main(int argc, char** argv) {
         std::string line;
         int64_t rounds = 0;
         const int S = o.spec;
-        const int S_mtp = o.mtp_max_t > 0 ? std::min(o.mtp_max_t, S) : S;   // the MTP's windows; suffixes go up to S
-        const bool need_draft = S_mtp > 1 || o.suffix_draft > 0;
-        if (S_mtp < S) mtp.set_max_drafts(S_mtp - 1);
+        const int S_mtp_limit = o.mtp_max_t > 0 ? std::min(o.mtp_max_t, S) : S;
         strata::spec::SuffixDrafter sfx(std::max(1, o.suffix_draft), 64, (size_t) o.max_context + 4096);
         strata::spec::DraftPolicy policy(S);   // MTP or lookup window, learned over the whole process
         // The vision path (--vision): GENI <max_new> <embeddings file> <id,id,...> carries images.  The file is one
@@ -4743,6 +4742,7 @@ int main(int argc, char** argv) {
             // tuning keys (setup's calibration measures settings without restarting the engine): the PCIe share of
             // the missed experts and the draft-probability floor, for this request only
             double req_pcie_frac = o.pcie_frac, req_spec_min_p = o.spec_min_p;
+            int S_mtp = S_mtp_limit;   // request cap, never beyond the configured window/allocation
             if (endp != nullptr) {   // GENI takes the same keys (#75: image requests were always greedy); its
                                      // embedding file path is the first token without an =
                 for (;;) {
@@ -4767,9 +4767,13 @@ int main(int argc, char** argv) {
                     else if (key == "seed") req_seed = std::strtoull(tok.c_str() + eq + 1, nullptr, 10);
                     else if (key == "pcie_frac") req_pcie_frac = std::clamp((double) fv, 0.0, 1.0);
                     else if (key == "spec_min_p") req_spec_min_p = std::clamp((double) fv, 0.0, 1.0);
+                    else if (key == "mtp_max_t")
+                        S_mtp = std::clamp(std::atoi(tok.c_str() + eq + 1), 1, std::max(1, S_mtp_limit));
                     // unknown keys are skipped: the ids start at the first token without '='
                 }
             }
+            const bool need_draft = S_mtp > 1 || o.suffix_draft > 0;
+            mtp.set_max_drafts(std::max(0, S_mtp - 1));   // restore the default on the following request
             std::string emb_path;
             if (geni && endp != nullptr) {
                 while (*endp == ' ') ++endp;

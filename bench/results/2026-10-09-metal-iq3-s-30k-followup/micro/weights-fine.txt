@@ -1,0 +1,6 @@
+native_gemm2_gu_18_r16 rows 20087 (39.2 per expert):  fine 32.95 ms  wdevfine 29.37 ms
+native_gemm2_down_20_r16 rows 20087 (39.2 per expert):  fine 20.99 ms  wdevfine 22.53 ms
+native_gemm2_gu_21_r16 rows 21884 (42.7 per expert):  fine 44.23 ms  wdevfine 37.60 ms
+native_gemm2_gu_22_r16 rows 21502 (42.0 per expert):  fine 42.72 ms  wdevfine 36.27 ms
+native_gemm2_down_42_r16 rows 21502 (42.0 per expert):  fine 27.35 ms  wdevfine 26.64 ms
+native_gemm2_gu_23_r16 rows 21947 (42.9 per expert):  fine 40.05 ms  wdevfine 35.24 ms

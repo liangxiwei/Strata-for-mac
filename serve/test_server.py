@@ -527,6 +527,13 @@ class SamplingKeys(unittest.TestCase):
         self.assertIn("penalty_last_n=4096", self.keys(repetition_penalty=1.1, penalty_last_n=4096))
         self.assertFalse([k for k in self.keys(temperature=0.7) if k.startswith("penalty")])
 
+    def test_mtp_request_window_cap(self):
+        for window in (1, 2, 4, 8):
+            self.assertIn(f"mtp_max_t={window}", self.keys(strata_tune={"mtp_max_t": window}))
+        for bad in (0, -1, 9, True, 2.5, "4", None):
+            self.assertFalse([k for k in self.keys(strata_tune={"mtp_max_t": bad})
+                              if k.startswith("mtp_max_t=")], bad)
+
 
 class GpuChoice(unittest.TestCase):
     """Issue #51: the config's \"gpu\" reaches the engine as CUDA_VISIBLE_DEVICES, numbered like nvidia-smi."""

@@ -1,0 +1,6 @@
+native_gemm2_gu_18_r16 rows 20087 (39.2 per expert):  r32 45.61 ms  wdev 38.04 ms
+native_gemm2_down_20_r16 rows 20087 (39.2 per expert):  r32 23.51 ms  wdev 23.92 ms
+native_gemm2_gu_21_r16 rows 21884 (42.7 per expert):  r32 54.18 ms  wdev 44.44 ms
+native_gemm2_gu_22_r16 rows 21502 (42.0 per expert):  r32 53.62 ms  wdev 47.41 ms
+native_gemm2_down_42_r16 rows 21502 (42.0 per expert):  r32 27.65 ms  wdev 26.56 ms
+native_gemm2_gu_23_r16 rows 21947 (42.9 per expert):  r32 45.01 ms  wdev 38.60 ms

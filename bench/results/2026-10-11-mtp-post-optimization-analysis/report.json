@@ -1,0 +1,764 @@
+{
+  "metadata": {
+    "hardware": "Apple M2 Max\n103079215104\n",
+    "power": "Battery Power:\n Sleep On Power Button 1\n powermode            1\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         5\n womp                 1\n networkoversleep     0\n sleep                1\n lessbright           1\n tcpkeepalive         1\n disksleep            0\nAC Power:\n Sleep On Power Button 1\n powermode            1\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         5\n womp                 1\n networkoversleep     0\n sleep                0\n tcpkeepalive         1\n disksleep            0\n",
+    "installed_engine_sha256": "1f3d63b3427edbb6361d4e1fca2a344cad2ef30a6a5ef5f819051627953c2763",
+    "main_weights": "Existing IQ3_S GGUF, unchanged",
+    "main_output_type": "Q6_K (the Q5_K startup log is a hard-coded label)",
+    "throughput_benchmark": "No new throughput claim; per-pass sampling changes execution overhead",
+    "micro_protocol": "GPU command-buffer times, fixed finite weight scales, random codes and scales; distinct activation columns, rotate up to 32 weight copies (~256 MiB), ABBA >=10 s per point; no inference process running",
+    "micro_numerics": "Meld receives exactly the dequantized Q8_1 activation used by Strata. This isolates the kernel difference. Supplemental random positive/negative weight scales and random activation scales are tested separately."
+  },
+  "kernel_profiles": [
+    {
+      "tape": "0xbe2e95fc0",
+      "T": 4,
+      "entries": 2157,
+      "sampled_launches": 48,
+      "sampled_busy_ms": 162.77664499999997,
+      "head_ms": 13.530003,
+      "kernel_families": [
+        {
+          "kernel": "native_mmvq_multi_kernel_q6_k_r1",
+          "count": 129,
+          "ms": 49.037799999999976,
+          "share_pct": 30.125820568423674
+        },
+        {
+          "kernel": "native_resident_down_20",
+          "count": 39,
+          "ms": 17.984592,
+          "share_pct": 11.048631700204906
+        },
+        {
+          "kernel": "native_resident_gu_22",
+          "count": 20,
+          "ms": 11.11806,
+          "share_pct": 6.830255040580301
+        },
+        {
+          "kernel": "native_resident_gu_18",
+          "count": 17,
+          "ms": 9.808135,
+          "share_pct": 6.025517358463803
+        },
+        {
+          "kernel": "fused_gr_up_batch_4",
+          "count": 96,
+          "ms": 8.834084999999995,
+          "share_pct": 5.427120702727346
+        },
+        {
+          "kernel": "native_mmvq_multi_kernel_iq4_xs_r4",
+          "count": 42,
+          "ms": 8.261445,
+          "share_pct": 5.075325763103178
+        },
+        {
+          "kernel": "native_mmvq_multi_kernel_q5_k_r1",
+          "count": 35,
+          "ms": 7.588273999999998,
+          "share_pct": 4.6617707349847395
+        },
+        {
+          "kernel": "fused_gr_norm1_kernel",
+          "count": 384,
+          "ms": 6.155873999999996,
+          "share_pct": 3.7817919149273522
+        },
+        {
+          "kernel": "native_resident_gu_21",
+          "count": 10,
+          "ms": 6.1501399999999995,
+          "share_pct": 3.7782692965566413
+        },
+        {
+          "kernel": "native_mmvq_multi_kernel_iq4_nl_r4",
+          "count": 47,
+          "ms": 5.4762439999999994,
+          "share_pct": 3.3642688728472083
+        },
+        {
+          "kernel": "fused_gr_down_batch_4",
+          "count": 96,
+          "ms": 5.471114999999998,
+          "share_pct": 3.361117929417945
+        },
+        {
+          "kernel": "native_mmvq_multi_kernel_q4_k_r1",
+          "count": 47,
+          "ms": 5.162286999999999,
+          "share_pct": 3.1713929231063833
+        },
+        {
+          "kernel": "bf16_f32_mmvf_multi_kernel",
+          "count": 120,
+          "ms": 3.846407000000001,
+          "share_pct": 2.3629968537562633
+        },
+        {
+          "kernel": "gdn_step_norm_multi_tail_kernel",
+          "count": 36,
+          "ms": 2.7915640000000006,
+          "share_pct": 1.7149659276980438
+        },
+        {
+          "kernel": "attn_chunk_kernel_m0",
+          "count": 12,
+          "ms": 2.6053679999999995,
+          "share_pct": 1.6005785105105221
+        },
+        {
+          "kernel": "native_resident_down_dim_42_r4",
+          "count": 9,
+          "ms": 2.0632020000000004,
+          "share_pct": 1.2675049298380616
+        },
+        {
+          "kernel": "gdn_ab_multi_kernel",
+          "count": 36,
+          "ms": 1.2185630000000003,
+          "share_pct": 0.7486104655861414
+        },
+        {
+          "kernel": "bf16_f32_mmvf_kernel",
+          "count": 16,
+          "ms": 1.113319,
+          "share_pct": 0.6839549985810313
+        },
+        {
+          "kernel": "native_quantize_q8_1_kernel",
+          "count": 193,
+          "ms": 1.108813,
+          "share_pct": 0.6811867881906526
+        },
+        {
+          "kernel": "route",
+          "count": 48,
+          "ms": 1.030861,
+          "share_pct": 0.6332978542468426
+        },
+        {
+          "kernel": "native_resident_gu_23",
+          "count": 1,
+          "ms": 0.612035,
+          "share_pct": 0.3759968145307333
+        },
+        {
+          "kernel": "quantize_q8_1_kernel",
+          "count": 96,
+          "ms": 0.5638189999999997,
+          "share_pct": 0.3463758575439369
+        },
+        {
+          "kernel": "kv_append_kernel",
+          "count": 48,
+          "ms": 0.4545530000000001,
+          "share_pct": 0.2792495201016093
+        },
+        {
+          "kernel": "nmoe_combine_kernel",
+          "count": 48,
+          "ms": 0.4448939999999999,
+          "share_pct": 0.27331562215205996
+        },
+        {
+          "kernel": "nqsi_append_kernel",
+          "count": 48,
+          "ms": 0.3927409999999999,
+          "share_pct": 0.2412760135214729
+        },
+        {
+          "kernel": "attn_merge_kernel",
+          "count": 12,
+          "ms": 0.365685,
+          "share_pct": 0.22465446440427622
+        },
+        {
+          "kernel": "native_rope_apply_kernel",
+          "count": 36,
+          "ms": 0.35567100000000007,
+          "share_pct": 0.21850247619982593
+        },
+        {
+          "kernel": "swiglu_entries_kernel",
+          "count": 48,
+          "ms": 0.28948000000000007,
+          "share_pct": 0.17783878025007835
+        },
+        {
+          "kernel": "gdn_conv_l2_multi_kernel",
+          "count": 36,
+          "ms": 0.27018000000000003,
+          "share_pct": 0.16598204244841147
+        },
+        {
+          "kernel": "shexp_native_swiglu_kernel",
+          "count": 48,
+          "ms": 0.2633539999999999,
+          "share_pct": 0.16178856616684784
+        },
+        {
+          "kernel": "shexp_native_scalar_sigmoid_multi_kernel",
+          "count": 48,
+          "ms": 0.22437800000000002,
+          "share_pct": 0.13784409919494292
+        },
+        {
+          "kernel": "nqs_norm_kernel",
+          "count": 36,
+          "ms": 0.223223,
+          "share_pct": 0.1371345379430815
+        },
+        {
+          "kernel": "shexp_scale_rows_kernel",
+          "count": 48,
+          "ms": 0.20852199999999999,
+          "share_pct": 0.1281031440351901
+        },
+        {
+          "kernel": "to_bf16_kernel",
+          "count": 48,
+          "ms": 0.193186,
+          "share_pct": 0.11868164502346149
+        },
+        {
+          "kernel": "block_scores_multi_kernel",
+          "count": 12,
+          "ms": 0.16485099999999997,
+          "share_pct": 0.10127435664987446
+        },
+        {
+          "kernel": "sampler_greedy_kernel",
+          "count": 1,
+          "ms": 0.15210200000000001,
+          "share_pct": 0.09344215197456615
+        },
+        {
+          "kernel": "nqs_gate_kernel",
+          "count": 12,
+          "ms": 0.12070099999999999,
+          "share_pct": 0.07415130100512884
+        },
+        {
+          "kernel": "weighted_rms_norm",
+          "count": 16,
+          "ms": 0.11293700000000001,
+          "share_pct": 0.06938157497962931
+        },
+        {
+          "kernel": "copy_from_mapped_kernel",
+          "count": 17,
+          "ms": 0.089333,
+          "share_pct": 0.05488072321431617
+        },
+        {
+          "kernel": "native_mmvq_multi_kernel_q8_0_r4",
+          "count": 1,
+          "ms": 0.0833,
+          "share_pct": 0.051174417558489435
+        },
+        {
+          "kernel": "block_topk_scan_kernel",
+          "count": 12,
+          "ms": 0.06447,
+          "share_pct": 0.039606418967536784
+        },
+        {
+          "kernel": "runtime_copy2d16",
+          "count": 12,
+          "ms": 0.063231,
+          "share_pct": 0.03884525326099455
+        },
+        {
+          "kernel": "native_gr_post_kernel",
+          "count": 8,
+          "ms": 0.05502,
+          "share_pct": 0.033800917815943445
+        },
+        {
+          "kernel": "native_gr_pre_gated_kernel",
+          "count": 4,
+          "ms": 0.032582,
+          "share_pct": 0.020016385028699915
+        },
+        {
+          "kernel": "nple_conv_residual_kernel",
+          "count": 4,
+          "ms": 0.02979,
+          "share_pct": 0.018301151249308527
+        },
+        {
+          "kernel": "nple_gate_kernel",
+          "count": 4,
+          "ms": 0.021362,
+          "share_pct": 0.013123504296331948
+        },
+        {
+          "kernel": "native_gr_down_silu_kernel",
+          "count": 4,
+          "ms": 0.019191,
+          "share_pct": 0.011789774878330982
+        },
+        {
+          "kernel": "history_advance_kernel",
+          "count": 4,
+          "ms": 0.018804,
+          "share_pct": 0.011552025783551446
+        },
+        {
+          "kernel": "copy_i32_from_mapped_kernel",
+          "count": 3,
+          "ms": 0.01578,
+          "share_pct": 0.009694265415041576
+        },
+        {
+          "kernel": "nple_broadcast_kernel",
+          "count": 4,
+          "ms": 0.014816000000000001,
+          "share_pct": 0.009102042863704437
+        },
+        {
+          "kernel": "copy(compute)",
+          "count": 4,
+          "ms": 0.01423,
+          "share_pct": 0.00874204035843103
+        },
+        {
+          "kernel": "embed_rows_kernel",
+          "count": 1,
+          "ms": 0.009002000000000001,
+          "share_pct": 0.005530277393295582
+        },
+        {
+          "kernel": "broadcast_streams_kernel",
+          "count": 1,
+          "ms": 0.007274,
+          "share_pct": 0.00446870003986137
+        }
+      ]
+    },
+    {
+      "tape": "0xbe2fe0fa0",
+      "T": 1,
+      "entries": 1743,
+      "sampled_launches": 157,
+      "sampled_busy_ms": 64.027838,
+      "head_ms": 4.210565,
+      "kernel_families": [
+        {
+          "kernel": "native_q6_k_mmvq_kernel_large",
+          "count": 129,
+          "ms": 16.094097,
+          "share_pct": 25.136093147483756
+        },
+        {
+          "kernel": "native_resident_down_20",
+          "count": 39,
+          "ms": 6.376457999999999,
+          "share_pct": 9.958883821752654
+        },
+        {
+          "kernel": "native_resident_gu_18",
+          "count": 17,
+          "ms": 4.1564879999999995,
+          "share_pct": 6.491688818229345
+        },
+        {
+          "kernel": "native_resident_gu_22",
+          "count": 20,
+          "ms": 4.061341,
+          "share_pct": 6.34308626819478
+        },
+        {
+          "kernel": "fused_gr_up_kernel",
+          "count": 96,
+          "ms": 3.960625000000002,
+          "share_pct": 6.185785938922383
+        },
+        {
+          "kernel": "fused_gr_down_kernel",
+          "count": 96,
+          "ms": 3.1930960000000006,
+          "share_pct": 4.987043292013078
+        },
+        {
+          "kernel": "native_q5_k_mmvq_kernel_large",
+          "count": 35,
+          "ms": 2.776631000000001,
+          "share_pct": 4.3365996521700465
+        },
+        {
+          "kernel": "native_resident_gu_21",
+          "count": 10,
+          "ms": 2.510428,
+          "share_pct": 3.920838307862277
+        },
+        {
+          "kernel": "fused_gr_norm1_kernel",
+          "count": 96,
+          "ms": 2.312357,
+          "share_pct": 3.6114869285450495
+        },
+        {
+          "kernel": "native_q4_k_mmvq_kernel_large",
+          "count": 47,
+          "ms": 2.0576429999999992,
+          "share_pct": 3.2136693417634983
+        },
+        {
+          "kernel": "bf16_f32_mmvf_kernel",
+          "count": 124,
+          "ms": 1.7348010000000014,
+          "share_pct": 2.7094480372740386
+        },
+        {
+          "kernel": "attn_chunk_kernel_m0",
+          "count": 12,
+          "ms": 1.7218459999999998,
+          "share_pct": 2.689214650664918
+        },
+        {
+          "kernel": "native_quantize_q8_1_kernel",
+          "count": 193,
+          "ms": 1.3082239999999998,
+          "share_pct": 2.043211266949229
+        },
+        {
+          "kernel": "route",
+          "count": 48,
+          "ms": 1.2334940000000003,
+          "share_pct": 1.926496409264983
+        },
+        {
+          "kernel": "gdn_step_norm_multi_tail_kernel",
+          "count": 36,
+          "ms": 1.215632,
+          "share_pct": 1.8985991686928427
+        },
+        {
+          "kernel": "native_iq4_xs_direct_sg4",
+          "count": 13,
+          "ms": 1.036349,
+          "share_pct": 1.618591275875971
+        },
+        {
+          "kernel": "native_iq4_nl_direct_r4",
+          "count": 47,
+          "ms": 0.9531259999999999,
+          "share_pct": 1.4886118753533422
+        },
+        {
+          "kernel": "native_resident_down_dim_42_r4",
+          "count": 9,
+          "ms": 0.792927,
+          "share_pct": 1.2384097679512462
+        },
+        {
+          "kernel": "gdn_ab_multi_kernel",
+          "count": 36,
+          "ms": 0.6981289999999998,
+          "share_pct": 1.090352293325912
+        },
+        {
+          "kernel": "quantize_q8_1_kernel",
+          "count": 96,
+          "ms": 0.6547490000000001,
+          "share_pct": 1.0226005132330098
+        },
+        {
+          "kernel": "nmoe_combine_kernel",
+          "count": 48,
+          "ms": 0.48868999999999996,
+          "share_pct": 0.7632461367819415
+        },
+        {
+          "kernel": "native_iq4_xs_direct_r4",
+          "count": 29,
+          "ms": 0.482102,
+          "share_pct": 0.7529568622948036
+        },
+        {
+          "kernel": "attn_merge_kernel",
+          "count": 12,
+          "ms": 0.447601,
+          "share_pct": 0.6990724878138161
+        },
+        {
+          "kernel": "native_rope_apply_kernel",
+          "count": 36,
+          "ms": 0.42456299999999997,
+          "share_pct": 0.6630912635219698
+        },
+        {
+          "kernel": "swiglu_entries_kernel",
+          "count": 48,
+          "ms": 0.33825799999999984,
+          "share_pct": 0.5282983317350178
+        },
+        {
+          "kernel": "shexp_native_swiglu_kernel",
+          "count": 48,
+          "ms": 0.309381,
+          "share_pct": 0.483197636627993
+        },
+        {
+          "kernel": "gdn_conv_l2_multi_kernel",
+          "count": 36,
+          "ms": 0.30171899999999996,
+          "share_pct": 0.47123096675542897
+        },
+        {
+          "kernel": "shexp_native_scalar_sigmoid_kernel",
+          "count": 48,
+          "ms": 0.28407499999999997,
+          "share_pct": 0.4436742030864762
+        },
+        {
+          "kernel": "nqs_norm_kernel",
+          "count": 36,
+          "ms": 0.25949000000000005,
+          "share_pct": 0.40527684223852767
+        },
+        {
+          "kernel": "to_bf16_kernel",
+          "count": 48,
+          "ms": 0.24716800000000003,
+          "share_pct": 0.38603208810517703
+        },
+        {
+          "kernel": "shexp_scale_rows_kernel",
+          "count": 48,
+          "ms": 0.246918,
+          "share_pct": 0.3856416329409717
+        },
+        {
+          "kernel": "native_resident_gu_23",
+          "count": 1,
+          "ms": 0.21646,
+          "share_pct": 0.33807169937551224
+        },
+        {
+          "kernel": "kv_append_kernel",
+          "count": 12,
+          "ms": 0.17838099999999998,
+          "share_pct": 0.2785991305844186
+        },
+        {
+          "kernel": "sampler_greedy_kernel",
+          "count": 1,
+          "ms": 0.175529,
+          "share_pct": 0.27414481807116464
+        },
+        {
+          "kernel": "nqsi_append_kernel",
+          "count": 12,
+          "ms": 0.144151,
+          "share_pct": 0.22513800950142968
+        },
+        {
+          "kernel": "block_scores_multi_kernel",
+          "count": 12,
+          "ms": 0.12357999999999998,
+          "share_pct": 0.1930097967699612
+        },
+        {
+          "kernel": "nqs_gate_kernel",
+          "count": 12,
+          "ms": 0.11386700000000002,
+          "share_pct": 0.17783983273025714
+        },
+        {
+          "kernel": "copy_from_mapped_kernel",
+          "count": 14,
+          "ms": 0.087035,
+          "share_pct": 0.13593306086643125
+        },
+        {
+          "kernel": "block_topk_scan_kernel",
+          "count": 12,
+          "ms": 0.07782200000000002,
+          "share_pct": 0.12154400715513776
+        },
+        {
+          "kernel": "runtime_copy2d16",
+          "count": 12,
+          "ms": 0.06998399999999999,
+          "share_pct": 0.10930245684697333
+        },
+        {
+          "kernel": "weighted_rms_norm",
+          "count": 4,
+          "ms": 0.037336999999999995,
+          "share_pct": 0.058313697863732326
+        },
+        {
+          "kernel": "copy_i32_from_mapped_kernel",
+          "count": 3,
+          "ms": 0.019496000000000003,
+          "share_pct": 0.03044925552538569
+        },
+        {
+          "kernel": "native_small_mmvq_kernel_q8_0_small",
+          "count": 1,
+          "ms": 0.018623,
+          "share_pct": 0.029085786091980804
+        },
+        {
+          "kernel": "native_gr_post_kernel",
+          "count": 2,
+          "ms": 0.01775,
+          "share_pct": 0.027722316658575913
+        },
+        {
+          "kernel": "embed_rows_kernel",
+          "count": 1,
+          "ms": 0.010960000000000001,
+          "share_pct": 0.017117554398760112
+        },
+        {
+          "kernel": "native_gr_pre_gated_kernel",
+          "count": 1,
+          "ms": 0.010895,
+          "share_pct": 0.017016036056066736
+        },
+        {
+          "kernel": "nple_conv_residual_kernel",
+          "count": 1,
+          "ms": 0.010042,
+          "share_pct": 0.01568380303579827
+        },
+        {
+          "kernel": "broadcast_streams_kernel",
+          "count": 1,
+          "ms": 0.007768,
+          "share_pct": 0.012132222862186912
+        },
+        {
+          "kernel": "nple_gate_kernel",
+          "count": 1,
+          "ms": 0.007319,
+          "share_pct": 0.011430965387274204
+        },
+        {
+          "kernel": "history_advance_kernel",
+          "count": 1,
+          "ms": 0.006391,
+          "share_pct": 0.009981595817744151
+        },
+        {
+          "kernel": "native_gr_down_silu_kernel",
+          "count": 1,
+          "ms": 0.006032,
+          "share_pct": 0.009420902201945348
+        },
+        {
+          "kernel": "nple_broadcast_kernel",
+          "count": 1,
+          "ms": 0.0050149999999999995,
+          "share_pct": 0.007832530593958208
+        },
+        {
+          "kernel": "copy(compute)",
+          "count": 1,
+          "ms": 0.004995,
+          "share_pct": 0.007801294180821785
+        }
+      ]
+    }
+  ],
+  "micro": [
+    {
+      "type": "14",
+      "K": 2560,
+      "N": 248320,
+      "median_us": {
+        "strata_multi4": 14911.716,
+        "meld_multi4": 6243.3045
+      },
+      "speed_ratio": 2.3884332407621636,
+      "time_reduction_pct": 58.13154904505961
+    },
+    {
+      "type": "14",
+      "K": 6144,
+      "N": 2560,
+      "median_us": {
+        "strata_multi4": 360.832,
+        "meld_multi4": 154.4145
+      },
+      "speed_ratio": 2.33677536759825,
+      "time_reduction_pct": 57.20598505675771
+    },
+    {
+      "type": "23",
+      "K": 2560,
+      "N": 12288,
+      "median_us": {
+        "strata_multi4": 666.5070000000001,
+        "strata_separate4": 409.6965
+      },
+      "speed_ratio": 1.626831081056343,
+      "time_reduction_pct": 38.530803127349
+    },
+    {
+      "type": "20",
+      "K": 640,
+      "N": 2560,
+      "median_us": {
+        "strata_multi4": 87.45599999999999,
+        "strata_separate4": 34.6845
+      },
+      "speed_ratio": 2.521472127319119,
+      "time_reduction_pct": 60.34062843029637
+    }
+  ],
+  "variable_scale_checks": [
+    {
+      "type": "14",
+      "K": "2560",
+      "N": "248320",
+      "mode": "variable_scale_parity4",
+      "round": "-1",
+      "gpu_us": "0",
+      "calls": "1",
+      "bitdiff": "825819",
+      "relative_l2": "1.88089775e-07"
+    },
+    {
+      "type": "14",
+      "K": "6144",
+      "N": "2560",
+      "mode": "variable_scale_parity4",
+      "round": "-1",
+      "gpu_us": "0",
+      "calls": "1",
+      "bitdiff": "8999",
+      "relative_l2": "2.82185606e-07"
+    },
+    {
+      "type": "23",
+      "K": "2560",
+      "N": "12288",
+      "mode": "variable_scale_parity4",
+      "round": "-1",
+      "gpu_us": "0",
+      "calls": "1",
+      "bitdiff": "0",
+      "relative_l2": "0"
+    },
+    {
+      "type": "20",
+      "K": "640",
+      "N": "2560",
+      "mode": "variable_scale_parity4",
+      "round": "-1",
+      "gpu_us": "0",
+      "calls": "1",
+      "bitdiff": "0",
+      "relative_l2": "0"
+    }
+  ],
+  "profile_full_model_160_token_output_equal": true,
+  "production_changes_this_investigation": []
+}

@@ -245,6 +245,33 @@ void gdn_step_norm_multi(float* state, const float* h, int conv_channels, const 
     check("gdn_step_norm_multi");
 }
 
+void gdn_step_norm_snapshots(float* state, const float* h, int conv_channels, const float* gate, const float* beta,
+                            const float* z, const float* gamma, float eps, float* y, int h_k, int h_v, int n_tok,
+                            float* snapshots, void* stream, int t_out_begin) {
+    if (!state || !h || !gate || !beta || !z || !gamma || !y || !snapshots || h_k <= 0 ||
+        h_v <= 0 || h_v % h_k || n_tok < 1 || n_tok > kVerifyMaxT) {
+        std::fprintf(stderr, "gdn_step_norm_snapshots: invalid arguments\n");
+        std::exit(1);
+    }
+    metal::Launch k("gdn_step_norm_snapshot_kernel", (unsigned) h_v, 1, 1, S, RG, 1, 0, stream);
+    k.buf(state).buf(h).scalar(conv_channels).buf(gate).buf(beta).buf(z).buf(gamma).scalar(eps).buf(y)
+     .scalar(h_k).scalar(h_v).scalar(n_tok).buf(nullptr).scalar(t_out_begin).buf(nullptr).buf(snapshots);
+    k.done();
+    check("gdn_step_norm_snapshots");
+}
+
+void gdn_commit_snapshot(float* state, const float* snapshots, int h_v, const int32_t* n_keep, void* stream) {
+    if (!state || !snapshots || !n_keep || h_v <= 0) {
+        std::fprintf(stderr, "gdn_commit_snapshot: invalid arguments\n");
+        std::exit(1);
+    }
+    const unsigned nf = (unsigned) (S * h_v * S);
+    metal::Launch k("gdn_commit_snapshot_kernel", (nf + 255) / 256, 1, 1, 256, 1, 1, 0, stream);
+    k.buf(state).buf(snapshots).scalar(nf).buf(n_keep);
+    k.done();
+    check("gdn_commit_snapshot");
+}
+
 void resident_plan(const int32_t* ids, int n_entries, int k, const int32_t* res_layer, int n_expert,
                    const uint8_t* cache_base, const unsigned long long* slot_off, long long blob, int32_t* plan,
                    long long capx, uint32_t* skip, uint32_t ring, void* stream) {

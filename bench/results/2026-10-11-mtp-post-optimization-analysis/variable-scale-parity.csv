@@ -1,0 +1,5 @@
+type,K,N,mode,round,gpu_us,calls,bitdiff,relative_l2
+14,2560,248320,variable_scale_parity4,-1,0,1,825819,1.88089775e-07
+14,6144,2560,variable_scale_parity4,-1,0,1,8999,2.82185606e-07
+23,2560,12288,variable_scale_parity4,-1,0,1,0,0
+20,640,2560,variable_scale_parity4,-1,0,1,0,0

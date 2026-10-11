@@ -218,6 +218,13 @@ private:
     bool gdn_write_capture_ = false;      // record_window: write the GDN state back (set while capturing)
     bool exec1_writes_gdn_ = false;       // exec_[1] was recorded that way
     bool last_gdn_written_ = false;       // the last run() already advanced the GDN state
+#if defined(STRATA_METAL_BACKEND)
+    float* gdn_snapshots_ = nullptr;      // [GDN layer][max_t][128, h_v, 128], optional
+    cudaGraphExec_t commit_snapshot_exec_ = nullptr;
+    bool gdn_snapshot_capture_ = false;
+    bool exec_snapshots_[9] = {};
+    bool last_gdn_snapshots_ = false;
+#endif
 
     // mapped staging (host pointer, device alias)
     int32_t* h_tok_ = nullptr;   int32_t* m_tok_ = nullptr;     // T

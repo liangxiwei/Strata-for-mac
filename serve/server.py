@@ -384,6 +384,9 @@ class StrataEngine:
                 v = tune.get(k)
                 if isinstance(v, (int, float)) and not isinstance(v, bool) and 0.0 <= float(v) <= 1.0:
                     keys += f" {k}={float(v)!r}"
+            v = tune.get("mtp_max_t")
+            if isinstance(v, int) and not isinstance(v, bool) and 1 <= v <= 8:
+                keys += f" mtp_max_t={v}"
         return keys + StrataEngine.projection_key(sampling)
 
     @staticmethod

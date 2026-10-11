@@ -935,6 +935,84 @@ kernel void native_iq4_xs_direct_sg4(NMV_SINGLE_PARAMS) {
     }
 }
 
+// Q6_K small batches: each simdgroup owns complete rows and evaluates the old
+// four virtual warps in their original order. Integer dot products remain exact
+// (four products of values in [-32,31] and [-128,127], < 2^24); only their packed
+// CUDA emulation is replaced. NT is specialized and weights are shared across
+// its columns. The original scale products, float partials and XOR tree remain.
+// M2 Max, ABBA >=10 s per point (2026-10-11-metal-mtp-kernel-optimization):
+// T4 head 2560 x 248320: ~15.14 -> 6.55 ms; 6144 x 2560: ~365 -> 193 us.
+
+// The integer four-byte dot is exactly representable as float. Keep the Q8 scales,
+// signed integer scale product, block accumulation and XOR reduction unchanged.
+struct NmvQ6DirectWeight { float4 q0, q1; int s0, s1; float d; };
+static inline NmvQ6DirectWeight nmv_q6_direct_load(constant const uint8_t* blk, int lane) {
+    const nmv_Fmt<4>::W wv = nmv_Fmt<4>::load(blk, lane);
+    constant const Q6KBlock* w = reinterpret_cast<constant const Q6KBlock*>(blk);
+    const int so = 8 * (lane / 16) + (lane % 16) / 4;
+    const uint4 sh = uint4(0, 8, 16, 24);
+    const uint vl = as_type<uint>(wv.vl), vh = as_type<uint>(wv.vh);
+    const uint c0 = (vl & 0x0f0f0f0fu) | ((vh << 4) & 0x30303030u);
+    const uint c1 = ((vl >> 4) & 0x0f0f0f0fu) | (vh & 0x30303030u);
+    return NmvQ6DirectWeight{float4((uint4(c0) >> sh) & 63u) - 32.0f,
+                          float4((uint4(c1) >> sh) & 63u) - 32.0f,
+                          (int) w->scales[so], (int) w->scales[so + 4], wv.d};
+}
+static inline float nmv_q6_direct_apply(const thread NmvQ6DirectWeight& w, constant const Q81Block* x, int lane) {
+    const int off = 4 * (lane / 16) + (lane % 16) / 8;
+    const int iqs = lane % 8;
+    const float4 a0 = float4(as_type<char4>(reinterpret_cast<constant const int*>(x[off].qs)[iqs]));
+    const float4 a1 = float4(as_type<char4>(reinterpret_cast<constant const int*>(x[off + 2].qs)[iqs]));
+    const int d0 = (int) dot(w.q0, a0), d1 = (int) dot(w.q1, a1);
+    float s = 0.0f;
+    s += (float) x[off].ds.x * (float) (d0 * w.s0);
+    s += (float) x[off + 2].ds.x * (float) (d1 * w.s1);
+    return w.d * s;
+}
+template<int NT, int R>
+static inline void nmv_q6_exact_sg(constant const uint8_t* w, constant const Q81Block* x, device float* y,
+                              int n_in, int n_out, uint gx, uint tid) {
+    const int lane = (int) (tid & 31u), sg = (int) (tid >> 5);
+    const int row0 = ((int) gx * 2 + sg) * R;
+    const int nb = n_in / 256, xs = n_in / 32;
+    if (row0 >= n_out) return;
+    float acc[NT][R];
+#pragma unroll
+    for (int vw = 0; vw < 4; ++vw) {
+        float part[NT][R];
+#pragma unroll
+        for (int j = 0; j < NT; ++j)
+#pragma unroll
+            for (int i = 0; i < R; ++i) part[j][i] = 0.0f;
+        for (int kb = vw; kb < nb; kb += 4) {
+#pragma unroll
+            for (int i = 0; i < R; ++i) if (row0 + i < n_out) {
+                const NmvQ6DirectWeight wv = nmv_q6_direct_load(w + ((size_t) (row0 + i) * nb + kb) * 210, lane);
+#pragma unroll
+                for (int j = 0; j < NT; ++j)
+                    part[j][i] += nmv_q6_direct_apply(wv, x + (size_t) j * xs + kb * 8, lane);
+            }
+        }
+#pragma unroll
+        for (int j = 0; j < NT; ++j)
+#pragma unroll
+            for (int i = 0; i < R; ++i) acc[j][i] = vw == 0 ? part[j][i] : acc[j][i] + part[j][i];
+    }
+#pragma unroll
+    for (int j = 0; j < NT; ++j)
+#pragma unroll
+        for (int i = 0; i < R; ++i) {
+            const float value = nmv_warp_sum(acc[j][i]);
+            const int store_lane = nb < 4 ? (row0 + i) % 4 : 0;
+            if (lane == store_lane && row0 + i < n_out) y[(size_t) j * n_out + row0 + i] = value;
+        }
+}
+#define NMV_Q6_SG(NT, R) \
+kernel void native_q6_multi_nt##NT##_r##R(NMV_SINGLE_PARAMS) { nmv_q6_exact_sg<NT, R>(w, x, y, n_in, n_out, gpos.x, tid); }
+#define NMV_Q6_SHAPES(NT) NMV_Q6_SG(NT, 2) NMV_Q6_SG(NT, 4)
+NMV_Q6_SHAPES(2) NMV_Q6_SHAPES(3) NMV_Q6_SHAPES(4)
+NMV_Q6_SHAPES(5) NMV_Q6_SHAPES(6) NMV_Q6_SHAPES(7) NMV_Q6_SHAPES(8)
+
 // rows and nw are runtime scalars: r4/r1 are the exact layout's two shapes (nw is 4), r2 the upstream one
 // (nw 4 or 2, chosen by the launcher, per the file comment).
 #define NMV_MULTI_KERNEL(FMT, F, ROWS) \
@@ -966,3 +1044,167 @@ NMV_MULTI_TRIPLE(q4_0, 6)
 NMV_MULTI_TRIPLE(q5_0, 7)
 NMV_MULTI_TRIPLE(q8_0, 8)
 NMV_MULTI_TRIPLE(iq4_nl, 9)
+
+// Exact Q4_K / Q5_K and IQ4 small batches: specialize the column count and
+// decode each weight slice once for all columns. Two simdgroups each own one
+// row; IQ4_NL also uses two rows per simdgroup for its measured small-K shape.
+
+// Integer products and their sums fit exactly in float. The outer scales,
+// block accumulation and virtual-warp reduction retain the packed oracle order.
+template<int F> struct NmvBatchDirect;
+struct NmvBatchKWeight { float4 q[4]; int sc[2], m[2], off, word; float d, dm; };
+template<int F> struct NmvBatchKCodes;
+template<> struct NmvBatchKCodes<0> {
+    static uint code(const thread nmv_Fmt<0>::W& w, int i, int j) {
+        return ((as_type<uint>(w.vl[j]) >> (4 * i)) & 0x0f0f0f0fu) |
+               (((as_type<uint>(w.vh[j]) >> i) << 4) & 0x10101010u);
+    }
+};
+template<> struct NmvBatchKCodes<1> {
+    static uint code(const thread nmv_Fmt<1>::W& w, int i, int j) {
+        return (as_type<uint>(w.v[j]) >> (4 * i)) & 0x0f0f0f0fu;
+    }
+};
+template<int F> static inline NmvBatchKWeight nmv_batch_k_load(constant const uint8_t* blk, int iqs) {
+    const typename nmv_Fmt<F>::W old = nmv_Fmt<F>::load(blk, iqs);
+    NmvBatchKWeight w;
+    w.off = old.bq8_offset; w.word = (iqs / 2) % 4;
+    w.d = (float) old.dm.x; w.dm = (float) old.dm.y;
+    const thread uint8_t* s = reinterpret_cast<const thread uint8_t*>(old.aux);
+    const uint4 shifts = uint4(0, 8, 16, 24);
+#pragma unroll
+    for (int i = 0; i < 2; ++i) {
+        w.sc[i] = s[i]; w.m[i] = s[i + 2];
+#pragma unroll
+        for (int j = 0; j < 2; ++j) {
+            const uint v = NmvBatchKCodes<F>::code(old, i, j);
+            w.q[2 * i + j] = float4((uint4(v) >> shifts) & 255u);
+        }
+    }
+    return w;
+}
+static inline float nmv_batch_k_apply(const thread NmvBatchKWeight& w, constant const Q81Block* x) {
+    float sd = 0.0f, sm = 0.0f;
+#pragma unroll
+    for (int i = 0; i < 2; ++i) {
+        constant const Q81Block* b = x + w.off + i;
+        constant const int* q = reinterpret_cast<constant const int*>(b->qs) + w.word;
+        const float4 a0 = float4(as_type<char4>(q[0])), a1 = float4(as_type<char4>(q[4]));
+        const int dotq = (int) (dot(w.q[2 * i], a0) + dot(w.q[2 * i + 1], a1));
+        const int sumq = (int) (dot(float4(1.0f), a0) + dot(float4(1.0f), a1));
+        sd += (float) b->ds.x * (float) (dotq * w.sc[i]);
+        sm += (float) b->ds.x * (float) (sumq * w.m[i]);
+    }
+    return w.d * sd - w.dm * sm;
+}
+template<> struct NmvBatchDirect<0> {
+    using W = NmvBatchKWeight;
+    static W load(constant const uint8_t* b, int i, threadgroup const float*) { return nmv_batch_k_load<0>(b, i); }
+    static float apply(const thread W& w, constant const Q81Block* x, int) { return nmv_batch_k_apply(w, x); }
+};
+template<> struct NmvBatchDirect<1> {
+    using W = NmvBatchKWeight;
+    static W load(constant const uint8_t* b, int i, threadgroup const float*) { return nmv_batch_k_load<1>(b, i); }
+    static float apply(const thread W& w, constant const Q81Block* x, int) { return nmv_batch_k_apply(w, x); }
+};
+template<int V> struct NmvBatchIqWeight { float4 q[V]; int scale; float d; };
+template<int F, int V> static inline NmvBatchIqWeight<V> nmv_batch_iq_load(constant const uint8_t* b, int iqs,
+                                                                          threadgroup const float* tbl) {
+    NmvBatchIqWeight<V> w;
+    w.d = (float) *reinterpret_cast<constant const half*>(b);
+    w.scale = 1;
+    if (F == 5) {
+        constant const IQ4XSBlock* x = reinterpret_cast<constant const IQ4XSBlock*>(b);
+        w.scale = (((x->scales_l[iqs / 8] >> (iqs & 4)) & 15) |
+                   (((x->scales_h >> (iqs / 2)) & 3) << 4)) - 32;
+    }
+#pragma unroll
+    for (int j = 0; j < V / 2; ++j) {
+        uint u;
+        if (F == 5)
+            u = reinterpret_cast<constant const uint*>(reinterpret_cast<constant const IQ4XSBlock*>(b)->qs)[iqs + j];
+        else u = as_type<uint>(nmv_load_int_b2(reinterpret_cast<constant const uint16_t*>(
+                     reinterpret_cast<constant const IQ4NLBlock*>(b)->qs), iqs + j));
+#pragma unroll
+        for (int k = 0; k < 4; ++k) {
+            w.q[j][k] = tbl[(u >> (8 * k)) & 15u];
+            w.q[j + V / 2][k] = tbl[(u >> (8 * k + 4)) & 15u];
+        }
+    }
+    return w;
+}
+template<> struct NmvBatchDirect<5> {
+    using W = NmvBatchIqWeight<8>;
+    static W load(constant const uint8_t* b, int i, threadgroup const float* t) { return nmv_batch_iq_load<5, 8>(b, i, t); }
+    static float apply(const thread W& w, constant const Q81Block* x, int i) {
+        const NmvActXs a = nmv_Direct<5>::act(x, 0, i);
+        float s = 0.0f;
+#pragma unroll
+        for (int j = 0; j < 8; ++j) s += dot(w.q[j], a.a[j]);
+        return (w.d * a.d8) * (float) ((int) s * w.scale);
+    }
+};
+template<> struct NmvBatchDirect<9> {
+    using W = NmvBatchIqWeight<4>;
+    static W load(constant const uint8_t* b, int i, threadgroup const float* t) { return nmv_batch_iq_load<9, 4>(b, i, t); }
+    static float apply(const thread W& w, constant const Q81Block* x, int i) {
+        const NmvActNl a = nmv_Direct<9>::act(x, 0, i);
+        float s = 0.0f;
+#pragma unroll
+        for (int j = 0; j < 4; ++j) s += dot(w.q[j], a.a[j]);
+        return (w.d * a.d8) * (float) (int) s;
+    }
+};
+template<int F, int NT, int R>
+static inline void nmv_batch_body(constant const uint8_t* w, constant const Q81Block* x, device float* y,
+                                   int n_in, int n_out, uint gx, uint tid, int store_lane_rows, threadgroup float* table) {
+    using Fmt = nmv_Fmt<F>; using D = NmvBatchDirect<F>;
+    if (F == 5 || F == 9) {
+        if (tid < 16) table[tid] = (float) kvalues_iq4nl[tid];
+        threadgroup_barrier(mem_flags::mem_threadgroup);
+    }
+    const int lane = (int) (tid & 31u), sg = (int) (tid >> 5);
+    const int row0 = ((int) gx * 2 + sg) * R;
+    const int nb = n_in / Fmt::DIV, xs = n_in / 32;
+    if (row0 >= n_out) return;
+    float acc[NT][R];
+#pragma unroll
+    for (int vw = 0; vw < 4; ++vw) {
+        const int vt = lane + 32 * vw, iqs = Fmt::kqs(vt);
+        float part[NT][R];
+#pragma unroll
+        for (int j = 0; j < NT; ++j)
+#pragma unroll
+            for (int i = 0; i < R; ++i) part[j][i] = 0.0f;
+        for (int kb = vt / Fmt::T; kb < nb; kb += Fmt::BPI) {
+#pragma unroll
+            for (int i = 0; i < R; ++i) if (row0 + i < n_out) {
+                const typename D::W v = D::load(w + ((size_t) (row0 + i) * nb + kb) * Fmt::BYTES, iqs, table);
+#pragma unroll
+                for (int j = 0; j < NT; ++j)
+                    part[j][i] += D::apply(v, x + (size_t) j * xs + kb * Fmt::KBY, iqs);
+            }
+        }
+#pragma unroll
+        for (int j = 0; j < NT; ++j)
+#pragma unroll
+            for (int i = 0; i < R; ++i) acc[j][i] = vw == 0 ? part[j][i] : acc[j][i] + part[j][i];
+    }
+#pragma unroll
+    for (int j = 0; j < NT; ++j)
+#pragma unroll
+        for (int i = 0; i < R; ++i) {
+            const float value = nmv_warp_sum(acc[j][i]);
+            const int sl = store_lane_rows ? (row0 + i) % 4 : 0;
+            if (lane == sl && row0 + i < n_out) y[(size_t) j * n_out + row0 + i] = value;
+        }
+}
+#define NMV_BATCH_KERNEL(F, NT, R) \
+kernel void native_batch_f##F##_nt##NT##_r##R(NMV_SINGLE_PARAMS, constant const int& store_lane_rows [[buffer(5)]]) { \
+    threadgroup float table[16]; \
+    nmv_batch_body<F, NT, R>(w, x, y, n_in, n_out, gpos.x, tid, store_lane_rows, table); }
+#define NMV_BATCH_COLS(F, R) NMV_BATCH_KERNEL(F, 2, R) NMV_BATCH_KERNEL(F, 3, R) NMV_BATCH_KERNEL(F, 4, R) \
+    NMV_BATCH_KERNEL(F, 5, R) NMV_BATCH_KERNEL(F, 6, R) NMV_BATCH_KERNEL(F, 7, R) NMV_BATCH_KERNEL(F, 8, R)
+NMV_BATCH_COLS(0, 1) NMV_BATCH_COLS(1, 1) NMV_BATCH_COLS(5, 1) NMV_BATCH_COLS(9, 1) NMV_BATCH_COLS(9, 2)
+#undef NMV_BATCH_COLS
+#undef NMV_BATCH_KERNEL

@@ -1,0 +1,290 @@
+[
+  {
+    "prompt_tokens": 1139,
+    "gen_tokens": 512,
+    "ttft_s": 5.621281707892194,
+    "elapsed_s": 31.065671249991283,
+    "decode_tps": 20.08316490300556,
+    "prompt_tps_including_ttft": 202.62282859812225,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 1139,
+      "prompt_ms": 5499.1,
+      "prompt_per_token_ms": 4.828,
+      "prompt_per_second": 207.1,
+      "predicted_n": 512,
+      "predicted_ms": 25535.5,
+      "predicted_per_token_ms": 49.874,
+      "predicted_per_second": 20.1,
+      "draft_n": 436,
+      "draft_n_accepted": 281
+    },
+    "usage": {
+      "prompt_tokens": 1139,
+      "completion_tokens": 512,
+      "total_tokens": 1651,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "content_sha256": "7863d5c9904354724d2af1f257e51e84b10b8041f7276ba7fbf652f747bc669c",
+    "label": "aba-after",
+    "round": 2,
+    "window": 4,
+    "hc_batch": 1,
+    "spec_min_p": 0.5,
+    "iq4_multi": 2,
+    "q6_multi": 1,
+    "k_multi": 1,
+    "expert_iq4_direct": 1,
+    "engine_sha256": "3aa4e5972b0a9a56180a6e13a5b1f8ffa00112c2686003ba149d6071f0cac099",
+    "gdn_snapshot": 0,
+    "vocabulary": "subset",
+    "approx_prompt_tokens": 1000,
+    "identical_to_strata_off": true,
+    "prompt_sha256": "0d512dcbe2279b249e97e41cd436cd3f00e64bcf72cf4ebb9d5f13f821edb085",
+    "decode_round_timing": [
+      "strata decode timing: 232 windows, avg T 2.88, 2.21 tokens/window, 110.07 ms/window = verify 98.36 (GPU-reach wait 0.00 + per-layer host 0.00 [plan 0.00 actq 0.00 jobs 0.00 CPU 0.00] + stage 1.00) + commit/emit 0.18 + draft 11.52; per layer-window: CPU experts 0.00 (0.00 entries), VRAM hits 0.00, PCIe 0.00"
+    ]
+  },
+  {
+    "prompt_tokens": 4289,
+    "gen_tokens": 512,
+    "ttft_s": 20.138856625068,
+    "elapsed_s": 42.98534033400938,
+    "decode_tps": 22.372364266096984,
+    "prompt_tps_including_ttft": 212.97137567687102,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 4289,
+      "prompt_ms": 20029.3,
+      "prompt_per_token_ms": 4.67,
+      "prompt_per_second": 214.1,
+      "predicted_n": 512,
+      "predicted_ms": 22917.7,
+      "predicted_per_token_ms": 44.761,
+      "predicted_per_second": 22.3,
+      "draft_n": 418,
+      "draft_n_accepted": 317
+    },
+    "usage": {
+      "prompt_tokens": 4289,
+      "completion_tokens": 512,
+      "total_tokens": 4801,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "content_sha256": "18bd860ff1059f3d47a40d37a14fbce7495693973d1eb5e6ef8ef72e6bf5a376",
+    "label": "aba-after",
+    "round": 2,
+    "window": 4,
+    "hc_batch": 1,
+    "spec_min_p": 0.5,
+    "iq4_multi": 2,
+    "q6_multi": 1,
+    "k_multi": 1,
+    "expert_iq4_direct": 1,
+    "engine_sha256": "3aa4e5972b0a9a56180a6e13a5b1f8ffa00112c2686003ba149d6071f0cac099",
+    "gdn_snapshot": 0,
+    "vocabulary": "subset",
+    "approx_prompt_tokens": 4000,
+    "identical_to_strata_off": true,
+    "prompt_sha256": "1bd434a8c8127dbf84c1a835bc6632690df7a3425eafad645f92234a7880ba91",
+    "decode_round_timing": [
+      "strata decode timing: 197 windows, avg T 3.12, 2.60 tokens/window, 116.33 ms/window = verify 103.68 (GPU-reach wait 0.00 + per-layer host 0.00 [plan 0.00 actq 0.00 jobs 0.00 CPU 0.00] + stage 1.04) + commit/emit 0.22 + draft 12.44; per layer-window: CPU experts 0.00 (0.00 entries), VRAM hits 0.00, PCIe 0.00"
+    ]
+  },
+  {
+    "prompt_tokens": 1139,
+    "gen_tokens": 512,
+    "ttft_s": 5.475713332998566,
+    "elapsed_s": 29.317279207985848,
+    "decode_tps": 21.436122463085095,
+    "prompt_tps_including_ttft": 208.00942831246974,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 1139,
+      "prompt_ms": 5375.8,
+      "prompt_per_token_ms": 4.72,
+      "prompt_per_second": 211.9,
+      "predicted_n": 512,
+      "predicted_ms": 23929.1,
+      "predicted_per_token_ms": 46.737,
+      "predicted_per_second": 21.4,
+      "draft_n": 250,
+      "draft_n_accepted": 219
+    },
+    "usage": {
+      "prompt_tokens": 1139,
+      "completion_tokens": 512,
+      "total_tokens": 1651,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "content_sha256": "6d5cf21237deca10def1421ef01877702ea29c48734642ce36d789caa68453b8",
+    "label": "w2-r1",
+    "round": 1,
+    "window": 2,
+    "hc_batch": 1,
+    "spec_min_p": 0.5,
+    "iq4_multi": 2,
+    "q6_multi": 1,
+    "k_multi": 1,
+    "expert_iq4_direct": 1,
+    "engine_sha256": "3aa4e5972b0a9a56180a6e13a5b1f8ffa00112c2686003ba149d6071f0cac099",
+    "gdn_snapshot": 0,
+    "vocabulary": "subset",
+    "approx_prompt_tokens": 1000,
+    "identical_to_strata_off": true,
+    "prompt_sha256": "23718d23aa176cb1c52e6c91cf05919619dad9fe301d2ebb2aacfe8c4e815290",
+    "decode_round_timing": [
+      "strata decode timing: 294 windows, avg T 1.85, 1.74 tokens/window, 81.39 ms/window = verify 74.77 (GPU-reach wait 0.00 + per-layer host 0.00 [plan 0.00 actq 0.00 jobs 0.00 CPU 0.00] + stage 0.65) + commit/emit 0.23 + draft 6.39; per layer-window: CPU experts 0.00 (0.00 entries), VRAM hits 0.00, PCIe 0.00"
+    ]
+  },
+  {
+    "prompt_tokens": 4289,
+    "gen_tokens": 512,
+    "ttft_s": 21.370280166971497,
+    "elapsed_s": 46.3813858339563,
+    "decode_tps": 20.43419294323389,
+    "prompt_tps_including_ttft": 200.69928735088823,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 4289,
+      "prompt_ms": 21267.2,
+      "prompt_per_token_ms": 4.959,
+      "prompt_per_second": 201.7,
+      "predicted_n": 512,
+      "predicted_ms": 25088.5,
+      "predicted_per_token_ms": 49.001,
+      "predicted_per_second": 20.4,
+      "draft_n": 247,
+      "draft_n_accepted": 207
+    },
+    "usage": {
+      "prompt_tokens": 4289,
+      "completion_tokens": 512,
+      "total_tokens": 4801,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "content_sha256": "318e3521e69e8b140040a26ff95c6b03b6e20c83819fa3fff1916662e7a8e313",
+    "label": "w2-r1",
+    "round": 1,
+    "window": 2,
+    "hc_batch": 1,
+    "spec_min_p": 0.5,
+    "iq4_multi": 2,
+    "q6_multi": 1,
+    "k_multi": 1,
+    "expert_iq4_direct": 1,
+    "engine_sha256": "3aa4e5972b0a9a56180a6e13a5b1f8ffa00112c2686003ba149d6071f0cac099",
+    "gdn_snapshot": 0,
+    "vocabulary": "subset",
+    "approx_prompt_tokens": 4000,
+    "identical_to_strata_off": true,
+    "prompt_sha256": "60c430d45bdef082ece9f6cb361a8011781dee37af895366fc6cec3686c0c5a1",
+    "decode_round_timing": [
+      "strata decode timing: 306 windows, avg T 1.81, 1.67 tokens/window, 81.99 ms/window = verify 75.46 (GPU-reach wait 0.00 + per-layer host 0.00 [plan 0.00 actq 0.00 jobs 0.00 CPU 0.00] + stage 0.65) + commit/emit 0.20 + draft 6.33; per layer-window: CPU experts 0.00 (0.00 entries), VRAM hits 0.00, PCIe 0.00"
+    ]
+  },
+  {
+    "prompt_tokens": 1139,
+    "gen_tokens": 512,
+    "ttft_s": 5.880085875047371,
+    "elapsed_s": 32.0430122500984,
+    "decode_tps": 19.531524037253536,
+    "prompt_tps_including_ttft": 193.704654014228,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 1139,
+      "prompt_ms": 5770.9,
+      "prompt_per_token_ms": 5.067,
+      "prompt_per_second": 197.4,
+      "predicted_n": 512,
+      "predicted_ms": 26261.0,
+      "predicted_per_token_ms": 51.291,
+      "predicted_per_second": 19.5,
+      "draft_n": 251,
+      "draft_n_accepted": 201
+    },
+    "usage": {
+      "prompt_tokens": 1139,
+      "completion_tokens": 512,
+      "total_tokens": 1651,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "content_sha256": "7863d5c9904354724d2af1f257e51e84b10b8041f7276ba7fbf652f747bc669c",
+    "label": "w2-r2",
+    "round": 2,
+    "window": 2,
+    "hc_batch": 1,
+    "spec_min_p": 0.5,
+    "iq4_multi": 2,
+    "q6_multi": 1,
+    "k_multi": 1,
+    "expert_iq4_direct": 1,
+    "engine_sha256": "3aa4e5972b0a9a56180a6e13a5b1f8ffa00112c2686003ba149d6071f0cac099",
+    "gdn_snapshot": 0,
+    "vocabulary": "subset",
+    "approx_prompt_tokens": 1000,
+    "identical_to_strata_off": true,
+    "prompt_sha256": "0d512dcbe2279b249e97e41cd436cd3f00e64bcf72cf4ebb9d5f13f821edb085",
+    "decode_round_timing": [
+      "strata decode timing: 312 windows, avg T 1.80, 1.64 tokens/window, 84.17 ms/window = verify 77.53 (GPU-reach wait 0.00 + per-layer host 0.00 [plan 0.00 actq 0.00 jobs 0.00 CPU 0.00] + stage 0.02) + commit/emit 0.17 + draft 6.46; per layer-window: CPU experts 0.00 (0.00 entries), VRAM hits 0.00, PCIe 0.00"
+    ]
+  },
+  {
+    "prompt_tokens": 4289,
+    "gen_tokens": 512,
+    "ttft_s": 21.64194766699802,
+    "elapsed_s": 48.64258770807646,
+    "decode_tps": 18.929671576470565,
+    "prompt_tps_including_ttft": 198.17994507677008,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 4289,
+      "prompt_ms": 21539.6,
+      "prompt_per_token_ms": 5.022,
+      "prompt_per_second": 199.1,
+      "predicted_n": 512,
+      "predicted_ms": 27075.5,
+      "predicted_per_token_ms": 52.882,
+      "predicted_per_second": 18.9,
+      "draft_n": 253,
+      "draft_n_accepted": 219
+    },
+    "usage": {
+      "prompt_tokens": 4289,
+      "completion_tokens": 512,
+      "total_tokens": 4801,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "content_sha256": "18bd860ff1059f3d47a40d37a14fbce7495693973d1eb5e6ef8ef72e6bf5a376",
+    "label": "w2-r2",
+    "round": 2,
+    "window": 2,
+    "hc_batch": 1,
+    "spec_min_p": 0.5,
+    "iq4_multi": 2,
+    "q6_multi": 1,
+    "k_multi": 1,
+    "expert_iq4_direct": 1,
+    "engine_sha256": "3aa4e5972b0a9a56180a6e13a5b1f8ffa00112c2686003ba149d6071f0cac099",
+    "gdn_snapshot": 0,
+    "vocabulary": "subset",
+    "approx_prompt_tokens": 4000,
+    "identical_to_strata_off": true,
+    "prompt_sha256": "1bd434a8c8127dbf84c1a835bc6632690df7a3425eafad645f92234a7880ba91",
+    "decode_round_timing": [
+      "strata decode timing: 293 windows, avg T 1.86, 1.75 tokens/window, 92.41 ms/window = verify 85.14 (GPU-reach wait 0.00 + per-layer host 0.00 [plan 0.00 actq 0.00 jobs 0.00 CPU 0.00] + stage 0.03) + commit/emit 0.19 + draft 7.08; per layer-window: CPU experts 0.00 (0.00 entries), VRAM hits 0.00, PCIe 0.00"
+    ]
+  }
+]

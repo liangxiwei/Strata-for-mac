@@ -1,0 +1,32 @@
+[
+  {
+    "round": 0,
+    "approx_prompt_tokens": 1000,
+    "identical_greedy_text": true
+  },
+  {
+    "round": 0,
+    "approx_prompt_tokens": 4000,
+    "identical_greedy_text": true
+  },
+  {
+    "round": 1,
+    "approx_prompt_tokens": 1000,
+    "identical_greedy_text": true
+  },
+  {
+    "round": 1,
+    "approx_prompt_tokens": 4000,
+    "identical_greedy_text": true
+  },
+  {
+    "round": 2,
+    "approx_prompt_tokens": 1000,
+    "identical_greedy_text": true
+  },
+  {
+    "round": 2,
+    "approx_prompt_tokens": 4000,
+    "identical_greedy_text": true
+  }
+]

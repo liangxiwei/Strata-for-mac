@@ -1,0 +1,12 @@
+{
+  "power": "Battery Power:\n Sleep On Power Button 1\n powermode            1\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         5\n womp                 1\n networkoversleep     0\n sleep                1\n lessbright           1\n tcpkeepalive         1\n disksleep            0\nAC Power:\n Sleep On Power Button 1\n powermode            1\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         5\n womp                 1\n networkoversleep     0\n sleep                0\n tcpkeepalive         1\n disksleep            0\n",
+  "swap_before": "vm.swapusage: total = 21504.00M  used = 20050.38M  free = 1453.62M  (encrypted)\n",
+  "engine": "/Users/liangxw/src/xproject/petproject/Strata/build-metal-engine/strata",
+  "engine_sha256": "7f9f3cf946a947a6b77ccff1bbb5373c2e79b0ac2134705c8918583092ac2e38",
+  "subset_tokens": 106299,
+  "context_capacity": 131072,
+  "output_tokens": 512,
+  "points": [
+    "kernel-sweep:4:1:subset:0"
+  ]
+}

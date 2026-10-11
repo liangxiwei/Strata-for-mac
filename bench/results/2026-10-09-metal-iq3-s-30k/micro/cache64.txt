@@ -1,0 +1,6 @@
+native_gemm_gu_18 rows 1498 (23.4 per expert):  orig 4.93 ms  16x64_22 7.90 ms  32x64_24 6.02 ms
+native_gemm_down_20 rows 1498 (23.4 per expert):  orig 1.59 ms  16x64_22 3.15 ms  32x64_24 2.70 ms
+native_gemm_gu_21 rows 1386 (21.7 per expert):  orig 4.90 ms  16x64_22 7.47 ms  32x64_24 5.96 ms
+native_gemm_gu_22 rows 1123 (17.5 per expert):  orig 2.77 ms  16x64_22 5.83 ms  32x64_24 4.90 ms
+native_gemm_down_42 rows 1123 (17.5 per expert):  orig 1.38 ms  16x64_22 2.72 ms  32x64_24 2.38 ms
+native_gemm_gu_23 rows 892 (13.9 per expert):  orig 3.01 ms  16x64_22 6.13 ms  32x64_24 5.30 ms

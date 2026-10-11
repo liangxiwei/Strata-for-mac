@@ -82,3 +82,10 @@ bench/results/2026-10-03-metal-10k-mtp/mtp-on/*
 !bench/results/2026-10-03-metal-10k-mtp/mtp-on/server-config.json
 # per-machine scratch of local tooling
 .claude/
+
+# Raw 30K inference outputs and audit traces stay on the measuring machine.
+bench/results/2026-10-09-metal-iq3-s-30k/run/
+bench/results/2026-10-09-metal-iq3-s-30k-followup/run/
+
+# Benchmark copies/hardlinks of the MTP model runtime are local model data.
+bench/results/**/rt-subset/

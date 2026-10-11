@@ -1,0 +1,80 @@
+MTP implementation comparison on Apple M2 Max — 2026-10-11
+
+Question: why does Meld MTP speed up the existing IQ3_S model while the current Strata Metal path does not?
+Same main GGUF files, same saved 1139-token input, 512 greedy output tokens, thinking/cache disabled.
+This diagnostic uses the installed Strata engine and its original Q2_0 MTP expert runtime.
+Meld uses its shared-Q8_0 MTP and the 106299-token draft subset. Low Power Mode retained.
+One warmup followed by one request per setting. Every previous server was stopped before the next load.
+Strata settings: full or subset vocabulary; max window=4; threshold .5 or 0 per request.
+Meld settings: max drafts=3; default threshold=0; LLAMA_DECODE_TRACE=1.
+
+Measured Strata per-round wall times:
+Setting | Avg input tokens | Output tokens | Verify ms | Draft ms | Round ms | Decode tok/s
+strata_full, p=0.5 | 3.15 | 2.63 | 136.47 | 16.82 | 153.54 | 17.12
+strata_full, p=0 | 3.98 | 2.88 | 167.77 | 19.71 | 187.74 | 15.33
+strata_subset, p=0.5 | 3.13 | 2.61 | 134.94 | 11.77 | 146.98 | 17.79
+strata_subset, p=0 | 3.98 | 2.84 | 166.39 | 13.70 | 180.37 | 15.79
+
+Meld: 174 four-token target calls, mean 103.79 ms, median 103.78 ms.
+Meld draft: one-token mean 2.73 ms; median 2.41 ms.
+All draft calls including catch-up total 10.84 ms per target call.
+Output: 2.91 tokens per target call; request decode 25.26 tok/s.
+
+Interpretation:
+Cost per emitted token = (verification + drafting + state/host overhead) / emitted tokens per round.
+Strata verification is about 89%-92% of round wall time in these settings.
+At threshold 0, four-token Strata verification costs about 166-168 ms versus about 104 ms in Meld.
+The subset lowers Strata draft cost (16.82 -> 11.77 ms at threshold .5), but barely changes verification.
+Reducing the confidence threshold increases accepted output per round but slows overall Strata throughput here.
+A high conditional draft-acceptance percentage alone therefore does not establish a speed benefit.
+
+Source findings and implementation priorities:
+1. Batched Metal hyper-connection projections (highest priority for the verification path).
+   Strata fused_gr_read_multi launches norm/down/up separately for each token. Meld adds small-batch
+   float/BF16 matvec selection for K=320 and split-K for short-wide matrices such as 320x10240 and 4x10240.
+   Strata already batches other projections and its LM head: it is not a fully sequential verifier.
+   Proposed change: bind contiguous activation/output buffers and use token strides; share weight loads
+   across 2-4 token accumulators. Preserve each output's arithmetic order when possible.
+   Source: src/kernels/metal/fused_gr.mm:125; src/core/verify.cpp:632;
+   Meld patches/0002-metal-small-batch-matvec-for-f32-f16-bf16-rows-with-.patch and 0003-metal-split-K-...patch.
+   The phase timing establishes an expensive verifier; HC's individual time share still needs a kernel-level A/B.
+2. Restore the existing draft vocabulary subset when MTP is enabled on Metal (low effort, measured benefit).
+   Strata already implements it in src/core/mtp.cpp:398, but setup.py:3154 skips refresh_draft_vocab on Metal.
+   data/mac-metal.json deliberately disables drafts after prior M2 Max measurements, explaining that choice.
+   Meld's subset is credited to Strata. The current installation has no rt/draft_vocab.bin.
+   This experiment enabled it in a separate runtime directory, leaving original files unchanged.
+3. Evaluate GDN state snapshots instead of accepted-prefix recurrence replay.
+   Strata multi-token verification reads the old state, then commit runs the accepted-prefix recurrence again.
+   One-token Metal windows already have an in-place optimization, so that repeated work is specific to multi-token windows.
+   Meld's delta-net-base.cpp stores rollback snapshots as part of the verification recurrence.
+   Tradeoff: snapshot RAM and write bandwidth versus repeated computation. Benefit not measured in this diagnostic.
+   Source: src/core/verify.cpp:668,1317; Meld src/models/delta-net-base.cpp:566.
+4. Tune MTP by tokens per millisecond and add a measured fallback to ordinary decode.
+   Strata DraftPolicy chooses suffix lookup versus MTP; it does not generally disable a losing MTP path.
+   Threshold 0 from Meld was slower in Strata here. Window size and threshold need joint calibration.
+   Source: src/spec/draft_policy.cpp:66; src/program/generate.cpp:5369; Meld common/common.h:330.
+5. Evaluate Metal-native dense-quant kernels and optional Q8_0 dense re-encoding after the above.
+   Strata's multi-column kernels preserve CUDA arithmetic and software dp4a/byte_perm semantics.
+   Meld documents Q2_0-d8 four-token verification 53.9 -> 46.5 ms, with increased storage and measured KLD 0.0026.
+   Those are the author's Q2_0-d8 results, not our IQ3_S results: all tests here used the original IQ3_S main file.
+   Source: src/kernels/metal/native_mmvq.metal:94; Meld docs/PERFORMANCE.md:24 and tools/requant_dense.py.
+
+Additional observations:
+- All main experts are resident on the GPU in both tested paths. CPU expert fallback/PCIe misses do not explain the gap.
+- Strata graph replay re-encodes a tape, but sampled encoding for the 2733-entry tape was about 1.1-1.2 ms.
+  CPU graph encoding is much smaller than the 60+ ms target verification difference.
+- Strata and Meld both have autoregressive draft steps and catch-up work; Meld does not eliminate all CPU synchronization.
+- Strata normalizes the 10240-element MTP hidden input globally; Meld normalizes each 2560-element stream.
+  This semantic difference needs checking against the trained-model reference, rather than assuming either is a speed fix.
+- Meld's optional fused HC op is off by default, with no clear end-to-end gain in its performance notes.
+  The useful lesson is the measured small-batch kernel work, not adopting every fused op or debug experiment.
+- Strata output was exactly equal to the prior non-MTP output for all four settings here.
+  The earlier Meld MTP/non-MTP comparison had different greedy texts; floating-point equivalence needs validation when porting kernels.
+
+Limits:
+Diagnostic one-request phase measurements, not a repeated/interleaved performance benchmark.
+Meld trace explicitly synchronizes llama_decode. Strata verify wall time can include an asynchronous preceding commit.
+Strata's legacy GPU stage stamp counter on Metal is a launch counter, not nanoseconds; it was not used as a time profile.
+Kernel-level diagnosis should use real Metal command-buffer/counter timestamps and verify end-to-end gains afterwards.
+Only this M2 Max / IQ3_S / Metal setup was tested; the conclusion does not generalize to Strata's CUDA/HIP engines.
+No daily engine, model weight or config changes were made. All inference processes are closed.

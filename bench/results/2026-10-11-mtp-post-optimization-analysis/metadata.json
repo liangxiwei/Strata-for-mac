@@ -1,0 +1,10 @@
+{
+  "hardware": "Apple M2 Max\n103079215104\n",
+  "power": "Battery Power:\n Sleep On Power Button 1\n powermode            1\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         5\n womp                 1\n networkoversleep     0\n sleep                1\n lessbright           1\n tcpkeepalive         1\n disksleep            0\nAC Power:\n Sleep On Power Button 1\n powermode            1\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         5\n womp                 1\n networkoversleep     0\n sleep                0\n tcpkeepalive         1\n disksleep            0\n",
+  "installed_engine_sha256": "1f3d63b3427edbb6361d4e1fca2a344cad2ef30a6a5ef5f819051627953c2763",
+  "main_weights": "Existing IQ3_S GGUF, unchanged",
+  "main_output_type": "Q6_K (the Q5_K startup log is a hard-coded label)",
+  "throughput_benchmark": "No new throughput claim; per-pass sampling changes execution overhead",
+  "micro_protocol": "GPU command-buffer times, fixed finite weight scales, random codes and scales; distinct activation columns, rotate up to 32 weight copies (~256 MiB), ABBA >=10 s per point; no inference process running",
+  "micro_numerics": "Meld receives exactly the dequantized Q8_1 activation used by Strata. This isolates the kernel difference. Supplemental random positive/negative weight scales and random activation scales are tested separately."
+}

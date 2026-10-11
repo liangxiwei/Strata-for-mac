@@ -178,13 +178,14 @@ kernel void gdn_ab_multi_kernel(constant const float* x [[buffer(0)]],
 // STAGE_LAST = false (gdn_step_norm_multi_tail_kernel): the last token's state is not staged in `shadow` - no
 // later token reads it - and a commit writes it straight to `state`, where the staged kernel copied it back
 // afterwards. Every value is the same float; only redundant device traffic goes.
-template<bool STAGE_LAST>
+template<bool STAGE_LAST, bool SNAPSHOT = false>
 static inline void vr_gdn_step_body(device float* state, constant const float* hbuf, const int C, constant const float* gate,
                                     constant const float* beta, constant const float* z, constant const float* gamma,
                                     const float eps, device float* y, const int h_k, const int h_v, const int T,
                                     constant const int* n_keep, const int t_out_begin, device float* shadow, uint3 gpos,
                                     uint tid, threadgroup float* sk, threadgroup float* sq,
-                                    threadgroup float (*red)[VR_S], threadgroup float* wsum) {
+                                    threadgroup float (*red)[VR_S], threadgroup float* wsum,
+                                    device float* snapshots = nullptr) {
     const int head = (int) gpos.x;
     const int col = (int) (tid & 127u);          // threadIdx.x, 0..127
     const int rg = (int) (tid >> 7);             // threadIdx.y, 0..3
@@ -204,7 +205,10 @@ static inline void vr_gdn_step_body(device float* state, constant const float* h
         }
         threadgroup_barrier(mem_flags::mem_threadgroup);
         const float g = metal::precise::exp(gate[(ulong) (uint) t * (ulong) h_v + (ulong) head]);
-        device float* s_at = t == 0 ? base : srun;        // token 0 reads the caller's state itself
+        const ulong snapshot_stride = (ulong) VR_S * h_v * VR_S;
+        const ulong state_offset = ((ulong) (rg * VR_RPG) * h_v + head) * VR_S + col;
+        device float* s_at = t == 0 ? base :
+            (SNAPSHOT ? snapshots + (ulong) (t - 1) * snapshot_stride + state_offset : srun);
         float kv = 0.0f;
 #pragma unroll
         for (int r = 0; r < VR_RPG; ++r) kv = fma(s_at[r * row_stride], sk[rg * VR_RPG + r], kv);
@@ -215,7 +219,8 @@ static inline void vr_gdn_step_body(device float* state, constant const float* h
                             beta[(ulong) (uint) t * (ulong) h_v + (ulong) head];
         float o = 0.0f;
         const bool last = !STAGE_LAST && t == n - 1;
-        device float* s_to = last ? (n_keep != nullptr ? base : nullptr) : srun;
+        device float* s_to = SNAPSHOT ? snapshots + (ulong) t * snapshot_stride + state_offset :
+                                       (last ? (n_keep != nullptr ? base : nullptr) : srun);
 #pragma unroll
         for (int r = 0; r < VR_RPG; ++r) {
             const float s = fma(g, s_at[r * row_stride], sk[rg * VR_RPG + r] * delta);
@@ -257,6 +262,23 @@ kernel void NAME(VR_STEP_PARAMS) { \
 }
 VR_STEP_KERNEL(gdn_step_norm_multi_kernel, true)
 VR_STEP_KERNEL(gdn_step_norm_multi_tail_kernel, false)
+
+kernel void gdn_step_norm_snapshot_kernel(VR_STEP_PARAMS, device float* snapshots [[buffer(15)]]) {
+    threadgroup float sk[VR_S], sq[VR_S];
+    threadgroup float red[VR_RG][VR_S];
+    threadgroup float wsum[VR_S * VR_RG / 32];
+    vr_gdn_step_body<false, true>(state, hbuf, C, gate, beta, z, gamma, eps, y, h_k, h_v, T,
+                                 n_keep, t_out_begin, shadow, gpos, tid, sk, sq, red, wsum, snapshots);
+}
+
+kernel void gdn_commit_snapshot_kernel(device float* state [[buffer(0)]],
+                                       constant const float* snapshots [[buffer(1)]],
+                                       constant const uint& n_float [[buffer(2)]],
+                                       constant const int* n_keep [[buffer(3)]],
+                                       uint i [[thread_position_in_grid]]) {
+    if (i < n_float && n_keep[0] > 0)
+        state[i] = snapshots[(ulong) (n_keep[0] - 1) * n_float + i];
+}
 
 
 

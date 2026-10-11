@@ -1,0 +1,219 @@
+{
+  "groups": [
+    {
+      "approx_prompt_tokens": 1000,
+      "prompt_tokens": 1139,
+      "runs": 3,
+      "gen_tokens": 512,
+      "decode_tps": 15.729354629504618,
+      "decode_tps_range": [
+        14.672204152679264,
+        16.288904061203638
+      ],
+      "prefill_tps": 198.3,
+      "ttft_s": 5.974103874999997,
+      "total_s": 38.801834375,
+      "draft_n": 1308,
+      "draft_n_accepted": 931,
+      "draft_acceptance": 0.7117737003058104,
+      "previous_strata_off": {
+        "runs": 3,
+        "prompt_tokens": [
+          1139,
+          1139,
+          1139
+        ],
+        "gen_tokens": [
+          512,
+          512,
+          512
+        ],
+        "decode_tps": 18.453337130053175,
+        "prefill_tps": 203.2,
+        "ttft_s": 5.754302458999973,
+        "total_s": 33.445887374999984
+      },
+      "previous_meld_mtp": {
+        "runs": 3,
+        "prompt_tokens": [
+          1139,
+          1139,
+          1139
+        ],
+        "gen_tokens": [
+          512,
+          512,
+          512
+        ],
+        "decode_tps": 24.16548852887434,
+        "prefill_tps": 182.796520350276,
+        "ttft_s": 6.264150374999986,
+        "total_s": 27.62430458299997
+      },
+      "previous_strata_original_mtp": {
+        "approx_prompt_tokens": 1000,
+        "prompt_tokens": 1139,
+        "runs": 3,
+        "gen_tokens": 512,
+        "decode_tps": 15.77343166231343,
+        "decode_tps_range": [
+          14.678925138049653,
+          16.307113799380524
+        ],
+        "prefill_tps": 204.9,
+        "ttft_s": 5.6581245840000065,
+        "total_s": 37.814199041999984,
+        "draft_n": 1291,
+        "draft_n_accepted": 914,
+        "draft_acceptance": 0.7079783113865221,
+        "previous_strata_off": {
+          "runs": 3,
+          "prompt_tokens": [
+            1139,
+            1139,
+            1139
+          ],
+          "gen_tokens": [
+            512,
+            512,
+            512
+          ],
+          "decode_tps": 18.453337130053175,
+          "prefill_tps": 203.2,
+          "ttft_s": 5.754302458999973,
+          "total_s": 33.445887374999984
+        },
+        "previous_meld_mtp": {
+          "runs": 3,
+          "prompt_tokens": [
+            1139,
+            1139,
+            1139
+          ],
+          "gen_tokens": [
+            512,
+            512,
+            512
+          ],
+          "decode_tps": 24.16548852887434,
+          "prefill_tps": 182.796520350276,
+          "ttft_s": 6.264150374999986,
+          "total_s": 27.62430458299997
+        },
+        "gain_over_previous_strata_off_percent": -14.522606121877224
+      },
+      "gain_over_previous_strata_off_percent": -14.761462825671067,
+      "gain_over_previous_strata_original_mtp_percent": -0.27943844911137994
+    },
+    {
+      "approx_prompt_tokens": 4000,
+      "prompt_tokens": 4289,
+      "runs": 3,
+      "gen_tokens": 512,
+      "decode_tps": 15.7406504109471,
+      "decode_tps_range": [
+        14.915801685690584,
+        16.335125988920527
+      ],
+      "prefill_tps": 225.7,
+      "ttft_s": 19.124566165999994,
+      "total_s": 51.79043387499996,
+      "draft_n": 1263,
+      "draft_n_accepted": 969,
+      "draft_acceptance": 0.7672209026128266,
+      "previous_strata_off": {
+        "runs": 3,
+        "prompt_tokens": [
+          4289,
+          4289,
+          4289
+        ],
+        "gen_tokens": [
+          512,
+          512,
+          512
+        ],
+        "decode_tps": 18.19168776306885,
+        "prefill_tps": 220.6,
+        "ttft_s": 19.53822716700006,
+        "total_s": 47.80414912499998
+      },
+      "previous_meld_mtp": {
+        "runs": 3,
+        "prompt_tokens": [
+          4289,
+          4289,
+          4289
+        ],
+        "gen_tokens": [
+          512,
+          512,
+          512
+        ],
+        "decode_tps": 24.000755623820805,
+        "prefill_tps": 190.38778293715305,
+        "ttft_s": 22.592608541000004,
+        "total_s": 43.88395800000001
+      },
+      "previous_strata_original_mtp": {
+        "approx_prompt_tokens": 4000,
+        "prompt_tokens": 4289,
+        "runs": 3,
+        "gen_tokens": 512,
+        "decode_tps": 16.15680511351815,
+        "decode_tps_range": [
+          15.67537801386895,
+          17.167989265103458
+        ],
+        "prefill_tps": 225.4,
+        "ttft_s": 19.125135625000013,
+        "total_s": 50.604396334,
+        "draft_n": 1222,
+        "draft_n_accepted": 953,
+        "draft_acceptance": 0.7798690671031097,
+        "previous_strata_off": {
+          "runs": 3,
+          "prompt_tokens": [
+            4289,
+            4289,
+            4289
+          ],
+          "gen_tokens": [
+            512,
+            512,
+            512
+          ],
+          "decode_tps": 18.19168776306885,
+          "prefill_tps": 220.6,
+          "ttft_s": 19.53822716700006,
+          "total_s": 47.80414912499998
+        },
+        "previous_meld_mtp": {
+          "runs": 3,
+          "prompt_tokens": [
+            4289,
+            4289,
+            4289
+          ],
+          "gen_tokens": [
+            512,
+            512,
+            512
+          ],
+          "decode_tps": 24.000755623820805,
+          "prefill_tps": 190.38778293715305,
+          "ttft_s": 22.592608541000004,
+          "total_s": 43.88395800000001
+        },
+        "gain_over_previous_strata_off_percent": -11.185782628051355
+      },
+      "gain_over_previous_strata_off_percent": -13.473391716284988,
+      "gain_over_previous_strata_original_mtp_percent": -2.5757239729459758
+    }
+  ],
+  "ready_s": 146.322309125,
+  "identical_output_pairs": 6,
+  "output_pairs": 6,
+  "reference_runs_measured_earlier": true,
+  "single_process_for_three_mtp_rounds": true
+}

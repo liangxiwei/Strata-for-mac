@@ -1,0 +1,46 @@
+[
+  {
+    "type": "14",
+    "K": 2560,
+    "N": 248320,
+    "median_us": {
+      "strata_multi4": 14911.716,
+      "meld_multi4": 6243.3045
+    },
+    "speed_ratio": 2.3884332407621636,
+    "time_reduction_pct": 58.13154904505961
+  },
+  {
+    "type": "14",
+    "K": 6144,
+    "N": 2560,
+    "median_us": {
+      "strata_multi4": 360.832,
+      "meld_multi4": 154.4145
+    },
+    "speed_ratio": 2.33677536759825,
+    "time_reduction_pct": 57.20598505675771
+  },
+  {
+    "type": "23",
+    "K": 2560,
+    "N": 12288,
+    "median_us": {
+      "strata_multi4": 666.5070000000001,
+      "strata_separate4": 409.6965
+    },
+    "speed_ratio": 1.626831081056343,
+    "time_reduction_pct": 38.530803127349
+  },
+  {
+    "type": "20",
+    "K": 640,
+    "N": 2560,
+    "median_us": {
+      "strata_multi4": 87.45599999999999,
+      "strata_separate4": 34.6845
+    },
+    "speed_ratio": 2.521472127319119,
+    "time_reduction_pct": 60.34062843029637
+  }
+]

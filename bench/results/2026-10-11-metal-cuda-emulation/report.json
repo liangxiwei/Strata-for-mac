@@ -1,0 +1,642 @@
+{
+  "date": "2026-10-12",
+  "measurement": "Apple M2 Max, 38 GPU cores, 96 GiB, macOS 26.5, existing Low Power Mode",
+  "baseline": {
+    "binary": "/Users/liangxw/src/xproject/petproject/Strata/engine/strata",
+    "sha256": "3aa4e5972b0a9a56180a6e13a5b1f8ffa00112c2686003ba149d6071f0cac099",
+    "metadata": {
+      "vision": "gpu",
+      "vision_src": "4d89409b228a1daa",
+      "source": "local",
+      "backend": "metal",
+      "version": "0.1.34",
+      "src": "73efdd2b9343705a"
+    },
+    "mtp_max_t": 4,
+    "spec_min_p": 0.5,
+    "context_capacity": 262144,
+    "draft_vocab_sha256": "b1e1d3a7a9e4bf862dcd5923ce661fb59bbd07907e594df5cf86a62ac235cb91",
+    "metal_profile_revision": "2026-10-12-mtp-kernels",
+    "env": {
+      "STRATA_METAL_IQ4_EXPAND": "0",
+      "STRATA_METAL_HC_BATCH": "1",
+      "STRATA_METAL_Q6_MULTI": "1",
+      "STRATA_METAL_K_MULTI": "1",
+      "STRATA_METAL_IQ4_MULTI": "2",
+      "STRATA_METAL_EXPERT_IQ4_DIRECT": "1",
+      "STRATA_METAL_GDN_SNAPSHOT": "0"
+    }
+  },
+  "reference_policy": "latest validated MTP-on engine; no MTP-off inference in this scope",
+  "inventory": [
+    {
+      "files": [
+        "src/kernels/metal/native_mmvq.metal",
+        "src/kernels/metal/native_mmvq.mm"
+      ],
+      "hot_path": "native dense single-token and fallback quantized matrix-vector kernels",
+      "decision": "keep validated multi-token fast paths; Q6 single-token candidate lacks a large whole-model gain"
+    },
+    {
+      "files": [
+        "src/kernels/metal/iq_kernels.metal",
+        "src/kernels/metal/iq_kernels.mm"
+      ],
+      "hot_path": "resident IQ3_XXS/IQ3_S/IQ2_S/IQ4_XS gate/up, Q2_0 draft gate/up",
+      "decision": "generic float-dot/vector-permutation and row-reuse candidates mostly regress; keep existing kernels"
+    },
+    {
+      "files": [
+        "src/kernels/metal/s2_expert_grouped.metal"
+      ],
+      "hot_path": "alternate S2 expert path, not current native IQ3_S runtime",
+      "decision": "record packed-dot/byte-permutation/ballot emulation; no speed claim or unmeasured production edit"
+    },
+    {
+      "files": [
+        "src/kernels/metal/sampler.metal"
+      ],
+      "hot_path": "integer multiply-high for counter-based sampling RNG",
+      "decision": "preserve exact random bits; this is intentional integer arithmetic"
+    },
+    {
+      "files": [
+        "src/kernels/metal/strata_port.metalh",
+        "src/kernels/metal/kv_q4.metal",
+        "src/kernels/metal/kv_q8.metal"
+      ],
+      "hot_path": "half/quantized storage conversion and bit packing",
+      "decision": "rounding and special-value semantics are required; current daily KV is FP16"
+    }
+  ],
+  "generic_helper_screen": [
+    {
+      "type": 18,
+      "cap": 10,
+      "mode": 1,
+      "baseline_us": 115.793,
+      "candidate_us": 129.715,
+      "time_change_pct": 12.02317929408514
+    },
+    {
+      "type": 18,
+      "cap": 10,
+      "mode": 2,
+      "baseline_us": 115.793,
+      "candidate_us": 133.09,
+      "time_change_pct": 14.937863255982652
+    },
+    {
+      "type": 18,
+      "cap": 20,
+      "mode": 1,
+      "baseline_us": 222.542,
+      "candidate_us": 278.883,
+      "time_change_pct": 25.31701880993249
+    },
+    {
+      "type": 18,
+      "cap": 20,
+      "mode": 2,
+      "baseline_us": 222.542,
+      "candidate_us": 299.937,
+      "time_change_pct": 34.777704882673845
+    },
+    {
+      "type": 18,
+      "cap": 40,
+      "mode": 1,
+      "baseline_us": 464.366,
+      "candidate_us": 640.453,
+      "time_change_pct": 37.91987354802031
+    },
+    {
+      "type": 18,
+      "cap": 40,
+      "mode": 2,
+      "baseline_us": 464.366,
+      "candidate_us": 829.07,
+      "time_change_pct": 78.53804972801628
+    },
+    {
+      "type": 21,
+      "cap": 10,
+      "mode": 1,
+      "baseline_us": 122.842,
+      "candidate_us": 136.97,
+      "time_change_pct": 11.500952442975532
+    },
+    {
+      "type": 21,
+      "cap": 10,
+      "mode": 2,
+      "baseline_us": 122.842,
+      "candidate_us": 141.918,
+      "time_change_pct": 15.528890770257743
+    },
+    {
+      "type": 21,
+      "cap": 20,
+      "mode": 1,
+      "baseline_us": 236.007,
+      "candidate_us": 293.661,
+      "time_change_pct": 24.428936429851646
+    },
+    {
+      "type": 21,
+      "cap": 20,
+      "mode": 2,
+      "baseline_us": 236.007,
+      "candidate_us": 324.651,
+      "time_change_pct": 37.55990288423649
+    },
+    {
+      "type": 21,
+      "cap": 40,
+      "mode": 1,
+      "baseline_us": 491.84,
+      "candidate_us": 677.841,
+      "time_change_pct": 37.81737963565388
+    },
+    {
+      "type": 21,
+      "cap": 40,
+      "mode": 2,
+      "baseline_us": 491.84,
+      "candidate_us": 836.693,
+      "time_change_pct": 70.11487475601822
+    },
+    {
+      "type": 22,
+      "cap": 10,
+      "mode": 1,
+      "baseline_us": 118.602,
+      "candidate_us": 130.017,
+      "time_change_pct": 9.624626903424893
+    },
+    {
+      "type": 22,
+      "cap": 10,
+      "mode": 2,
+      "baseline_us": 118.602,
+      "candidate_us": 134.1,
+      "time_change_pct": 13.067233267567158
+    },
+    {
+      "type": 22,
+      "cap": 20,
+      "mode": 1,
+      "baseline_us": 231.272,
+      "candidate_us": 290.738,
+      "time_change_pct": 25.71258085717252
+    },
+    {
+      "type": 22,
+      "cap": 20,
+      "mode": 2,
+      "baseline_us": 231.272,
+      "candidate_us": 315.191,
+      "time_change_pct": 36.285845238507044
+    },
+    {
+      "type": 22,
+      "cap": 40,
+      "mode": 1,
+      "baseline_us": 445.227,
+      "candidate_us": 490.406,
+      "time_change_pct": 10.147407951449484
+    },
+    {
+      "type": 22,
+      "cap": 40,
+      "mode": 2,
+      "baseline_us": 445.227,
+      "candidate_us": 490.547,
+      "time_change_pct": 10.179077189838015
+    },
+    {
+      "type": 23,
+      "cap": 10,
+      "mode": 1,
+      "baseline_us": 129.001,
+      "candidate_us": 167.435,
+      "time_change_pct": 29.793567491724858
+    },
+    {
+      "type": 23,
+      "cap": 10,
+      "mode": 2,
+      "baseline_us": 129.001,
+      "candidate_us": 203.217,
+      "time_change_pct": 57.53133696638011
+    },
+    {
+      "type": 23,
+      "cap": 20,
+      "mode": 1,
+      "baseline_us": 245.174,
+      "candidate_us": 354.301,
+      "time_change_pct": 44.51002145415093
+    },
+    {
+      "type": 23,
+      "cap": 20,
+      "mode": 2,
+      "baseline_us": 245.174,
+      "candidate_us": 453.211,
+      "time_change_pct": 84.85279842071346
+    },
+    {
+      "type": 23,
+      "cap": 40,
+      "mode": 1,
+      "baseline_us": 526.785,
+      "candidate_us": 752.143,
+      "time_change_pct": 42.77988173543288
+    },
+    {
+      "type": 23,
+      "cap": 40,
+      "mode": 2,
+      "baseline_us": 526.785,
+      "candidate_us": 973.016,
+      "time_change_pct": 84.70837248592879
+    },
+    {
+      "type": 42,
+      "cap": 10,
+      "mode": 1,
+      "baseline_us": 114.646,
+      "candidate_us": 156.875,
+      "time_change_pct": 36.83425501107757
+    },
+    {
+      "type": 42,
+      "cap": 10,
+      "mode": 2,
+      "baseline_us": 114.646,
+      "candidate_us": 127.488,
+      "time_change_pct": 11.201437468380938
+    },
+    {
+      "type": 42,
+      "cap": 20,
+      "mode": 1,
+      "baseline_us": 198.309,
+      "candidate_us": 309.405,
+      "time_change_pct": 56.02166316203498
+    },
+    {
+      "type": 42,
+      "cap": 20,
+      "mode": 2,
+      "baseline_us": 198.309,
+      "candidate_us": 271.69,
+      "time_change_pct": 37.003363437867165
+    },
+    {
+      "type": 42,
+      "cap": 40,
+      "mode": 1,
+      "baseline_us": 392.669,
+      "candidate_us": 599.969,
+      "time_change_pct": 52.79255556206375
+    },
+    {
+      "type": 42,
+      "cap": 40,
+      "mode": 2,
+      "baseline_us": 392.669,
+      "candidate_us": 487.072,
+      "time_change_pct": 24.041368175231568
+    }
+  ],
+  "gu_row_reuse_screen": [
+    {
+      "type": 18,
+      "cap": 10,
+      "mode": 1,
+      "baseline_us": 120.938,
+      "candidate_us": 133.507,
+      "time_change_pct": 10.392928608047104
+    },
+    {
+      "type": 18,
+      "cap": 10,
+      "mode": 2,
+      "baseline_us": 120.938,
+      "candidate_us": 126.158,
+      "time_change_pct": 4.316261224759788
+    },
+    {
+      "type": 18,
+      "cap": 20,
+      "mode": 1,
+      "baseline_us": 232.738,
+      "candidate_us": 278.108,
+      "time_change_pct": 19.494023322362498
+    },
+    {
+      "type": 18,
+      "cap": 20,
+      "mode": 2,
+      "baseline_us": 232.738,
+      "candidate_us": 270.846,
+      "time_change_pct": 16.373776521238483
+    },
+    {
+      "type": 18,
+      "cap": 40,
+      "mode": 1,
+      "baseline_us": 468.862,
+      "candidate_us": 654.758,
+      "time_change_pct": 39.64834002329043
+    },
+    {
+      "type": 18,
+      "cap": 40,
+      "mode": 2,
+      "baseline_us": 468.862,
+      "candidate_us": 821.926,
+      "time_change_pct": 75.30232776381965
+    },
+    {
+      "type": 21,
+      "cap": 10,
+      "mode": 1,
+      "baseline_us": 125.809,
+      "candidate_us": 136.897,
+      "time_change_pct": 8.813359934503895
+    },
+    {
+      "type": 21,
+      "cap": 10,
+      "mode": 2,
+      "baseline_us": 125.809,
+      "candidate_us": 134.464,
+      "time_change_pct": 6.879476031126552
+    },
+    {
+      "type": 21,
+      "cap": 20,
+      "mode": 1,
+      "baseline_us": 245.228,
+      "candidate_us": 295.892,
+      "time_change_pct": 20.6599572642602
+    },
+    {
+      "type": 21,
+      "cap": 20,
+      "mode": 2,
+      "baseline_us": 245.228,
+      "candidate_us": 300.629,
+      "time_change_pct": 22.591629014631277
+    },
+    {
+      "type": 21,
+      "cap": 40,
+      "mode": 1,
+      "baseline_us": 485.531,
+      "candidate_us": 650.02,
+      "time_change_pct": 33.87816637866583
+    },
+    {
+      "type": 21,
+      "cap": 40,
+      "mode": 2,
+      "baseline_us": 485.531,
+      "candidate_us": 875.527,
+      "time_change_pct": 80.3236044660382
+    },
+    {
+      "type": 22,
+      "cap": 10,
+      "mode": 1,
+      "baseline_us": 116.396,
+      "candidate_us": 132.098,
+      "time_change_pct": 13.490154300835089
+    },
+    {
+      "type": 22,
+      "cap": 10,
+      "mode": 2,
+      "baseline_us": 116.396,
+      "candidate_us": 123.259,
+      "time_change_pct": 5.896250730265651
+    },
+    {
+      "type": 22,
+      "cap": 20,
+      "mode": 1,
+      "baseline_us": 228.784,
+      "candidate_us": 291.411,
+      "time_change_pct": 27.373854815022035
+    },
+    {
+      "type": 22,
+      "cap": 20,
+      "mode": 2,
+      "baseline_us": 228.784,
+      "candidate_us": 294.405,
+      "time_change_pct": 28.682512763130276
+    },
+    {
+      "type": 22,
+      "cap": 40,
+      "mode": 1,
+      "baseline_us": 448.329,
+      "candidate_us": 493.382,
+      "time_change_pct": 10.049093411311771
+    },
+    {
+      "type": 22,
+      "cap": 40,
+      "mode": 2,
+      "baseline_us": 448.329,
+      "candidate_us": 428.398,
+      "time_change_pct": -4.445619176988325
+    },
+    {
+      "type": 23,
+      "cap": 10,
+      "mode": 1,
+      "baseline_us": 130.035,
+      "candidate_us": 188.755,
+      "time_change_pct": 45.157073095705
+    },
+    {
+      "type": 23,
+      "cap": 10,
+      "mode": 2,
+      "baseline_us": 130.035,
+      "candidate_us": 181.203,
+      "time_change_pct": 39.34940592917293
+    },
+    {
+      "type": 23,
+      "cap": 20,
+      "mode": 1,
+      "baseline_us": 248.195,
+      "candidate_us": 372.905,
+      "time_change_pct": 50.24678176433852
+    },
+    {
+      "type": 23,
+      "cap": 20,
+      "mode": 2,
+      "baseline_us": 248.195,
+      "candidate_us": 375.746,
+      "time_change_pct": 51.39144624186627
+    },
+    {
+      "type": 23,
+      "cap": 40,
+      "mode": 1,
+      "baseline_us": 540.439,
+      "candidate_us": 985.371,
+      "time_change_pct": 82.32788529325235
+    },
+    {
+      "type": 23,
+      "cap": 40,
+      "mode": 2,
+      "baseline_us": 540.439,
+      "candidate_us": 1088.035,
+      "time_change_pct": 101.32429376858445
+    },
+    {
+      "type": 42,
+      "cap": 10,
+      "mode": 1,
+      "baseline_us": 104.901,
+      "candidate_us": 107.816,
+      "time_change_pct": 2.778810497516715
+    },
+    {
+      "type": 42,
+      "cap": 10,
+      "mode": 2,
+      "baseline_us": 104.901,
+      "candidate_us": 96.785,
+      "time_change_pct": -7.736818524132271
+    },
+    {
+      "type": 42,
+      "cap": 20,
+      "mode": 1,
+      "baseline_us": 201.289,
+      "candidate_us": 211.924,
+      "time_change_pct": 5.283448176502459
+    },
+    {
+      "type": 42,
+      "cap": 20,
+      "mode": 2,
+      "baseline_us": 201.289,
+      "candidate_us": 188.09,
+      "time_change_pct": -6.557238597240778
+    },
+    {
+      "type": 42,
+      "cap": 40,
+      "mode": 1,
+      "baseline_us": 404.328,
+      "candidate_us": 408.803,
+      "time_change_pct": 1.106774697770141
+    },
+    {
+      "type": 42,
+      "cap": 40,
+      "mode": 2,
+      "baseline_us": 404.328,
+      "candidate_us": 335.441,
+      "time_change_pct": -17.03740527492531
+    }
+  ],
+  "q6_single_sustained": [
+    {
+      "K": 2560,
+      "N": 248320,
+      "baseline_us": 4597.409,
+      "candidate_us": 4627.7029999999995,
+      "time_change_pct": 0.6589363704643247,
+      "protocol": "ABBA, >=10 s per point"
+    },
+    {
+      "K": 2560,
+      "N": 106299,
+      "baseline_us": 1941.141,
+      "candidate_us": 1707.2894999999999,
+      "time_change_pct": -12.047115588203027,
+      "protocol": "ABBA, >=10 s per point"
+    },
+    {
+      "K": 6144,
+      "N": 2560,
+      "baseline_us": 109.276,
+      "candidate_us": 101.24449999999999,
+      "time_change_pct": -7.349738277389372,
+      "protocol": "ABBA, >=10 s per point"
+    }
+  ],
+  "parity": {
+    "primitives": {
+      "cases_per_mode": 262144,
+      "values_per_mode": 524288,
+      "modes": 3,
+      "different": 0
+    },
+    "generic_helpers": {
+      "cases": 180,
+      "values": 2210880,
+      "different": 0
+    },
+    "gu_row_reuse": {
+      "cases": 180,
+      "values": 2210880,
+      "different": 0
+    },
+    "q6_single": {
+      "cases": 168,
+      "values": 387828,
+      "different": 0
+    }
+  },
+  "new_production_kernels": [],
+  "setup": {
+    "revision": "2026-10-12-mtp-kernels",
+    "env": {
+      "STRATA_METAL_IQ4_EXPAND": "0",
+      "STRATA_METAL_HC_BATCH": "1",
+      "STRATA_METAL_Q6_MULTI": "1",
+      "STRATA_METAL_K_MULTI": "1",
+      "STRATA_METAL_IQ4_MULTI": "2",
+      "STRATA_METAL_EXPERT_IQ4_DIRECT": "1",
+      "STRATA_METAL_GDN_SNAPSHOT": "0"
+    },
+    "mtp_max_t": 4,
+    "spec_min_p": 0.5,
+    "tests": 68,
+    "passed": true,
+    "legacy_migration": "once, historical cap 1 with spec > 1; preserve existing overrides and subsequent edits",
+    "no_start": "prepare selected draft subset before writing run script"
+  },
+  "installed_numerical_gate": {
+    "reference": "bench/results/2026-10-11-metal-mtp-kernel-optimization/quality/legacy",
+    "candidate": "bench/results/2026-10-11-metal-mtp-kernel-optimization/quality/optimized",
+    "trace_files": [
+      132,
+      132
+    ],
+    "same_requests": true,
+    "same_output_ids": true,
+    "same_committed_states": true,
+    "same_model_settings": true,
+    "same_draft_counts": true,
+    "rows": 474,
+    "values": 117703680,
+    "different": 0,
+    "bitwise_pass": true
+  },
+  "limits": "Full-model speed/logits/state audit currently IQ3_S only; no new 100K-input MTP or vision audit."
+}

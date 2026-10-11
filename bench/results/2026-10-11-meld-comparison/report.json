@@ -1,0 +1,94 @@
+{
+  "groups": [
+    {
+      "approx_prompt_tokens": 1000,
+      "strata": {
+        "runs": 3,
+        "prompt_tokens": [
+          1139,
+          1139,
+          1139
+        ],
+        "gen_tokens": [
+          512,
+          512,
+          512
+        ],
+        "decode_tps": 18.453337130053175,
+        "prefill_tps": 203.2,
+        "ttft_s": 5.754302458999973,
+        "total_s": 33.445887374999984
+      },
+      "meld_mtp": {
+        "runs": 3,
+        "prompt_tokens": [
+          1139,
+          1139,
+          1139
+        ],
+        "gen_tokens": [
+          512,
+          512,
+          512
+        ],
+        "decode_tps": 24.16548852887434,
+        "prefill_tps": 182.796520350276,
+        "ttft_s": 6.264150374999986,
+        "total_s": 27.62430458299997
+      },
+      "meld_decode_gain_percent": 30.95457129820891,
+      "meld_prefill_gain_percent": -10.041082504785425
+    },
+    {
+      "approx_prompt_tokens": 4000,
+      "strata": {
+        "runs": 3,
+        "prompt_tokens": [
+          4289,
+          4289,
+          4289
+        ],
+        "gen_tokens": [
+          512,
+          512,
+          512
+        ],
+        "decode_tps": 18.19168776306885,
+        "prefill_tps": 220.6,
+        "ttft_s": 19.53822716700006,
+        "total_s": 47.80414912499998
+      },
+      "meld_mtp": {
+        "runs": 3,
+        "prompt_tokens": [
+          4289,
+          4289,
+          4289
+        ],
+        "gen_tokens": [
+          512,
+          512,
+          512
+        ],
+        "decode_tps": 24.000755623820805,
+        "prefill_tps": 190.38778293715305,
+        "ttft_s": 22.592608541000004,
+        "total_s": 43.88395800000001
+      },
+      "meld_decode_gain_percent": 31.9325393905727,
+      "meld_prefill_gain_percent": -13.695474643176308
+    }
+  ],
+  "peak_combined_process_rss_gib": {
+    "strata": 21.234588623046875,
+    "meld_mtp": 61.4464111328125
+  },
+  "all_prompts_uncached": true,
+  "all_thinking_disabled": true,
+  "engines_stopped_after_test": true,
+  "startup_median_s": {
+    "strata": 134.27261679100002,
+    "meld_mtp": 24.059332790999974
+  },
+  "rss_caveat": "Process RSS is not a comparable total physical-memory/GPU-footprint metric across engines."
+}

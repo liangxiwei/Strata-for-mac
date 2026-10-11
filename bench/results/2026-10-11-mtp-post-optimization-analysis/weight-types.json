@@ -1,0 +1,77 @@
+{
+  "tensor_types": {
+    "Q6_K": 129,
+    "BF16": 484,
+    "F32": 292,
+    "IQ4_XS": 45,
+    "Q4_K": 47,
+    "IQ4_NL": 86,
+    "IQ3_XXS": 34,
+    "Q5_K": 35,
+    "Q2_0": 9,
+    "IQ2_S": 40,
+    "F16": 1,
+    "IQ3_S": 20,
+    "Q8_0": 1
+  },
+  "sample_shapes": [
+    [
+      "output.weight",
+      "Q6_K",
+      [
+        2560,
+        248320
+      ]
+    ],
+    [
+      "blk.0.attn_gate.weight",
+      "Q4_K",
+      [
+        2560,
+        6144
+      ]
+    ],
+    [
+      "blk.0.attn_qkv.weight",
+      "Q6_K",
+      [
+        2560,
+        10240
+      ]
+    ],
+    [
+      "blk.0.ffn_down_exps.weight",
+      "IQ4_NL",
+      [
+        640,
+        2560,
+        512
+      ]
+    ],
+    [
+      "blk.0.ffn_down_shexp.weight",
+      "IQ4_NL",
+      [
+        640,
+        2560
+      ]
+    ],
+    [
+      "blk.0.ffn_gate_exps.weight",
+      "IQ3_XXS",
+      [
+        2560,
+        640,
+        512
+      ]
+    ],
+    [
+      "blk.0.ssm_out.weight",
+      "Q6_K",
+      [
+        6144,
+        2560
+      ]
+    ]
+  ]
+}

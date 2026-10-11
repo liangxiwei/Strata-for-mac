@@ -1,34 +1,130 @@
 {
- "about": "The Metal engine's run settings on an Apple-Silicon Mac: what setup.py writes into strata-<model>.json there. The core switches are the measured ones (README, docs/MAC.md): all experts resident in the Mac's memory and decoded on the GPU as one graph (--mmap-experts --no-prefill-borrow), 1,024-token prompt chunks, FP16 KV, the MTP layer loaded (the server needs it) but no drafts (--mtp-max-t 1 --suffix-draft 0: on the M2 Max the checking cost more than it saved). context_options is setup's context menu; {pack} {gguf} {ple} {profile} {mtp} {context} are filled in by setup.",
- "measured_on": "Apple M2 Max (38-core GPU, 96 GB), macOS 26.5, Xcode 26.1, plugged in, Energy Mode Automatic",
- "evidence": "bench/results/2026-10-04-metal-models/ (IQ2_XS, Q2_0), bench/results/2026-10-04-metal-vision/ (images), bench/results/2026-10-04-metal-128k/ (128K context), bench/results/2026-10-04-metal-256k/ (256K context)",
+ "about": "The Metal engine's defaults on an Apple-Silicon Mac. All experts use the resident GPU path (--mmap-experts --no-prefill-borrow), 1024-token prompt chunks and FP16 KV. MTP is enabled with --spec 4 --mtp-max-t 4 --spec-min-p 0.5 and the CJK draft vocabulary; suffix drafts and GDN snapshots stay off. The exact Q6_K/Q4_K/Q5_K/IQ4 batch and IQ4_NL expert kernels are enabled. Model/menu/context measurements are historical; current MTP speed and numerical gates use IQ3_S on the M2 Max in Low Power Mode. Other models use the same format-based kernels, but their whole-model MTP speed must be measured separately. Placeholders are filled by setup.",
+ "measured_on": "Historical model/menu/context measurements: Apple M2 Max (38-core GPU, 96 GB), macOS 26.5, Xcode 26.1, plugged in, Energy Mode Automatic",
+ "mtp_measured_on": "IQ3_S MTP and exact batch kernels: Apple M2 Max (38-core GPU, 96 GiB), macOS 26.5, existing Low Power Mode retained, 2026-10-11/12",
+ "evidence": "bench/results/2026-10-04-metal-models/ (IQ2_XS, Q2_0), bench/results/2026-10-04-metal-vision/ (images), bench/results/2026-10-04-metal-128k/ (128K context), bench/results/2026-10-04-metal-256k/ (256K context), bench/results/2026-10-11-metal-mtp-kernel-optimization/ (IQ3_S MTP, short/10K/cached numerical audit)",
  "model": "IQ2_XS",
  "family": "qwen",
  "context": 32768,
- "contexts_measured": [32768, 131072, 262144],
- "context_options": [131072, 262144],
+ "contexts_measured": [
+  32768,
+  131072,
+  262144
+ ],
+ "context_options": [
+  131072,
+  262144
+ ],
  "context_default": 262144,
- "context_extra_mib": {"131072": 2677, "262144": 6248},
+ "context_extra_mib": {
+  "131072": 2677,
+  "262144": 6248
+ },
  "ram_gb": 96,
  "footprint_gb": 40.3,
  "overhead_gib": 7.3,
  "gpu_share": 0.81,
  "min_ram_gb": 20,
- "args": ["--pack", "{pack}", "--native", "{gguf}", "--ple-gguf", "{ple}", "--max-context", "{context}",
-          "--spec", "4", "--spec-min-p", "0.5", "--prefill", "1024", "--expert-profile", "{profile}",
-          "--expert-cache", "auto", "--mtp", "{mtp}", "--mtp-max-t", "1", "--suffix-draft", "0",
-          "--mmap-experts", "--no-prefill-borrow"],
- "env": {"STRATA_METAL_IQ4_EXPAND": "0"},
- "cmake": ["-DSTRATA_ENABLE_METAL=ON", "-DSTRATA_METAL_ENGINE=ON", "-DSTRATA_NATIVE_EXPERTS=ON",
-           "-DSTRATA_BUILD_TESTS=OFF"],
- "vision": {"default": true, "max_tokens": 1024, "reserve_mib": 700, "footprint_gib": 1.3,
-            "cmake": ["-DGGML_METAL=ON"]},
+ "args": [
+  "--pack",
+  "{pack}",
+  "--native",
+  "{gguf}",
+  "--ple-gguf",
+  "{ple}",
+  "--max-context",
+  "{context}",
+  "--spec",
+  "4",
+  "--spec-min-p",
+  "0.5",
+  "--prefill",
+  "1024",
+  "--expert-profile",
+  "{profile}",
+  "--expert-cache",
+  "auto",
+  "--mtp",
+  "{mtp}",
+  "--mtp-max-t",
+  "4",
+  "--suffix-draft",
+  "0",
+  "--mmap-experts",
+  "--no-prefill-borrow"
+ ],
+ "env": {
+  "STRATA_METAL_IQ4_EXPAND": "0",
+  "STRATA_METAL_HC_BATCH": "1",
+  "STRATA_METAL_Q6_MULTI": "1",
+  "STRATA_METAL_K_MULTI": "1",
+  "STRATA_METAL_IQ4_MULTI": "2",
+  "STRATA_METAL_EXPERT_IQ4_DIRECT": "1",
+  "STRATA_METAL_GDN_SNAPSHOT": "0"
+ },
+ "cmake": [
+  "-DSTRATA_ENABLE_METAL=ON",
+  "-DSTRATA_METAL_ENGINE=ON",
+  "-DSTRATA_NATIVE_EXPERTS=ON",
+  "-DSTRATA_BUILD_TESTS=OFF"
+ ],
+ "vision": {
+  "default": true,
+  "max_tokens": 1024,
+  "reserve_mib": 700,
+  "footprint_gib": 1.3,
+  "cmake": [
+   "-DGGML_METAL=ON"
+  ]
+ },
  "menu": [
-  {"family": "qwen", "model": "IQ2_XS", "note": "the original model, 2-bit, writes a little faster", "measured": {"write_tok_s": 29, "read_tok_s": 277}},
-  {"family": "qwen", "model": "Q2_0", "note": "the original model, 2-bit, a little smaller", "measured": {"write_tok_s": 27, "read_tok_s": 276}},
-  {"family": "coder", "model": "IQ1_M", "note": "the Coder: half the experts, for code", "measured": null},
-  {"family": "swift", "model": "IQ2_XS", "note": "a fine-tune that thinks shorter", "measured": null},
-  {"family": "qwen", "model": "IQ3_XXS", "note": "the original model, 3-bit", "measured": null},
-  {"family": "qwen", "model": "IQ3_S", "note": "the original model, 3.5-bit, the best quality", "measured": {"context_tokens": 262144, "prefill_tok_s": 168, "decode_tok_s": 21, "peak_footprint": "61.6G"}}
- ]
+  {
+   "family": "qwen",
+   "model": "IQ2_XS",
+   "note": "the original model, 2-bit, writes a little faster",
+   "measured": {
+    "write_tok_s": 29,
+    "read_tok_s": 277
+   }
+  },
+  {
+   "family": "qwen",
+   "model": "Q2_0",
+   "note": "the original model, 2-bit, a little smaller",
+   "measured": {
+    "write_tok_s": 27,
+    "read_tok_s": 276
+   }
+  },
+  {
+   "family": "coder",
+   "model": "IQ1_M",
+   "note": "the Coder: half the experts, for code",
+   "measured": null
+  },
+  {
+   "family": "swift",
+   "model": "IQ2_XS",
+   "note": "a fine-tune that thinks shorter",
+   "measured": null
+  },
+  {
+   "family": "qwen",
+   "model": "IQ3_XXS",
+   "note": "the original model, 3-bit",
+   "measured": null
+  },
+  {
+   "family": "qwen",
+   "model": "IQ3_S",
+   "note": "the original model, 3.5-bit, the best quality",
+   "measured": {
+    "context_tokens": 262144,
+    "prefill_tok_s": 168,
+    "decode_tok_s": 21,
+    "peak_footprint": "61.6G"
+   }
+  }
+ ],
+ "revision": "2026-10-12-mtp-kernels"
 }

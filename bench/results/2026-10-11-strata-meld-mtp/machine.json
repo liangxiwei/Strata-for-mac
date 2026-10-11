@@ -1,0 +1,20 @@
+{
+  "hardware": "Apple M2 Max\n103079215104\n",
+  "power": "Battery Power:\n Sleep On Power Button 1\n powermode            1\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         5\n womp                 1\n networkoversleep     0\n sleep                1\n lessbright           1\n tcpkeepalive         1\n disksleep            0\nAC Power:\n Sleep On Power Button 1\n powermode            1\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         5\n womp                 1\n networkoversleep     0\n sleep                0\n tcpkeepalive         1\n disksleep            0\n",
+  "swap_before": "vm.swapusage: total = 15360.00M  used = 14272.75M  free = 1087.25M  (encrypted)\n",
+  "daily_engine_sha256": "12365f5a7f194a02b3a306e0e554060a33cc444dbd6e894edcd2dec78579475e",
+  "experimental_engine_sha256": "7ad598b9742d66ca33d5d32d5173012a089dd7386d63811a2bc1b448906d3014",
+  "mtp_source_sha256": "5ff54097406a905cf3a724c709124ceb0e3e10235ee862298969e91c96fa96e6",
+  "expert_bytes": 2673868800,
+  "max_context": 131072,
+  "spec": 4,
+  "mtp_max_t": 4,
+  "spec_min_p": 0.5,
+  "suffix_draft": 0,
+  "prefill_chunk": 2048,
+  "strata_forward_algorithm_retained": true,
+  "references_measured_earlier": true,
+  "single_server_for_three_rounds": true,
+  "draft_head_vocabulary": "original Strata full vocabulary; no draft_vocab.bin in original runtime",
+  "legacy_q2_expert_support_retained": true
+}

@@ -1,0 +1,347 @@
+{
+  "measured_on": "Apple M2 Max, 38-core GPU, 96 GB; macOS 26.5 (25F71), Xcode 26.1; AC power, Low Power Mode (powermode 1)",
+  "capacity": 262144,
+  "prompt_tokens": 30000,
+  "corpus_rev": "dc047b5",
+  "binary_sha256": "778df88d1f727922b06c3ffd77546305d4c07055b01079c67349d18d07329dba",
+  "method": "One engine per chunk size. Two fixed 30K prompts; first content differs to prevent reuse. All comparisons pair identical token IDs. No kernel/phase profiler or periodic memory sampling in these timing runs. vmmap only after both requests.",
+  "selected_chunk": 2048,
+  "runs": [
+    {
+      "chunk": 1024,
+      "startup_s": 139.14448300004005,
+      "prompt_sha256": [
+        "ef139db96f6b3065c5b1f5f4fcd50859df161728debdd544cdbca45456d2f942",
+        "3a9b565d1a562cbc2c202fb7b8d6523209ecc4e955fdfefca80e4267a6df6f4d"
+      ],
+      "prompt_ms": [
+        172058.2,
+        152004.7
+      ],
+      "prefill_tok_s": [
+        174.3596062262653,
+        197.36231840199676
+      ],
+      "first_token_s": [
+        172.11657770804595,
+        152.05869129102211
+      ],
+      "output_ids": [
+        [
+          96618,
+          96076,
+          116149,
+          118501,
+          3709,
+          104003,
+          98019,
+          95814,
+          16,
+          15,
+          96212,
+          16,
+          23,
+          95971,
+          3709,
+          119920,
+          96585,
+          95814,
+          2860,
+          12,
+          22,
+          18,
+          16,
+          24,
+          1710,
+          248046
+        ],
+        [
+          96618,
+          96076,
+          116149,
+          118501,
+          3709,
+          104003,
+          98019,
+          95814,
+          16,
+          15,
+          96212,
+          16,
+          23,
+          95971,
+          3709,
+          119920,
+          96585,
+          95814,
+          2860,
+          12,
+          22,
+          18,
+          16,
+          24,
+          1710,
+          248046
+        ]
+      ],
+      "fields_found": [
+        [
+          "银杏",
+          "10月18日",
+          "AX-7319"
+        ],
+        [
+          "银杏",
+          "10月18日",
+          "AX-7319"
+        ]
+      ],
+      "reused": [
+        0,
+        0
+      ],
+      "peak_footprint": [
+        "Physical footprint:         61.4G",
+        "Physical footprint (peak):  61.4G"
+      ],
+      "vram_free_mib": 18073,
+      "expert_slots": 24576,
+      "swap_before": "vm.swapusage: total = 5120.00M  used = 4589.25M  free = 530.75M  (encrypted)",
+      "swap_after": "vm.swapusage: total = 5120.00M  used = 4575.81M  free = 544.19M  (encrypted)",
+      "memory_sampling_interval_s": 0,
+      "throughput_gain_percent": [
+        0.0,
+        0.0
+      ],
+      "time_saved_s": [
+        0.0,
+        0.0
+      ],
+      "additional_allocated_mib": 0
+    },
+    {
+      "chunk": 2048,
+      "startup_s": 143.8699595829239,
+      "prompt_sha256": [
+        "ef139db96f6b3065c5b1f5f4fcd50859df161728debdd544cdbca45456d2f942",
+        "3a9b565d1a562cbc2c202fb7b8d6523209ecc4e955fdfefca80e4267a6df6f4d"
+      ],
+      "prompt_ms": [
+        149633.4,
+        133098.3
+      ],
+      "prefill_tok_s": [
+        200.48999755402204,
+        225.39731912428635
+      ],
+      "first_token_s": [
+        149.6911921669962,
+        133.15134766709525
+      ],
+      "output_ids": [
+        [
+          96618,
+          96076,
+          116149,
+          118501,
+          3709,
+          104003,
+          98019,
+          95814,
+          16,
+          15,
+          96212,
+          16,
+          23,
+          95971,
+          3709,
+          119920,
+          96585,
+          95814,
+          2860,
+          12,
+          22,
+          18,
+          16,
+          24,
+          1710,
+          248046
+        ],
+        [
+          96618,
+          96076,
+          116149,
+          118501,
+          3709,
+          104003,
+          98019,
+          95814,
+          16,
+          15,
+          96212,
+          16,
+          23,
+          95971,
+          3709,
+          119920,
+          96585,
+          95814,
+          2860,
+          12,
+          22,
+          18,
+          16,
+          24,
+          1710,
+          248046
+        ]
+      ],
+      "fields_found": [
+        [
+          "银杏",
+          "10月18日",
+          "AX-7319"
+        ],
+        [
+          "银杏",
+          "10月18日",
+          "AX-7319"
+        ]
+      ],
+      "reused": [
+        0,
+        0
+      ],
+      "peak_footprint": [
+        "Physical footprint:         61.8G",
+        "Physical footprint (peak):  61.8G"
+      ],
+      "vram_free_mib": 17608,
+      "expert_slots": 24576,
+      "swap_before": "vm.swapusage: total = 5120.00M  used = 4575.81M  free = 544.19M  (encrypted)",
+      "swap_after": "vm.swapusage: total = 5120.00M  used = 4575.81M  free = 544.19M  (encrypted)",
+      "memory_sampling_interval_s": 0,
+      "throughput_gain_percent": [
+        14.986493657164779,
+        14.204839580971385
+      ],
+      "time_saved_s": [
+        22.42480000000002,
+        18.906400000000023
+      ],
+      "additional_allocated_mib": 465
+    },
+    {
+      "chunk": 4096,
+      "startup_s": 146.1180760000134,
+      "prompt_sha256": [
+        "ef139db96f6b3065c5b1f5f4fcd50859df161728debdd544cdbca45456d2f942",
+        "3a9b565d1a562cbc2c202fb7b8d6523209ecc4e955fdfefca80e4267a6df6f4d"
+      ],
+      "prompt_ms": [
+        159962.6,
+        122469.7
+      ],
+      "prefill_tok_s": [
+        187.5438383722195,
+        244.9585489308784
+      ],
+      "first_token_s": [
+        160.0204509999603,
+        122.52428912499454
+      ],
+      "output_ids": [
+        [
+          96618,
+          96076,
+          116149,
+          118501,
+          3709,
+          104003,
+          98019,
+          95814,
+          16,
+          15,
+          96212,
+          16,
+          23,
+          95971,
+          3709,
+          119920,
+          96585,
+          95814,
+          2860,
+          12,
+          22,
+          18,
+          16,
+          24,
+          1710,
+          248046
+        ],
+        [
+          96618,
+          96076,
+          116149,
+          118501,
+          3709,
+          104003,
+          98019,
+          95814,
+          16,
+          15,
+          96212,
+          16,
+          23,
+          95971,
+          3709,
+          119920,
+          96585,
+          95814,
+          2860,
+          12,
+          22,
+          18,
+          16,
+          24,
+          1710,
+          248046
+        ]
+      ],
+      "fields_found": [
+        [
+          "银杏",
+          "10月18日",
+          "AX-7319"
+        ],
+        [
+          "银杏",
+          "10月18日",
+          "AX-7319"
+        ]
+      ],
+      "reused": [
+        0,
+        0
+      ],
+      "peak_footprint": [
+        "Physical footprint:         62.4G",
+        "Physical footprint (peak):  62.4G"
+      ],
+      "vram_free_mib": 16680,
+      "expert_slots": 24576,
+      "swap_before": "vm.swapusage: total = 5120.00M  used = 4567.81M  free = 552.19M  (encrypted)",
+      "swap_after": "vm.swapusage: total = 7168.00M  used = 6057.31M  free = 1110.69M  (encrypted)",
+      "memory_sampling_interval_s": 0,
+      "throughput_gain_percent": [
+        7.5615175047167416,
+        24.116169142244992
+      ],
+      "time_saved_s": [
+        12.095600000000006,
+        29.535000000000014
+      ],
+      "additional_allocated_mib": 1393
+    }
+  ]
+}

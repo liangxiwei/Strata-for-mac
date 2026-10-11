@@ -1,0 +1,9 @@
+{
+  "remaining_test_processes": [],
+  "ports_open": {
+    "8081": false,
+    "8082": false
+  },
+  "engine_sha256_unchanged": "1f3d63b3427edbb6361d4e1fca2a344cad2ef30a6a5ef5f819051627953c2763",
+  "memory": "The system has 103079215104 (6291456 pages with a page size of 16384).\nSystem-wide memory free percentage: 90%\n"
+}

@@ -1,0 +1,355 @@
+diff --git a/include/strata/prefill/gemm.hpp b/include/strata/prefill/gemm.hpp
+index c9ddc6f..cccd487 100644
+--- a/include/strata/prefill/gemm.hpp
++++ b/include/strata/prefill/gemm.hpp
+@@ -37,6 +37,13 @@ public:
+     void native(const uint16_t* X, int ggml_type, const void* W_blocks, float* Y, int64_t T, int64_t N, int64_t K,
+                 int64_t ldy = 0, float beta = 0.0f);
+ 
++#if defined(STRATA_METAL_BACKEND)
++    /// Immutable model projections only: optionally retain the exact dequantized FP16 image.
++    /// The source allocation and its contents must remain unchanged for this Gemm's lifetime.
++    void native_static(const uint16_t* X, int ggml_type, const void* W_blocks, float* Y, int64_t T,
++                       int64_t N, int64_t K, int64_t ldy = 0, float beta = 0.0f);
++#endif
++
+     /// Caller-owned buffers only: the scratch and workspace moved (the prompt path laid its buffers out again).
+     void rebind(uint16_t* scratch, int64_t scratch_elems, void* workspace, size_t ws_bytes);
+ 
+diff --git a/src/kernels/metal/iq_kernels.metal b/src/kernels/metal/iq_kernels.metal
+index a631b92..8a1bdea 100644
+--- a/src/kernels/metal/iq_kernels.metal
++++ b/src/kernels/metal/iq_kernels.metal
+@@ -1854,6 +1854,42 @@ IQK_GEMM2_PAIR(gu_21, 21, false) IQK_GEMM2_PAIR(gu_22, 22, false) IQK_GEMM2_PAIR
+ IQK_GEMM2_PAIR(gu_29, 29, false) IQK_GEMM2_PAIR(gu_42, 42, false)
+ IQK_GEMM2_PAIR(down_20, 20, true) IQK_GEMM2_PAIR(down_23, 23, true) IQK_GEMM2_PAIR(down_42, 42, true)
+ 
++// A 32-row descriptor often has fewer valid rows in its final tile. Keep the same
++// eight SIMD groups, decoded weight slices and ascending MMA sequence; choose an
++// 8/16/24/32-row output tile without another dispatch or a larger shared allocation.
++#define IQK_GEMM2_TAIL(NAME, TY, DOWN) \
++kernel void NAME(constant const ushort* x [[buffer(0)]], constant const uint8_t* arena [[buffer(1)]], \
++                 constant const int4* tiles [[buffer(2)]], device float* y [[buffer(3)]], \
++                 constant const long& H [[buffer(4)]], constant const long& FF [[buffer(5)]], \
++                 constant const ulong& row_bytes [[buffer(6)]], constant const ulong& weight_offset [[buffer(7)]], \
++                 uint2 tile [[threadgroup_position_in_grid]], uint tid [[thread_index_in_threadgroup]], \
++                 uint sg [[simdgroup_index_in_threadgroup]], uint lane [[thread_index_in_simdgroup]]) { \
++    threadgroup half sx[32 * 32], sw[32 * 64]; threadgroup float scratch[8 * 64]; \
++    if (tiles[tile.y].z <= 8) \
++        iqk_gemm2<TY, DOWN, 8, 64, 1, 8>(x, arena, tiles, y, H, FF, row_bytes, weight_offset, \
++                                       tile, tid, sg, lane, sx, sw, scratch); \
++    else if (tiles[tile.y].z <= 16) \
++        iqk_gemm2<TY, DOWN, 16, 64, 2, 4>(x, arena, tiles, y, H, FF, row_bytes, weight_offset, \
++                                        tile, tid, sg, lane, sx, sw, scratch); \
++    else if (tiles[tile.y].z <= 24) \
++        iqk_gemm2<TY, DOWN, 24, 64, 1, 8>(x, arena, tiles, y, H, FF, row_bytes, weight_offset, \
++                                        tile, tid, sg, lane, sx, sw, scratch); \
++    else \
++        iqk_gemm2<TY, DOWN, 32, 64, 2, 4>(x, arena, tiles, y, H, FF, row_bytes, weight_offset, \
++                                        tile, tid, sg, lane, sx, sw, scratch); \
++}
++IQK_GEMM2_TAIL(native_gemm2_gu_16_r32_tail, 16, false)
++IQK_GEMM2_TAIL(native_gemm2_gu_17_r32_tail, 17, false)
++IQK_GEMM2_TAIL(native_gemm2_gu_18_r32_tail, 18, false)
++IQK_GEMM2_TAIL(native_gemm2_gu_21_r32_tail, 21, false)
++IQK_GEMM2_TAIL(native_gemm2_gu_22_r32_tail, 22, false)
++IQK_GEMM2_TAIL(native_gemm2_gu_23_r32_tail, 23, false)
++IQK_GEMM2_TAIL(native_gemm2_gu_29_r32_tail, 29, false)
++IQK_GEMM2_TAIL(native_gemm2_gu_42_r32_tail, 42, false)
++IQK_GEMM2_TAIL(native_gemm2_down_20_r32_tail, 20, true)
++IQK_GEMM2_TAIL(native_gemm2_down_23_r32_tail, 23, true)
++IQK_GEMM2_TAIL(native_gemm2_down_42_r32_tail, 42, true)
++
+ // ---------------------------------------------------------------- the element-wise steps
+ kernel void swiglu_entries_kernel(constant const float* gate [[buffer(0)]],
+                                   constant const float* up [[buffer(1)]],
+diff --git a/src/kernels/metal/iq_kernels.mm b/src/kernels/metal/iq_kernels.mm
+index 4e06f24..a4ea274 100644
+--- a/src/kernels/metal/iq_kernels.mm
++++ b/src/kernels/metal/iq_kernels.mm
+@@ -339,6 +339,11 @@ int native_expert_gemm_rows(double rows_per_expert) {
+         return v == nullptr || std::atoi(v) != 0;
+     }();
+     if (!on) return 0;
++    static const int forced = [] {
++        const char* e = std::getenv("STRATA_METAL_PREFILL_MOE_ROWS");
++        return e ? std::atoi(e) : 0;
++    }();
++    if (forced == 16 || forced == 32) return forced;
+     return rows_per_expert >= 40.0 ? 32 : 16;
+ }
+ 
+@@ -349,8 +354,12 @@ void native_expert_gemm(const NativeExpertLayout& L, const uint16_t* x, const ui
+     char name[64];
+     const int64_t cols = down ? L.n_embd : 2 * L.n_ff;
+     if (tile_rows == 16 || tile_rows == 32) {   // descriptors of up to tile_rows rows (prefill.cpp builds them)
+-        std::snprintf(name, sizeof name, "native_gemm2_%s_%d_r%d", down ? "down" : "gu", down ? L.d_type : L.gu_type,
+-                      tile_rows);
++        static const bool tail = [] {
++            const char* e = std::getenv("STRATA_METAL_PREFILL_MOE_TAIL");
++            return e != nullptr && std::atoi(e) != 0;
++        }();
++        std::snprintf(name, sizeof name, "native_gemm2_%s_%d_r%d%s", down ? "down" : "gu", down ? L.d_type : L.gu_type,
++                      tile_rows, tile_rows == 32 && tail ? "_tail" : "");
+         metal::Launch q(name, (unsigned) ((cols + 63) / 64), (unsigned) n_tiles, 1, tile_rows == 32 ? 256 : 128, 1, 1, 0,
+                         stream);
+         q.buf(x).buf(arena).buf(tiles).buf(y).scalar(L.n_embd).scalar(L.n_ff)
+diff --git a/src/prefill/gemm.mm b/src/prefill/gemm.mm
+index a268ad6..d7e94c0 100644
+--- a/src/prefill/gemm.mm
++++ b/src/prefill/gemm.mm
+@@ -18,6 +18,8 @@
+ #include <cstring>
+ #include <map>
+ #include <mutex>
++#include <algorithm>
++#include <limits>
+ 
+ namespace strata::prefill {
+ namespace {
+@@ -28,7 +30,15 @@ struct WidenScratch {
+     float* x = nullptr;     // X's f32 image (T*K floats, grown on demand)
+     float* w = nullptr;     // W's f32 image (N*K floats)
+     size_t x_elems = 0, w_elems = 0;
+-    ~WidenScratch() { if (x) cudaFree(x); if (w) cudaFree(w); }
++    using DenseKey = std::tuple<uintptr_t, int, int64_t, int64_t>;
++    std::map<DenseKey, uint16_t*> dense;
++    size_t dense_bytes = 0, dense_limit = 0;
++    bool dense_initialized = false;
++    ~WidenScratch() {
++        if (x) cudaFree(x);
++        if (w) cudaFree(w);
++        for (const auto& entry : dense) cudaFree(entry.second);
++    }
+ };
+ 
+ // MPSMatrixMultiplication objects bake M, N, K, alpha, beta and the input dtype at init; they also
+@@ -275,4 +285,55 @@ void Gemm::native(const uint16_t* X, int ggml_type, const void* W_blocks, float*
+     f16(X, scratch_, Y, T, N, K, ldy, beta);
+ }
+ 
++void Gemm::native_static(const uint16_t* X, int ggml_type, const void* W_blocks, float* Y, int64_t T,
++                         int64_t N, int64_t K, int64_t ldy, float beta) {
++    auto* s = static_cast<WidenScratch*>(hipblaslt_state_);
++    if (s == nullptr || T < 64 || N <= 0 || K <= 0) {
++        native(X, ggml_type, W_blocks, Y, T, N, K, ldy, beta);
++        return;
++    }
++    if (!s->dense_initialized) {
++        s->dense_initialized = true;
++        const char* e = std::getenv("STRATA_METAL_PREFILL_DENSE_CACHE_MB");
++        size_t free_bytes = 0, total_bytes = 0;
++        // Opt-in, capped by the device working set and headroom after model/context allocation.
++        if (e && e[0] != '-' && cudaMemGetInfo(&free_bytes, &total_bytes) == cudaSuccess) {
++            const auto mb = std::min<unsigned long long>(std::strtoull(e, nullptr, 10), 4096);
++            s->dense_limit = std::min({size_t(mb) * (size_t(1) << 20), total_bytes / 16, free_bytes / 4});
++            std::fprintf(stderr, "Metal prefill dense cache: limit %zu MiB, free %zu MiB\n",
++                         s->dense_limit >> 20, free_bytes >> 20);
++        }
++    }
++    if (s->dense_limit == 0) {
++        native(X, ggml_type, W_blocks, Y, T, N, K, ldy, beta);
++        return;
++    }
++    const WidenScratch::DenseKey key{(uintptr_t)W_blocks, ggml_type, N, K};
++    const auto found = s->dense.find(key);
++    if (found != s->dense.end()) {
++        f16(X, found->second, Y, T, N, K, ldy, beta);
++        return;
++    }
++    if (s->dense_limit > s->dense_bytes && uint64_t(N) <= std::numeric_limits<size_t>::max() / 2 / uint64_t(K)) {
++        const size_t bytes = size_t(N) * size_t(K) * 2;
++        size_t free_bytes = 0, total_bytes = 0;
++        uint16_t* image = nullptr;
++        if (bytes <= s->dense_limit - s->dense_bytes &&
++            cudaMemGetInfo(&free_bytes, &total_bytes) == cudaSuccess && bytes <= free_bytes / 4) {
++            if (cudaMalloc(&image, bytes) != cudaSuccess) {
++                (void)cudaGetLastError();
++                native(X, ggml_type, W_blocks, Y, T, N, K, ldy, beta);
++                return;
++            }
++            // Same dequantizer, half rounding and serial stream as native(); no alternate precision.
++            strata::kernels::dequant_f16(ggml_type, W_blocks, 0, N, K, image, stream_);
++            s->dense.emplace(key, image);
++            s->dense_bytes += bytes;
++            f16(X, image, Y, T, N, K, ldy, beta);
++            return;
++        }
++    }
++    native(X, ggml_type, W_blocks, Y, T, N, K, ldy, beta);
++}
++
+ }  // namespace strata::prefill
+diff --git a/src/prefill/prefill.cpp b/src/prefill/prefill.cpp
+index f47ba07..72811fd 100644
+--- a/src/prefill/prefill.cpp
++++ b/src/prefill/prefill.cpp
+@@ -954,7 +954,11 @@ const core::WeightRef* need(const core::LayerView& v, const char* suffix, std::s
+ bool native_proj(Gemm& gm, const core::WeightRef* w, const uint16_t* X, float* Y, int64_t T, const std::string& name,
+                  std::string& err, int64_t ldy = 0) {
+     if (!w->native_data) { err = "prefill: " + name + " has no native GGUF blocks (run with --native)"; return false; }
++#if defined(STRATA_METAL_BACKEND)
++    gm.native_static(X, w->native_type, w->native_data, Y, T, w->ne1, w->ne0, ldy);
++#else
+     gm.native(X, w->native_type, w->native_data, Y, T, w->ne1, w->ne0, ldy);
++#endif
+     return true;
+ }
+ bool bf16_proj(Gemm& gm, const core::WeightRef* w, const uint16_t* X, float* Y, int64_t T, const std::string& name,
+diff --git a/tests/core/metal_gemm_test.cpp b/tests/core/metal_gemm_test.cpp
+index 349c36e..5837619 100644
+--- a/tests/core/metal_gemm_test.cpp
++++ b/tests/core/metal_gemm_test.cpp
+@@ -11,11 +11,12 @@
+ #include <random>
+ #include <vector>
+ #include <cstring>
++#include <cstdlib>
+ 
+ // Same native blocks as the independent IQ dequant parity fixtures: random legal codes with small,
+ // finite scales. Compare tiled products with the validated full FP16 dequantizer + ordinary GEMM.
+ int native_gemm_case(int gu_type, int down_type, int H, int FF, strata::prefill::Gemm& gemm,
+-                     cudaStream_t stream, std::mt19937& rng) {
++                     cudaStream_t stream, std::mt19937& rng, int short_rows = 3) {
+     namespace k = strata::kernels;
+     const auto L = k::native_expert_layout(gu_type, down_type, H, FF);
+     const size_t offset = L.bytes + 128;
+@@ -38,19 +39,24 @@ int native_gemm_case(int gu_type, int down_type, int H, int FF, strata::prefill:
+         matrix(at, gu_type, 2 * FF, H);
+         matrix(at + L.down_off, down_type, H, FF);
+     }
+-    constexpr int rows = 37;
+-    const int32_t desc[] = {0, 1, 3, 0, (int32_t)offset, 4, 16, 0,
+-                           (int32_t)offset, 20, 16, 0, 0, 36, 1, 0};
++    const int rows = short_rows + 34;
++    std::vector<int32_t> desc;
++    for (int r = 0; r < short_rows; r += 16)
++        desc.insert(desc.end(), {0, 1 + r, std::min(16, short_rows - r), 0});
++    desc.insert(desc.end(), {(int32_t)offset, short_rows + 1, 16, 0,
++                            (int32_t)offset, short_rows + 17, 16, 0, 0, rows - 1, 1, 0});
++    const int32_t desc32[] = {0, 1, short_rows, 0, (int32_t)offset, short_rows + 1, 32, 0,
++                             0, rows - 1, 1, 0};
+     uint8_t* arena = nullptr;
+     uint16_t *x = nullptr, *w = nullptr;
+     int32_t* tiles = nullptr;
+     float *actual = nullptr, *expected = nullptr;
+-    cudaMalloc(&arena, blobs.size()); cudaMalloc(&tiles, sizeof desc);
++    cudaMalloc(&arena, blobs.size()); cudaMalloc(&tiles, desc.size() * 4);
+     cudaMalloc(&x, rows * H * 2); cudaMalloc(&w, 2 * FF * H * 2);
+     const size_t out_cap = (size_t) rows * std::max(H, 2 * FF) + 16;
+     cudaMalloc(&actual, out_cap * 4); cudaMalloc(&expected, out_cap * 4);
+     cudaMemcpyAsync(arena, blobs.data(), blobs.size(), cudaMemcpyHostToDevice, stream);
+-    cudaMemcpyAsync(tiles, desc, sizeof desc, cudaMemcpyHostToDevice, stream);
++    cudaMemcpyAsync(tiles, desc.data(), desc.size() * 4, cudaMemcpyHostToDevice, stream);
+     int failures = 0;
+     for (bool down : {false, true}) {
+         const int inner = down ? FF : H, cols = down ? H : 2 * FF;
+@@ -64,24 +70,84 @@ int native_gemm_case(int gu_type, int down_type, int H, int FF, strata::prefill:
+             auto* blob = arena + expert * offset;
+             if (down) k::iq_dequant_f16(down_type, blob + L.down_off, (int64_t) H * FF, w, stream);
+             else k::iq_dequant_gu_f16(gu_type, blob, blob + L.up_off, FF, H, w, stream);
+-            const int first = expert ? 4 : 1, count = expert ? 32 : 3;
++            const int first = expert ? short_rows + 1 : 1, count = expert ? 32 : short_rows;
+             gemm.f16(x + first * inner, w, expected + first * cols, count, cols, inner);
+-            if (!expert) gemm.f16(x + 36 * inner, w, expected + 36 * cols, 1, cols, inner);
++            if (!expert) gemm.f16(x + (rows - 1) * inner, w, expected + (rows - 1) * cols, 1, cols, inner);
++        }
++        for (int tile_rows : {0, 16, 32}) {
++            std::fill(got.begin(), got.end(), -987.f);
++            cudaMemcpyAsync(actual, got.data(), got.size() * 4, cudaMemcpyHostToDevice, stream);
++            cudaMemcpyAsync(tiles, tile_rows == 32 ? desc32 : desc.data(),
++                            tile_rows == 32 ? sizeof desc32 : desc.size() * 4, cudaMemcpyHostToDevice, stream);
++            k::native_expert_gemm(L, x, arena, tiles, actual, tile_rows == 32 ? 3 : desc.size() / 4,
++                                  down, stream, tile_rows);
++            cudaStreamSynchronize(stream);
++            cudaMemcpy(got.data(), actual, got.size() * 4, cudaMemcpyDeviceToHost);
++            cudaMemcpy(want.data(), expected, want.size() * 4, cudaMemcpyDeviceToHost);
++            size_t diff = 0;
++            for (size_t i = 0; i < got.size(); ++i) diff += std::memcmp(&got[i], &want[i], 4) != 0;
++            std::printf("Native tiled %d/%d %dx%d %s, tile rows %d, offsets/tails/guards: %zu differences\n",
++                        gu_type, down_type, H, FF, down ? "down" : "gate/up", tile_rows, diff);
++            failures += diff != 0;
+         }
+-        k::native_expert_gemm(L, x, arena, tiles, actual, 4, down, stream);
+-        cudaStreamSynchronize(stream);
+-        cudaMemcpy(got.data(), actual, got.size() * 4, cudaMemcpyDeviceToHost);
+-        cudaMemcpy(want.data(), expected, want.size() * 4, cudaMemcpyDeviceToHost);
+-        size_t diff = 0;
+-        for (size_t i = 0; i < got.size(); ++i) diff += std::memcmp(&got[i], &want[i], 4) != 0;
+-        std::printf("Native tiled %d/%d %dx%d %s, offsets/tails/guards: %zu differences\n",
+-                    gu_type, down_type, H, FF, down ? "down" : "gate/up", diff);
+-        failures += diff != 0;
+     }
+     cudaFree(arena); cudaFree(tiles); cudaFree(x); cudaFree(w); cudaFree(actual); cudaFree(expected);
+     return failures;
+ }
+ 
++// Cached immutable dense weights must match ordinary dequantization on first use, reuse,
++// strided beta accumulation and when the bounded cache cannot admit a larger matrix.
++int cached_dense_case(cudaStream_t stream, std::mt19937& rng) {
++    namespace k = strata::kernels;
++    setenv("STRATA_METAL_PREFILL_DENSE_CACHE_MB", "1", 1);
++    constexpr int K = 512, T = 65;
++    int failures = 0;
++    for (int type : {8, 23}) {
++        uint8_t* blocks = nullptr;
++        uint16_t* x = nullptr;
++        float *expected = nullptr, *actual = nullptr;
++        constexpr int max_n = 2048, max_ld = max_n + 7;
++        std::vector<uint8_t> source(max_n * k::iq_row_bytes(type, K));
++        for (auto& v : source) v = (uint8_t) rng();
++        const auto block_bytes = k::iq_row_bytes(type, type == 8 ? 32 : 256);
++        for (size_t i = 0; i < source.size(); i += block_bytes) {
++            const uint16_t d = k::f16_from_f32(float(int(rng() % 63) - 31) / 8192);
++            std::memcpy(source.data() + i, &d, 2);
++        }
++        cudaMalloc(&blocks, source.size());
++        cudaMalloc(&x, T * K * 2);
++        cudaMalloc(&expected, T * max_ld * 4);
++        cudaMalloc(&actual, T * max_ld * 4);
++        cudaMemcpyAsync(blocks, source.data(), source.size(), cudaMemcpyHostToDevice, stream);
++        {
++            strata::prefill::Gemm gm;
++            std::string err;
++            if (!gm.init(stream, 64 * K, err)) return 1;
++            for (int N : {37, 37, max_n, 37}) for (float beta : {0.0f, 1.0f}) {
++                const int ld = N + 7;
++                std::vector<uint16_t> input(T * K);
++                for (auto& v : input) v = k::f16_from_f32(float(int(rng() % 2001) - 1000) / 113);
++                std::vector<float> got(T * ld, -987.f), want(got);
++                cudaMemcpyAsync(x, input.data(), input.size() * 2, cudaMemcpyHostToDevice, stream);
++                cudaMemcpyAsync(expected, want.data(), want.size() * 4, cudaMemcpyHostToDevice, stream);
++                cudaMemcpyAsync(actual, got.data(), got.size() * 4, cudaMemcpyHostToDevice, stream);
++                gm.native(x, type, blocks, expected, T, N, K, ld, beta);
++                gm.native_static(x, type, blocks, actual, T, N, K, ld, beta);
++                cudaStreamSynchronize(stream);
++                cudaMemcpy(got.data(), actual, got.size() * 4, cudaMemcpyDeviceToHost);
++                cudaMemcpy(want.data(), expected, want.size() * 4, cudaMemcpyDeviceToHost);
++                const bool equal = std::memcmp(got.data(), want.data(), want.size() * 4) == 0;
++                failures += !equal;
++                for (float v : got) failures += !std::isfinite(v);
++            }
++        }
++        cudaFree(blocks); cudaFree(x); cudaFree(expected); cudaFree(actual);
++    }
++    unsetenv("STRATA_METAL_PREFILL_DENSE_CACHE_MB");
++    std::printf("Bounded immutable dense cache: %d failures\n", failures);
++    return failures;
++}
++
+ int main() {
+     cudaStream_t stream{};
+     cudaStreamCreate(&stream);
+@@ -90,9 +156,12 @@ int main() {
+     if (!gemm.init(stream, 0, err)) return 1;
+     std::mt19937 rng(17);
+     int fail = 0;
++    fail += cached_dense_case(stream, rng);
+     for (int gu : {16, 17, 18, 21, 22, 23, 29, 42})
+         for (int dt : {20, 23, 42}) fail += native_gemm_case(gu, dt, 512, 256, gemm, stream, rng);
+     for (int gu : {16, 22, 29}) fail += native_gemm_case(gu, 42, 2560, 640, gemm, stream, rng);
++    for (int gu : {18, 21, 22, 23}) for (int tail : {8, 9, 16, 17, 24, 25, 31, 32})
++        fail += native_gemm_case(gu, gu == 22 ? 42 : 20, 2560, 640, gemm, stream, rng, tail);
+     {
+         constexpr size_t gu_codes = 1280 * 640, d_codes = 2560 * 160;
+         constexpr size_t gu_scales = 1280 * 40, d_scales = 2560 * 10;

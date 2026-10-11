@@ -248,6 +248,10 @@ Verifier::~Verifier() {
         if (e) cudaGraphExecDestroy(e);
     if (commit_exec_) cudaGraphExecDestroy(commit_exec_);
     if (commit_nogdn_exec_) cudaGraphExecDestroy(commit_nogdn_exec_);
+#if defined(STRATA_METAL_BACKEND)
+    if (commit_snapshot_exec_) cudaGraphExecDestroy(commit_snapshot_exec_);
+    if (gdn_snapshots_) cudaFree(gdn_snapshots_);
+#endif
     if (gdn_keep1_) cudaFree(gdn_keep1_);
     if (cs_) cudaStreamDestroy(cs_);
     if (copy_) { cudaStreamSynchronize(copy_); cudaStreamDestroy(copy_); }
@@ -433,6 +437,19 @@ bool Verifier::init(const WeightTable& wt, const ModelGeometry& g, SessionState&
     }
 #if defined(STRATA_METAL_BACKEND)
     {
+        const char* snapshots = std::getenv("STRATA_METAL_GDN_SNAPSHOT");
+        if (snapshots && std::atoi(snapshots) != 0 && hits_.all_resident && lb_ == 0 && le_ == g.n_layers &&
+            next_ == nullptr) {
+            size_t layers = 0;
+            for (int64_t l = 0; l < g.n_layers; ++l) layers += !is_qsa_layer(g, l);
+            const size_t bytes = layers * size_t(max_t_) * size_t(g.ssm_state_size) * size_t(g.ssm_v_heads) *
+                                 size_t(g.ssm_state_size) * sizeof(float);
+            if (cudaMalloc((void**) &gdn_snapshots_, bytes) != cudaSuccess) {
+                gdn_snapshots_ = nullptr;
+                cudaGetLastError();
+                std::fprintf(stderr, "strata verify: GDN snapshots did not fit; retaining recurrence replay\n");
+            } else std::fprintf(stderr, "strata verify: GDN prefix snapshots: %.1f MiB\n", double(bytes) / (1 << 20));
+        }
         const char* v = std::getenv("STRATA_METAL_GDN_INPLACE");
         if (v == nullptr || std::atoi(v) != 0) {
             const int32_t one = 1;
@@ -668,8 +685,15 @@ bool Verifier::record_window(int T, cudaStream_t cs, std::string& err) {
                 // the recurrence from the untouched state over tokens [0, te); outputs only for this group's.
                 // A one-token window recorded with gdn_write_capture_ also writes the new state back (n_keep = 1:
                 // the same y, and the state the commit's own step would compute from the same inputs)
-                gdn_step_norm_multi(state, hb, (int) C, gate, beta, z_, (const float*) wnm->data, EPS, y_, (int) HK,
-                                    (int) HV, te, gdn_write_capture_ ? gdn_keep1_ : nullptr, cs, tb);
+#if defined(STRATA_METAL_BACKEND)
+                if (gdn_snapshot_capture_) {
+                    const size_t nf = size_t(g.ssm_state_size) * size_t(HV) * size_t(g.ssm_state_size);
+                    gdn_step_norm_snapshots(state, hb, (int) C, gate, beta, z_, (const float*) wnm->data, EPS,
+                                           y_, (int) HK, (int) HV, te, gdn_snapshots_ + size_t(gi) * MT * nf, cs, tb);
+                } else
+#endif
+                    gdn_step_norm_multi(state, hb, (int) C, gate, beta, z_, (const float*) wnm->data, EPS, y_, (int) HK,
+                                        (int) HV, te, gdn_write_capture_ ? gdn_keep1_ : nullptr, cs, tb);
                 stamp(l, 6, grp);
                 native_quantize_q8_1(y_ + (size_t) tb * ZV, xq_, (int) ZV, n, cs);
                 native_mmvq(wout->native_type, wout->native_data, xq_, bo_ + tb * N, (int) ZV, (int) N, n, cs);
@@ -1158,9 +1182,12 @@ bool Verifier::capture(int T, std::string& err) {
         }
         // a one-token window keeps every token it reads: its GDN state is written back here (see verify.hpp)
         gdn_write_capture_ = T == 1 && gdn_keep1_ != nullptr && lb_ == 0 && next_ == nullptr;
+        gdn_snapshot_capture_ = T > 1 && gdn_snapshots_ != nullptr;
         const bool ok = record_window(T, cs_, err);
         if (T == 1) exec1_writes_gdn_ = gdn_write_capture_;
+        exec_snapshots_[T] = gdn_snapshot_capture_;
         gdn_write_capture_ = false;
+        gdn_snapshot_capture_ = false;
         cudaGraph_t graph = nullptr;
         const cudaError_t ce = cudaStreamEndCapture(cs_, &graph);
         if (!ok || ce != cudaSuccess || !graph) {
@@ -1295,7 +1322,7 @@ bool Verifier::capture_commit(std::string& err) {
     const int64_t HS = (int64_t) NG_HIST * NG_HC_DIM;
     // the commit graph; with_gdn == false is the same graph without the GDN recurrence (its window already wrote
     // the state back: see verify.hpp)
-    auto record = [&](bool with_gdn, cudaGraphExec_t* out) -> bool {
+    auto record = [&](bool with_gdn, cudaGraphExec_t* out, bool snapshots = false) -> bool {
         if (cudaStreamBeginCapture(cs_, cudaStreamCaptureModeThreadLocal) != cudaSuccess) {
             err = "verify: begin commit capture failed";
             return false;
@@ -1314,11 +1341,21 @@ bool Verifier::capture_commit(std::string& err) {
                     float* conv = state + (uint64_t) g.ssm_state_size * g.ssm_v_heads * g.ssm_state_size;
                     const float* qkv = qkv_L_ + (size_t) gdn_index * MT * C;
                     gdn_conv_commit(conv, qkv, (int) C, commit_, cs_);
-                    if (with_gdn)
+                    if (with_gdn) {
+#if defined(STRATA_METAL_BACKEND)
+                        if (snapshots) {
+                            const size_t nf = size_t(g.ssm_state_size) * size_t(HV) * size_t(g.ssm_state_size);
+                            gdn_commit_snapshot(state, gdn_snapshots_ + size_t(gdn_index) * MT * nf,
+                                                (int) HV, commit_, cs_);
+                        } else
+#else
+                        (void) snapshots;
+#endif
                         gdn_step_norm_multi(state, h_L_ + (size_t) gdn_index * MT * C, (int) C,
                                             gate_L_ + (size_t) gdn_index * MT * HV, beta_L_ + (size_t) gdn_index * MT * HV,
                                             z_, (const float*) wnm->data, EPS, y_dummy_, (int) g.ssm_k_heads, (int) HV,
                                             (int) MT, commit_, cs_);
+                    }
                     ++gdn_index;
                 } else {
                     const QsaState& st = ss.qsa_states[qsa_index];
@@ -1354,6 +1391,9 @@ bool Verifier::capture_commit(std::string& err) {
     };
     if (!record(true, &commit_exec_)) return false;
     if (gdn_keep1_ != nullptr && !record(false, &commit_nogdn_exec_)) return false;
+#if defined(STRATA_METAL_BACKEND)
+    if (gdn_snapshots_ != nullptr && !record(true, &commit_snapshot_exec_, true)) return false;
+#endif
     return true;
 }
 
@@ -1402,10 +1442,12 @@ bool Verifier::run(int T, const int32_t* tokens, int64_t pos0, PoolMultiFn pool,
 #if defined(STRATA_METAL_BACKEND)
     const int G = groups_[T] > 0 ? groups_[T] : 1;
     last_gdn_written_ = false;
+    last_gdn_snapshots_ = false;
     if (hits_.all_resident) {
         const cudaError_t e = cudaGraphLaunch(exec_[T], cs_);
         if (e != cudaSuccess) { err = "verify: resident graph launch failed"; return false; }
         last_gdn_written_ = T == 1 && exec1_writes_gdn_;
+        last_gdn_snapshots_ = exec_snapshots_[T];
     } else {
     // Metal port (rules 11 + 9; see the MetalWindow comment above): the opening segment replays the first
     // pre's; every step then waits for its pre's doorbell, serves the pool, raises the step's three flags
@@ -1797,7 +1839,15 @@ bool Verifier::commit(int n_keep, std::string& err) {
         err = "verify: a window that wrote its GDN state back has no matching commit";   // never: see run()
         return false;
     }
-    const cudaError_t le = cudaGraphLaunch(gdn_done ? commit_nogdn_exec_ : commit_exec_, cs_);
+    cudaGraphExec_t commit_graph = gdn_done ? commit_nogdn_exec_ : commit_exec_;
+#if defined(STRATA_METAL_BACKEND)
+    if (last_gdn_snapshots_) {
+        if (commit_snapshot_exec_ == nullptr) { err = "verify: missing snapshot commit graph"; return false; }
+        commit_graph = commit_snapshot_exec_;
+    }
+    last_gdn_snapshots_ = false;
+#endif
+    const cudaError_t le = cudaGraphLaunch(commit_graph, cs_);
     if (le != cudaSuccess) { err = std::string("verify: commit launch: ") + cudaGetErrorString(le); return false; }
     // set_commit_async: no wait here - the next window runs on the same stream after it, and the drafter (its own
     // stream) reads only this window's final rows and its own K/V. h_commit_ is next written after the next window's

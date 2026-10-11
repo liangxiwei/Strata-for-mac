@@ -1,0 +1,21 @@
+--- a/src/kernels/metal/iq_kernels.metal
++++ b/src/kernels/metal/iq_kernels.metal
+@@ -1901,3 +1901,5 @@
+     // __expf -> metal::precise::exp (the port's substitute at every exp site)
+     h[i] = (g / (1.0f + metal::precise::exp(-g))) * up[i];
+ }
++
++#include "../../../bench/results/2026-10-09-metal-iq3-s-30k-followup/prototype-weight-device.metalh"
+--- a/src/kernels/metal/iq_kernels.mm
++++ b/src/kernels/metal/iq_kernels.mm
+@@ -355,6 +355,10 @@
+         }();
+         std::snprintf(name, sizeof name, "native_gemm2_%s_%d_r%d%s", down ? "down" : "gu", down ? L.d_type : L.gu_type,
+                       tile_rows, tile_rows == 32 && tail ? "_tail" : "");
++        static const bool weight_device = env_on("STRATA_METAL_PREFILL_MOE_WEIGHT_DEVICE");
++        if (weight_device && tail && tile_rows == 32 && !down &&
++            (L.gu_type == 18 || L.gu_type == 21 || L.gu_type == 22 || L.gu_type == 23))
++            std::snprintf(name, sizeof name, "wdev_fine_gu%d", L.gu_type);
+         metal::Launch q(name, (unsigned) ((cols + 63) / 64), (unsigned) n_tiles, 1, tile_rows == 32 ? 256 : 128, 1, 1, 0,
+                         stream);
+         q.buf(x).buf(arena).buf(tiles).buf(y).scalar(L.n_embd).scalar(L.n_ff)

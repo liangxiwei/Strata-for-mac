@@ -1,0 +1,26 @@
+{
+  "binary": "/Users/liangxw/src/xproject/petproject/Strata/engine/strata",
+  "sha256": "3aa4e5972b0a9a56180a6e13a5b1f8ffa00112c2686003ba149d6071f0cac099",
+  "metadata": {
+    "vision": "gpu",
+    "vision_src": "4d89409b228a1daa",
+    "source": "local",
+    "backend": "metal",
+    "version": "0.1.34",
+    "src": "73efdd2b9343705a"
+  },
+  "mtp_max_t": 4,
+  "spec_min_p": 0.5,
+  "context_capacity": 262144,
+  "draft_vocab_sha256": "b1e1d3a7a9e4bf862dcd5923ce661fb59bbd07907e594df5cf86a62ac235cb91",
+  "metal_profile_revision": "2026-10-12-mtp-kernels",
+  "env": {
+    "STRATA_METAL_IQ4_EXPAND": "0",
+    "STRATA_METAL_HC_BATCH": "1",
+    "STRATA_METAL_Q6_MULTI": "1",
+    "STRATA_METAL_K_MULTI": "1",
+    "STRATA_METAL_IQ4_MULTI": "2",
+    "STRATA_METAL_EXPERT_IQ4_DIRECT": "1",
+    "STRATA_METAL_GDN_SNAPSHOT": "0"
+  }
+}

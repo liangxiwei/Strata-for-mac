@@ -1,0 +1,23 @@
+{
+  "power": "Battery Power:\n Sleep On Power Button 1\n powermode            1\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         5\n womp                 1\n networkoversleep     0\n sleep                1\n lessbright           1\n tcpkeepalive         1\n disksleep            0\nAC Power:\n Sleep On Power Button 1\n powermode            1\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         5\n womp                 1\n networkoversleep     0\n sleep                0\n tcpkeepalive         1\n disksleep            0\n",
+  "swap_before": "vm.swapusage: total = 17408.00M  used = 16164.00M  free = 1244.00M  (encrypted)\n",
+  "engine_sha256": "12365f5a7f194a02b3a306e0e554060a33cc444dbd6e894edcd2dec78579475e",
+  "mtp_dense_layout": "fc_embedding.weight q8_0 2560 2560 0 6963200\nfc_hidden.weight q8_0 2560 2560 6963200 6963200\nhyper_connection_mixer.hc_norm.weight f32 1 10240 13926400 40960\nhyper_connection_mixer.input_mix_weight_down.weight bf16 320 10240 13967360 6553600\nhyper_connection_mixer.input_mix_weight_up.weight bf16 10240 320 20520960 6553600\nattn_hyper_connection.block_inject_weight.weight bf16 4 10240 27074560 81920\nattn_hyper_connection.hc_norm.weight f32 1 10240 27156480 40960\nattn_hyper_connection.input_mix_weight_down.weight bf16 320 10240 27197440 6553600\nattn_hyper_connection.input_mix_weight_up.weight bf16 10240 320 33751040 6553600\nmlp.gate.weight bf16 512 2560 40304640 2621440\nmlp.shared_expert.down_proj.weight q8_0 2560 640 42926080 1740800\nmlp.shared_expert.gate_proj.weight q8_0 640 2560 44666880 1740800\nmlp.shared_expert.up_proj.weight q8_0 640 2560 46407680 1740800\nmlp.shared_expert_gate.weight bf16 1 2560 48148480 5120\nmlp_hyper_connection.block_inject_weight.weight bf16 4 10240 48153600 81920\nmlp_hyper_connection.hc_norm.weight f32 1 10240 48235520 40960\nmlp_hyper_connection.input_mix_weight_down.weight bf16 320 10240 48276480 6553600\nmlp_hyper_connection.input_mix_weight_up.weight bf16 10240 320 54830080 6553600\nself_attn.indexer.index_qk_proj.weight q8_0 640 2560 61383680 1740800\nself_attn.indexer.k_layernorm.weight f32 1 128 63124480 512\nself_attn.indexer.q_layernorm.weight f32 1 128 63124992 512\nself_attn.k_norm.weight f32 1 256 63125504 1024\nself_attn.k_proj.weight q8_0 512 2560 63126528 1392640\nself_attn.o_proj.weight q8_0 2560 6144 64519168 16711680\nself_attn.q_norm.weight f32 1 256 81230848 1024\nself_attn.q_proj.weight q8_0 12288 2560 81231872 33423360\nself_attn.v_proj.weight q8_0 512 2560 114655232 1392640\npre_fc_norm_embedding.weight f32 1 2560 116047872 10240\npre_fc_norm_hidden.weight f32 1 10240 116058112 40960\n",
+  "mtp_files": {
+    "experts.bin": {
+      "size_bytes": 707788800
+    },
+    "dense.bin": {
+      "size_bytes": 116099072
+    },
+    "dense.txt": {
+      "size_bytes": 1851
+    }
+  },
+  "max_context": 131072,
+  "spec": 4,
+  "mtp_max_t": 4,
+  "spec_min_p": 0.5,
+  "suffix_draft": 0,
+  "prefill_chunk": 2048
+}

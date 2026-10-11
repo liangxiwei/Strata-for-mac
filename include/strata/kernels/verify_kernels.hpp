@@ -35,6 +35,14 @@ void gdn_ab_multi(const float* x, const uint16_t* w_alpha, const uint16_t* w_bet
 void gdn_step_norm_multi(float* state, const float* h, int conv_channels, const float* gate, const float* beta,
                          const float* z, const float* gamma, float eps, float* y, int h_k, int h_v, int n_tok,
                          const int32_t* n_keep, void* stream, int t_out_begin = 0);
+#if defined(STRATA_METAL_BACKEND)
+/// Read-only verification with one (128, h_v, 128) state snapshot per token; same output bits as above.
+void gdn_step_norm_snapshots(float* state, const float* h, int conv_channels, const float* gate, const float* beta,
+                            const float* z, const float* gamma, float eps, float* y, int h_k, int h_v, int n_tok,
+                            float* snapshots, void* stream, int t_out_begin = 0);
+/// Commit only snapshot[*n_keep - 1], keeping rejected tokens out of the live state.
+void gdn_commit_snapshot(float* state, const float* snapshots, int h_v, const int32_t* n_keep, void* stream);
+#endif
 /// Spin until *flag >= value (a mapped host flag).  The value is fixed at capture, so several rings can be
 /// outstanding at once (the split verify window keeps two).
 void wait_flag_ge(const uint32_t* flag, uint32_t value, void* stream);

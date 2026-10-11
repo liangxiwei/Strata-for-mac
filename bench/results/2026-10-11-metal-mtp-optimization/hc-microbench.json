@@ -1,0 +1,44 @@
+[
+  {
+    "window": 2,
+    "legacy_us": 87.1435,
+    "batched_us": 75.69800000000001,
+    "time_reduction_percent": 13.134083437089394,
+    "legacy_runs": [
+      85.979,
+      88.308
+    ],
+    "batched_runs": [
+      75.709,
+      75.687
+    ]
+  },
+  {
+    "window": 3,
+    "legacy_us": 127.05099999999999,
+    "batched_us": 104.539,
+    "time_reduction_percent": 17.718868800717814,
+    "legacy_runs": [
+      125.854,
+      128.248
+    ],
+    "batched_runs": [
+      104.527,
+      104.551
+    ]
+  },
+  {
+    "window": 4,
+    "legacy_us": 168.94799999999998,
+    "batched_us": 142.2075,
+    "time_reduction_percent": 15.827651111584618,
+    "legacy_runs": [
+      165.618,
+      172.278
+    ],
+    "batched_runs": [
+      141.782,
+      142.633
+    ]
+  }
+]

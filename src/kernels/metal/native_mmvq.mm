@@ -1,6 +1,7 @@
 // src/kernels/metal/native_mmvq.mm - the port of src/kernels/cuda/native_mmvq.cu's host half.  Same entry
-// points (include/strata/kernels/native_mmvq.hpp), same validation, same launch decisions (the small-K
-// rule, the multi_exact layouts, the ncols switch), same forwards to iq_mmvq for the i-quants and Q5_1 -
+// points (include/strata/kernels/native_mmvq.hpp), same validation and single-column arithmetic, plus
+// exact Metal small-batch paths for Q4_K / Q5_K / Q6_K and IQ4. Other formats retain the CUDA small-K / multi_exact
+// launch decisions and the forwards to iq_mmvq for the i-quants and Q5_1 -
 // the kernels are metal::Launch chains whose argument order IS each kernel's [[buffer(N)]] order (rule A)
 // and every pointer rides as a bound buffer (rule 9: nothing but scalars travels as bytes).
 //
@@ -9,7 +10,7 @@
 // native_mmvq_multi_kernel_<fmt>_r1/_r2/_r4 (<F, NCOLS, NW, ROWS> with ROWS spelled and NCOLS/NW runtime -
 // see native_mmvq.metal's file comment for why runtime NCOLS/NW keep the multi == single bitwise contract).
 //
-// THE ONE HOST-SIDE ADDITION (the iq_kernels.mm precedent, "make_host_visible"): the shim's cudaMemcpy
+// Host visibility (the iq_kernels.mm precedent, "make_host_visible"): the shim's cudaMemcpy
 // orders only against the NULL stream, and callers read the quantizer's output with a bare cudaMemcpy right
 // after launching on their own stream - native_quantize_q8_1 therefore commits+waits the caller's stream
 // before returning.  Inside a graph capture there is no pending command buffer, so it is a no-op there.
@@ -107,6 +108,39 @@ bool iq4_direct() {
     return on;
 }
 
+// 0: original packed multi, 1: independent direct calls, 2: shared-weight batch.
+int iq4_multi_mode() {
+    static const int mode = [] {
+        const char* v = std::getenv("STRATA_METAL_IQ4_MULTI");
+        return v == nullptr ? 2 : std::clamp(std::atoi(v), 0, 2);
+    }();
+    return mode;
+}
+
+bool iq4_simdgroup() {
+    static const bool on = [] {
+        const char* v = std::getenv("STRATA_METAL_IQ4_SG");
+        return v == nullptr || std::atoi(v) != 0;
+    }();
+    return on;
+}
+
+bool k_multi_fast() {
+    static const bool on = [] {
+        const char* v = std::getenv("STRATA_METAL_K_MULTI");
+        return v == nullptr || std::atoi(v) != 0;
+    }();
+    return on;
+}
+
+bool q6_multi_fast() {
+    static const bool on = [] {
+        const char* v = std::getenv("STRATA_METAL_Q6_MULTI");
+        return v == nullptr || std::atoi(v) != 0;
+    }();
+    return on;
+}
+
 // the ncols == 1 kernels: the small-K rule picks 4 rows per block (grid rounded up) or 1 row (grid n_out)
 void launch_single(int f, const void* weights, const void* x_q8_1, float* y, int n_in, int n_out, void* stream) {
     const FmtHost& fmt = k_fmts[f];
@@ -119,11 +153,7 @@ void launch_single(int f, const void* weights, const void* x_q8_1, float* y, int
         }
         if (!expanded) {
             // simdgroup-per-row for the wide IQ4_XS matrices, 4 rows per threadgroup below (measured crossover)
-            static const bool sg_on = [] {
-                const char* v = std::getenv("STRATA_METAL_IQ4_SG");   // =0: 4 rows per threadgroup everywhere
-                return v == nullptr || std::atoi(v) != 0;
-            }();
-            const bool sg = sg_on && f == 5 && n_out >= 2560;
+            const bool sg = iq4_simdgroup() && f == 5 && n_out >= 2560;
             metal::Launch k(sg ? "native_iq4_xs_direct_sg4" : f == 5 ? "native_iq4_xs_direct_r4" : "native_iq4_nl_direct_r4",
                             (unsigned) (((size_t) n_out + (sg ? 15 : 3)) / (sg ? 16 : 4)), 1, 1, WARP, WARPS, 1, 0, stream);
             k.buf(weights).buf(x_q8_1).buf(y).scalar(n_in).scalar(n_out);
@@ -163,6 +193,46 @@ void launch_multi_n(int f, const void* weights, const void* x_q8_1, float* y, in
                     void* stream) {
     const FmtHost& fmt = k_fmts[f];
     char name[80];
+    if (g_multi_exact && f < 2 && k_multi_fast()) {
+        std::snprintf(name, sizeof name, "native_batch_f%d_nt%d_r1", f, ncols);
+        metal::Launch k(name, (unsigned) (((size_t) n_out + 1) / 2), 1, 1, WARP, 2, 1, 0, stream);
+        k.buf(weights).buf(x_q8_1).buf(y).scalar(n_in).scalar(n_out).scalar(n_in / fmt.div < fmt.bpi ? 1 : 0);
+        k.done();
+        return;
+    }
+    if (g_multi_exact && f == 4 && q6_multi_fast()) {
+        // Large heads benefit from eight rows per group; wider projections keep
+        // four to limit live accumulators. Both preserve the single-column bits.
+        const int rows = n_out >= 65536 && n_in <= 4096 && ncols <= 4 ? 4 : 2;
+        std::snprintf(name, sizeof name, "native_q6_multi_nt%d_r%d", ncols, rows);
+        metal::Launch k(name, (unsigned) (((size_t) n_out + 2 * rows - 1) / (2 * rows)),
+                        1, 1, WARP, 2, 1, 0, stream);
+        k.buf(weights).buf(x_q8_1).buf(y).scalar(n_in).scalar(n_out);
+        k.done();
+        return;
+    }
+    if (g_multi_exact && (f == 5 || f == 9) && iq4_direct() && iq4_multi_mode()) {
+        bool expanded = false;
+        if (f == 5) {
+            std::lock_guard<std::mutex> lock(g_expanded_mu);
+            expanded = g_expanded.count(weights) != 0;
+        }
+        if (iq4_multi_mode() == 2 && !expanded) {
+            const int rows = f == 9 && (n_in <= 1024 || n_in >= 4096) && ncols <= 4 ? 2 : 1;
+            std::snprintf(name, sizeof name, "native_batch_f%d_nt%d_r%d", f, ncols, rows);
+            metal::Launch k(name, (unsigned) (((size_t) n_out + 2 * rows - 1) / (2 * rows)),
+                            1, 1, WARP, 2, 1, 0, stream);
+            const int row_lane = f == 9 || !iq4_simdgroup() || n_out < 2560;
+            k.buf(weights).buf(x_q8_1).buf(y).scalar(n_in).scalar(n_out).scalar(row_lane);
+            k.done();
+            return;
+        }
+        const size_t stride = (size_t) (n_in / Q8K) * Q81_BYTES;
+        for (int j = 0; j < ncols; ++j)
+            launch_single(f, weights, (const uint8_t*) x_q8_1 + (size_t) j * stride,
+                          y + (size_t) j * n_out, n_in, n_out, stream);
+        return;
+    }
     if (!g_multi_exact) {
         const int nw = ncols <= 4 ? 4 : 2;
         const unsigned blocks = (unsigned) (((size_t) n_out + 1) / 2);
